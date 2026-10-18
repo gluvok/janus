@@ -9,7 +9,7 @@
 import argon2 from "argon2";
 import { supabase } from "./supabase.ts";
 
-type Role = "admin" | "manager" | "operator" | "base" | "customer";
+type Role = "admin" | "manager" | "operator" | "base";
 type Unit = "kg" | "q" | "gal";
 type WeighmentType = "unassigned" | "in" | "out";
 type TicketStatus = "pending" | "approved" | "rejected";
@@ -78,7 +78,7 @@ async function main() {
     args.includes("--clean") || args.includes("--reset") || process.env.RESET === "true";
 
   console.log("=================================================");
-  console.log("🚀 Starting GluVok High-Volume Test Database Seeding");
+  console.log("🚀 Starting Mesto High-Volume Test Database Seeding");
   console.log(`📡 Supabase Endpoint: ${process.env.SUPABASE_URL}`);
   console.log(`🧹 Clean Mode: ${shouldClean ? "ENABLED" : "DISABLED"}`);
   console.log("=================================================");
@@ -124,11 +124,10 @@ async function main() {
   // 2. USERS (Staff & Core profiles)
   console.log("\n👥 [2/8] Seeding Users (Staff & Client profiles)...");
   console.log("  🔒 Pre-hashing role passwords once with Argon2id...");
-  const [adminHash, managerHash, operatorHash, userHash] = await Promise.all([
+  const [adminHash, managerHash, operatorHash] = await Promise.all([
     argon2.hash("admin123"),
     argon2.hash("manager123"),
     argon2.hash("operator123"),
-    argon2.hash("user123"),
   ]);
 
   interface UserSeedConfig {
@@ -774,10 +773,9 @@ async function main() {
   const customerNames = customerRawConfigs.map((c) => c.name);
 
   const { data: existingCustomers, error: custFetchErr } = await supabase
-    .from("users")
+    .from("customers")
     .select("id, name")
-    .in("name", customerNames)
-    .eq("role", "customer");
+    .in("name", customerNames);
 
   if (custFetchErr) throw custFetchErr;
   for (const c of existingCustomers || []) {
@@ -787,13 +785,10 @@ async function main() {
   const missingCustomers = customerRawConfigs.filter((c) => !customerMap.has(c.name));
   if (missingCustomers.length > 0) {
     const { data: createdCustomers, error: custCreateErr } = await supabase
-      .from("users")
+      .from("customers")
       .insert(
         missingCustomers.map((c) => ({
-          username: c.username,
           name: c.name,
-          role: "customer" as const,
-          password_hash: c.username ? userHash : null,
           factory_id: c.factoryId,
           created_at: daysAgo(c.daysOffset, 25),
         })),
@@ -805,7 +800,7 @@ async function main() {
       customerMap.set(c.name, c.id);
     }
   }
-  console.log(`  ✓ Seeded ${customerMap.size} customer accounts in users table.`);
+  console.log(`  ✓ Seeded ${customerMap.size} customer profiles in customers table.`);
 
   // Helpers to get arrays of IDs for relationships
   const factory1CenterIds = factory1CenterNames.map((n) => centerMap.get(n)!);

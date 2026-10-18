@@ -1,12 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Briefcase01Icon,
-  CrownIcon,
-  HeadsetIcon,
-  UserCheck01Icon,
-  UserIcon,
-} from "@hugeicons/core-free-icons";
+import { Briefcase01Icon, CrownIcon, HeadsetIcon, UserIcon } from "@hugeicons/core-free-icons";
 import type { UserRole } from "@/app/users/types";
 
 interface RoleBadgeProps {
@@ -53,16 +47,6 @@ export function RoleBadge({ role }: RoleBadgeProps) {
         >
           <HugeiconsIcon icon={UserIcon} className="size-3" />
           Base
-        </Badge>
-      );
-    case "customer":
-      return (
-        <Badge
-          variant="outline"
-          className="gap-1 text-2xs font-normal text-emerald-900 border-emerald-300/80 bg-emerald-600/10 dark:text-emerald-200 dark:border-emerald-800/50 dark:bg-emerald-950/30"
-        >
-          <HugeiconsIcon icon={UserCheck01Icon} className="size-3" />
-          Customer
         </Badge>
       );
   }

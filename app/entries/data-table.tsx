@@ -34,6 +34,7 @@ import {
 import { getColumns } from "./columns";
 import { type Entry, type EntryMode } from "./types";
 import { type Center } from "@/app/centers/types";
+import { type Customer } from "@/app/customers/types";
 import { type User } from "@/app/users/types";
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -71,7 +72,7 @@ function formatCenterOptions(centers: Center[]): FacetedFilterOption[] {
   ];
 }
 
-function formatCustomerOptions(customers: User[]): FacetedFilterOption[] {
+function formatCustomerOptions(customers: Customer[]): FacetedFilterOption[] {
   return [
     { label: "All Customers", value: "all", icon: appIcons.customers },
     ...customers.map((u) => ({
@@ -96,7 +97,7 @@ function formatCreatorOptions(creators: User[]): FacetedFilterOption[] {
 async function fetchFilterOptions() {
   const [centersRes, customersRes, creatorsRes] = await Promise.all([
     axios.get<{ data: Center[] }>("/api/centers?all=true&sort=name.asc"),
-    axios.get<{ data: User[] }>("/api/users?role=customer&all=true&sort=name.asc"),
+    axios.get<{ data: Customer[] }>("/api/customers?all=true&sort=name.asc"),
     axios.get<{ data: User[] }>("/api/users?all=true&sort=name.asc"),
   ]);
   return {
@@ -121,7 +122,7 @@ function createFilterSanitizerSchema(validIds: Set<string>) {
 function validateAndSanitizeFilters(
   currentFilters: Record<string, string>,
   centers: Center[],
-  customers: User[],
+  customers: Customer[],
   creators: User[],
   onReset: (key: string) => void,
 ): { sanitizedFilters: Record<string, string>; needsFallback: boolean } {

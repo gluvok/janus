@@ -107,7 +107,7 @@ async function main() {
   }
 
   console.log("=================================================");
-  console.log("🚀 GluVok Client Onboarding Seeder");
+  console.log("🚀 Mesto Client Onboarding Seeder");
   console.log(`📡 Supabase Endpoint: ${process.env.SUPABASE_URL}`);
   console.log("=================================================");
 

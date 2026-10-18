@@ -20,7 +20,6 @@ const ROLE_ENTITY_LABELS: Record<UserRole, string> = {
   manager: "Staff user",
   operator: "Staff user",
   base: "Staff user",
-  customer: "Customer",
 };
 
 export async function GET(request: Request) {

@@ -29,7 +29,7 @@ function getInitials(name: string): string {
 
 const DEFAULT_USER_PROPS: UserProps = {
   name: "Admin Factory 1",
-  email: "admin1@gluvok.com",
+  email: "admin1@mesto.in",
   initials: "AF",
 };
 
@@ -41,7 +41,7 @@ export function AppSidebar() {
     if (!accountUser) return DEFAULT_USER_PROPS;
     return {
       name: accountUser.name,
-      email: `${accountUser.username ?? "admin"}@gluvok.com`,
+      email: `${accountUser.username ?? "admin"}@mesto.in`,
       initials: getInitials(accountUser.name),
     };
   }, [accountUser]);

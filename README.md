@@ -38,7 +38,6 @@ The platform adopts a unified **Rikyū-cha (利休茶)** Japanese roasted matcha
   - **Admin**: Sumi charcoal ink (`text-zinc-900 border-zinc-300 bg-zinc-600/10 dark:text-zinc-100 dark:border-zinc-700 dark:bg-zinc-800/40`) with `CrownIcon`.
   - **Operator**: Signature Rikyū-cha tea-moss green (`text-primary border-primary/30 bg-primary/10 dark:text-primary dark:border-primary/40 dark:bg-primary/15`) with `HeadsetIcon`.
   - **Manager**: Warm Hōjicha roasted tea bronze (`text-amber-900 border-amber-300/80 bg-amber-600/10 dark:text-amber-200 dark:border-amber-800/50 dark:bg-amber-950/30`) with `Briefcase01Icon`.
-  - **Customer**: Soft Sencha sage green (`text-emerald-900 border-emerald-300/80 bg-emerald-600/10 dark:text-emerald-200 dark:border-emerald-800/50 dark:bg-emerald-950/30`) with `UserCheck01Icon`.
   - **Base**: Unglazed warm stone (`text-stone-700 border-stone-300/80 bg-stone-500/10 dark:text-stone-300 dark:border-stone-700/80 dark:bg-stone-900/30`) with `UserIcon`.
 - **Interactive Criteria Chips (`components/data-table/`)**: Active date range filters (`DataTableDateRangeChip`) and multi-column sort chips (`SortableSortChip`) feature subtle matcha-tinted borders and backgrounds (`border-primary/25 bg-primary/10 text-primary`) for clear hierarchy and instant visual scanning.
 - **Toast Feedback**: Top-right anchored (`top-4 right-4`) with `font-heading` titles and semantic status colors.
@@ -55,7 +54,7 @@ The `/centers` route provides a full-featured data table built with **TanStack T
 - **Schema Mapping**: Maps directly to `centers` table in `schema.sql` (`id`, `name`, `created_at`, `updated_at`). 1:1 hardware relationship with `devices` (`id`, `center_id`, `api_key_hash`).
 - **Features**:
   - **Server-Side Multi-Column Sorting**: Support for sorting across multiple columns simultaneously with defined precedence (e.g., `Name` -> `Created At` -> `ID`).
-  - **Draggable Sort Priority Reordering (`@dnd-kit`)**: When 2 or more sorts are active, sorting chips in the Unified Criteria Bar display drag handles and can be reordered via drag-and-drop powered by `@dnd-kit/core`, `@dnd-kit/sortable`, and `@dnd-kit/utilities`. Dropping a chip immediately reorders sort priority indices (`#1`, `#2`, `#3`), re-queries the backend with the updated precedence (`?sort=...`), and persists to `gluvok_tables_state` cookies. Fully touch-ready for mobile/tablet with press-and-hold activation constraints (`TouchSensor`: 250ms hold, 5px tolerance) so swiping to scroll horizontally remains smooth, and desktop pointer distance thresholds (`PointerSensor`: 5px).
+  - **Draggable Sort Priority Reordering (`@dnd-kit`)**: When 2 or more sorts are active, sorting chips in the Unified Criteria Bar display drag handles and can be reordered via drag-and-drop powered by `@dnd-kit/core`, `@dnd-kit/sortable`, and `@dnd-kit/utilities`. Dropping a chip immediately reorders sort priority indices (`#1`, `#2`, `#3`), re-queries the backend with the updated precedence (`?sort=...`), and persists to `mesto_tables_state` cookies. Fully touch-ready for mobile/tablet with press-and-hold activation constraints (`TouchSensor`: 250ms hold, 5px tolerance) so swiping to scroll horizontally remains smooth, and desktop pointer distance thresholds (`PointerSensor`: 5px).
   - **Default Backend Ordering**: The backend endpoint defaults to ordering by `id` descending (newest ID first) when no explicit sorting criteria is provided. The frontend initializes with an empty sort state (displaying no default sort chips or header badges) to eliminate user confusion; sort badges and criteria chips appear only when columns are actively sorted.
   - **Unified Active Criteria Bar**: Filters and active sort badges render together in a single compact bar (`Filters: [📅 Date Range (x)] | Sorts: [#1 # ID: ↓ Desc (x)] [#2 📅 Created At: ↑ Asc (x)] Clear all`) with individual dismiss controls and full reset actions. Filter chips display column and option icons, and sort chips display column and directional sort icons (`ArrowUp01Icon`, `ArrowDown01Icon`).
   - **Scoped Datatable Loading & Scoped Refresh (`DataTableRefreshButton`)**: Toolbar (search, combobox, datepicker), active criteria badges, and pagination remain permanently mounted; the loading spinner is scoped exclusively to the table card area, eliminating focus loss and toolbar flicker during searches or pagination. Scoped `<DataTableRefreshButton>` re-executes table queries on demand without whole-page reloads.
@@ -93,7 +92,7 @@ The `/centers` route provides a full-featured data table built with **TanStack T
   - **Fluid Responsive Pagination with ButtonGroup**: Clean 2-row layout on mobile viewports: selection summary on row 1 and spaced rows-per-page, page count, and icon-only previous/next controls connected in a unified `ButtonGroup` on row 2, smoothly transitioning to single-line on desktop.
   - **Server-Side Pagination**: TanStack Table `manualPagination` defaulting to 15 rows per page with multiples-of-15 rows-per-page selector (`15, 30, 45, 60`), interactive Page jump Select dropdown (`1` to `totalPages`), and connected Previous/Next buttons via `ButtonGroup`.
   - **Accurate & Stabilized Selection Counter**: Selection count displays `{selectedCount} of {currentRowsCount} row(s) selected.` inside a locked `sm:min-w-48` container with `tabular-nums` formatting, preventing layout shifts or control movement when transitioning between 0, single-digit, and double-digit row counts.
-  - **Smart-Grouped Multi-Table Cookie Persistence (`gluvok_tables_state`)**: Powered by a server-synchronized cookie store (`stores/use-data-table-store.ts`, `lib/table-cookie.ts`). Retains user preferences (`search`, `filters`, `dateRange`, `sorting`, `pagination.pageSize`, and `columnVisibility`) per entity using a smart-grouped JSON structure:
+  - **Smart-Grouped Multi-Table Cookie Persistence (`mesto_tables_state`)**: Powered by a server-synchronized cookie store (`stores/use-data-table-store.ts`, `lib/table-cookie.ts`). Retains user preferences (`search`, `filters`, `dateRange`, `sorting`, `pagination.pageSize`, and `columnVisibility`) per entity using a smart-grouped JSON structure:
     ```json
     {
       "mode": "automatic",
@@ -106,7 +105,7 @@ The `/centers` route provides a full-featured data table built with **TanStack T
     }
     ```
     Dual-mode status is derived directly from the cookie schema definition (`isDualModeRoute`), eliminating hardcoded route constants. Strictly enforces clean target schemas with zero backward compatibility fallbacks (Rule 19).
-  - **Instant SSR Hydration & Zero Layout Shift**: Server Components in `app/layout.tsx` read `gluvok_tables_state` synchronously before generating HTML, eliminating client-side hydration delay. Tables and toolbars render immediately on first paint with 0ms mount delay.
+  - **Instant SSR Hydration & Zero Layout Shift**: Server Components in `app/layout.tsx` read `mesto_tables_state` synchronously before generating HTML, eliminating client-side hydration delay. Tables and toolbars render immediately on first paint with 0ms mount delay.
   - **Column Visibility & Actions**: Columns dropdown toggle, indeterminate select-all checkbox, and row actions dropdown (`Copy Center ID`, `Copy Center Name`).
 
 ## Entries Module & Data Table
@@ -208,35 +207,41 @@ Administrative users (`/users`) and agricultural customers (`/customers`) are po
     - Generalized relational frequency counting helper (`countOccurrences(items, key)`), eliminating 3 repetitive counting loops in `deleteUserAccounts`.
     - Enforced `StatusCodes` from `http-status-codes` across all error paths, eliminating raw numeric status literals.
   - **Zero-Branching Component & Type Architecture (Strict DRY Compliance)**:
-    - **Atomic Form Primitives (`app/users/user-dialog-primitives.tsx`)**: Extracted `UserDialogShell`, `FullNameField`, `CredentialsFields`, `CustomerPortalSwitch`, and `SystemRoleSelect`.
-    - **Dedicated Dialogs**: Eliminated the redundant `user-form-dialog.tsx` wrapper; callers consume dedicated dialogs directly via `ENTITY_CONFIG`:
-      - `StaffUserDialog`: Renders Full Name & System Role side-by-side, plus Username & Password side-by-side (`sm:grid-cols-2`), validated by `createStaffUserSchema` / `updateStaffUserSchema`.
-      - `CustomerUserDialog`: Renders Full Name full-width, Customer Portal Access toggle, and credentials conditionally, validated declaratively by `getCustomerFormSchema` using a discriminated union on `portalAccessEnabled`.
-    - **Zod Discriminated Unions (`app/users/types.ts`)**:
-      - Separated schemas into `createStaffUserSchema` (strictly requires username and password), `createCustomerUserSchema` (handles customer portal access rules), and `getCustomerFormSchema` (discriminated union on `portalAccessEnabled` for forms).
-      - Combined via `createUserSchema = z.discriminatedUnion("role", [...])` and `updateUserSchema = z.discriminatedUnion("role", [...])`, completely eliminating runtime `if (isCustomer)` checks in schema validation.
+    - **Atomic Form Primitives (`app/users/user-dialog-primitives.tsx`)**: Extracted `UserDialogShell`, `FullNameField`, `CredentialsFields`, and `SystemRoleSelect`.
+    - **Dedicated Staff User Dialog (`StaffUserDialog`)**: Renders Full Name & System Role side-by-side, plus Username & Password side-by-side (`sm:grid-cols-2`), validated by `getUserFormSchema`. Both username and password are strictly mandatory for all staff accounts.
+    - **Single Clean Schema Architecture (`app/users/types.ts`)**:
+      - `createUserSchema` and `updateUserSchema` strictly enforce mandatory username and password hashing across all roles (`admin`, `manager`, `operator`, `base`), completely eliminating discriminated unions or conditional portal access flags.
     - **Declarative API Routing & Domain Services**:
-      - `app/api/users/route.ts`: Replaced ternary message checks with a typed lookup dictionary (`ROLE_ENTITY_LABELS`).
-      - `app/api/users/service.ts`: Enforces domain tier conversions with domain predicate comparisons and standardized `StatusCodes` from `http-status-codes`.
-    - **Configuration-Driven Data Table (`ENTITY_CONFIG`)**: `UsersDataTable` consumes a centralized typed configuration dictionary mapping table IDs, singular/plural labels, search placeholders, add labels, role filter flags, and dialog constructors, eliminating all inline conditionals from the table render tree.
+      - `app/api/users/route.ts`: Uses `ROLE_ENTITY_LABELS` lookup dictionary for staff roles.
+      - `app/api/users/service.ts`: Enforces mandatory credential creation, password hashing via Argon2id, and relational safety checks against linked weighbridge and audit records with standardized `StatusCodes` from `http-status-codes`.
   - **Universal Comboboxes & Subtle Role Iconography**:
     - System Role dropdown utilizes Base UI combobox (`components/ui/combobox.tsx`) with search and leading role icons (`Admin`: `CrownIcon`, `Manager`: `Briefcase01Icon`, `Operator`: `HeadsetIcon`, `Base`: `UserIcon`).
     - Subtly tinted badges in the data table: Admin uses refined Slate/Neutral (violet/purple removed), and Manager, Operator, Base use gentle 5% background tints and soft muted borders.
-    - Hardware accounts are completely hidden from filter dropdowns and strictly rejected/ignored in backend filtering.
   - **Universal React Hook Form & Zod Architecture**:
-    - **Form State Delegation (`react-hook-form` + `@hookform/resolvers/zod`)**: All user modals (`StaffUserDialog`, `CustomerUserDialog`) and settings forms (`FactoryCard`) manage state and submission via `useForm` paired with `zodResolver`, eliminating ad-hoc dirty tracking and manual validation branches.
+    - **Form State Delegation (`react-hook-form` + `@hookform/resolvers/zod`)**: All user modals (`StaffUserDialog`) and settings forms (`FactoryCard`) manage state and submission via `useForm` paired with `zodResolver`, eliminating ad-hoc dirty tracking and manual validation branches.
     - **Inline Field Validation (`<FieldError>`)**: Inputs, comboboxes, and password fields render contextual inline `<FieldError>` messages dynamically as users type or change values.
     - **API Search Parameter Delegation (`lib/api-query.ts`)**: Pagination (`page`, `pageSize`) and date range filters are validated and coerced via centralized Zod schemas (`paginationQuerySchema`), eliminating raw fallback arithmetic.
     - **Visual Mandatory Asterisks (`*`) & Notice**: Required fields display `<span className="text-destructive font-semibold">*</span>`, accompanied by `"Fields marked with * are required."` in dialog and card headers.
     - **Direct Zod-Driven Button State (`isValid`) & Zero Layout Shift**: The Save Changes button remains visible in modal footers to prevent jarring layout shifts, is strictly disabled (`disabled={!isDirty || !isValid || isSubmitting}`) until form state evaluates to valid, and retains a constant label with an icon-swap `<Spinner>` during submission for a stable 0px width delta.
-    - **Customer Portal Revocation Safeguards**:
-      - Toggling OFF portal access on an existing active portal user displays an amber warning banner informing the user that login credentials will be revoked.
-      - In `app/api/users/service.ts`, clearing a customer's `username` (`null`) automatically clears `password_hash` (`null`), preventing orphan password hashes from persisting.
     - **Responsive Side-by-Side Layout (`sm:grid-cols-2`)**: Full Name + System Role side-by-side, and Username + Password side-by-side on desktop/tablet, stacking naturally on mobile (`sm:max-w-lg` container).
     - Far-left pinned dirty state badge using `<FormDirtyIndicator>` in modal and card footers.
     - Error banner renders leading `AlertCircleIcon` with accessible alert styling.
     - `Cancel01Icon` leading icon on all modal Cancel buttons.
     - Compact, single-line field descriptions designed for clear scanning without wrapping.
+
+## Customers Module & Data Table
+
+The `/customers` route provides a dedicated data table for managing transport, logistics, and weighbridge customer profiles, cleanly decoupled from user authentication:
+
+- **Backend Endpoint**: `GET /api/customers`, `POST /api/customers`, `PATCH /api/customers`, `DELETE /api/customers`
+  - Slicing and exact counting: `?page=<N>&pageSize=<N>` (`.range()` + `{ count: "exact" }`)
+  - Server-side text search: `?search=<text>` (`.ilike("name", ...)`)
+  - Server-side created date range: `?from=<ISO>&to=<ISO>` (`.gte("created_at", ...)`, `.lte("created_at", ...)`)
+  - Server-side multi-column sorting: `?sort=col1.asc,col2.desc` (defaults to `id.desc`)
+  - Full list retrieval: `?all=true` for filter dropdown hydration across Entries and Weighments
+- **Schema Mapping**: Maps directly to dedicated `customers` table in `schema.sql` (`id`, `name`, `factory_id`, `created_at`, `updated_at`, `deleted_at`) with unique index on `(factory_id, name) WHERE deleted_at IS NULL`.
+- **Minimal Form Modal (`CustomerFormDialog`)**: Prompts exclusively for **Customer Name**, eliminating credentials or auth requirements. Validated using `createCustomerSchema` with `react-hook-form` and `zodResolver`.
+- **Soft Deletion & Safeguards**: Deleting a customer soft-deletes the record with confirmation dialog and toast notifications.
 
 ## Getting Started
 
@@ -277,7 +282,7 @@ Running `pnpm run seed:test` or `pnpm run seed:test:clean` provisions high-volum
 - **Users**: Staff, hardware, and customer accounts in users table
 - **Centers**: 50 (35 in Factory 1, 15 in Factory 2) with staggered `created_at` dates (ideal for testing 10, 20, 30, 40, and 50 page sizes)
 - **Commodities**: 20 bulk agricultural commodities
-- **Customers**: 50 customer accounts (`role: customer` in `users` table)
+- **Customers**: 50 customer profiles (`customers` table)
 - **Automatic & Manual Entries**: 170 entries (85 automatic entries + 85 manual entries; 60 paired cycles and 50 standalone entries)
 - **Automatic & Manual Weighments**: 60 linked inbound/outbound cycles (30 automatic + 30 manual)
 - **Automatic & Manual Tickets**: 40 support tickets (20 automatic tickets and 20 manual tickets, linked to entries or weighments with XOR check constraints)
@@ -289,7 +294,6 @@ Running `pnpm run seed:test` or `pnpm run seed:test:clean` provisions high-volum
 - **Admin**: `admin1` / `admin123`
 - **Manager**: `manager1` / `manager123`
 - **Operator**: `operator1`, `operator3`, `operator4`, `operator5` / `operator123`
-- **Customer**: `customer1`, `customer2`, `customer3`, `customer4`, `customer5` / `user123`
 - **Hardware (Edge Scale)**: `pi1`, `pi3`, `pi4`, `pi5`, `pi6` / `hardware123`
 
 **Factory 2 (`Apex Agro Logistics`)**:
@@ -297,7 +301,6 @@ Running `pnpm run seed:test` or `pnpm run seed:test:clean` provisions high-volum
 - **Admin**: `admin2` / `admin123`
 - **Manager**: `manager2` / `manager123`
 - **Operator**: `operator2`, `operator6` / `operator123`
-- **Customer**: `customer6`, `customer7`, `customer8`, `customer9`, `customer10` / `user123`
 - **Hardware (Edge Scale)**: `pi2`, `pi7`, `pi8` / `hardware123`
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

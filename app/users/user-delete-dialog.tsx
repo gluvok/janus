@@ -23,18 +23,9 @@ interface UserDeleteDialogProps {
   onOpenChange: (open: boolean) => void;
   users: User[];
   onSuccess: () => void;
-  entityLabel: string;
-  entityLabelPlural: string;
 }
 
-export function UserDeleteDialog({
-  open,
-  onOpenChange,
-  users,
-  onSuccess,
-  entityLabel,
-  entityLabelPlural,
-}: UserDeleteDialogProps) {
+export function UserDeleteDialog({ open, onOpenChange, users, onSuccess }: UserDeleteDialogProps) {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -59,7 +50,7 @@ export function UserDeleteDialog({
 
       toast.add({
         type: "success",
-        title: isBatch ? `${entityLabelPlural} deleted` : `${entityLabel} deleted`,
+        title: isBatch ? "Users deleted" : "User deleted",
         description: isBatch
           ? `Successfully deleted ${users.length} accounts.`
           : `Account "${users[0].username}" has been removed.`,
@@ -68,7 +59,7 @@ export function UserDeleteDialog({
       onSuccess();
       onOpenChange(false);
     } catch (err: unknown) {
-      const msg = getErrorMessage(err, `Failed to delete ${entityLabel.toLowerCase()}.`);
+      const msg = getErrorMessage(err, "Failed to delete user.");
 
       setDeleteError(msg);
       toast.add({
@@ -89,16 +80,14 @@ export function UserDeleteDialog({
             <div className="flex size-7 items-center justify-center rounded-md bg-destructive/10 text-destructive">
               <HugeiconsIcon icon={Delete02Icon} className="size-4" />
             </div>
-            <DialogTitle>
-              {isBatch ? `Delete ${users.length} ${entityLabelPlural}` : `Delete ${entityLabel}`}
-            </DialogTitle>
+            <DialogTitle>{isBatch ? `Delete ${users.length} Users` : "Delete User"}</DialogTitle>
           </div>
           <DialogDescription>
             {isBatch
-              ? `Are you sure you want to delete these ${users.length} ${entityLabelPlural.toLowerCase()}? Accounts with linked operational history cannot be deleted.`
+              ? `Are you sure you want to delete these ${users.length} users? Accounts with linked operational history cannot be deleted.`
               : users[0]
                 ? `Are you sure you want to delete "${users[0].name}" (@${users[0].username})? Accounts with linked operational history cannot be deleted.`
-                : `Confirm ${entityLabel.toLowerCase()} deletion.`}
+                : "Confirm user deletion."}
           </DialogDescription>
         </DialogHeader>
 
@@ -160,7 +149,7 @@ export function UserDeleteDialog({
             ) : (
               <HugeiconsIcon icon={Delete02Icon} className="size-3.5" data-icon="inline-start" />
             )}
-            {isBatch ? `Delete ${users.length} ${entityLabelPlural}` : `Delete ${entityLabel}`}
+            {isBatch ? `Delete ${users.length} Users` : "Delete User"}
           </Button>
         </DialogFooter>
       </DialogContent>

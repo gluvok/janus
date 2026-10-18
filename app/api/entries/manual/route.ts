@@ -52,7 +52,7 @@ export async function GET(request: Request) {
           created_at,
           updated_at,
           center:centers(id, name),
-          customer:users!manual_entries_customer_id_fkey(id, name),
+          customer:customers(id, name),
           created_by_user:users!manual_entries_created_by_fkey(id, name, role)
         `,
         { count: "exact" },

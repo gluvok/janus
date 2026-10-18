@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ColumnVisibilityState, SortingState, PaginationState } from "@tanstack/react-table";
 
-export const TABLES_COOKIE_NAME = "gluvok_tables_state";
+export const TABLES_COOKIE_NAME = "mesto_tables_state";
 export const TABLES_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 export const DEFAULT_PAGE_SIZE = 15;
 
@@ -66,9 +66,9 @@ export type TablesCookiePayload = z.infer<typeof tablesCookiePayloadSchema>;
 
 export const DEFAULT_TABLES_COOKIE: TablesCookiePayload = {
   mode: "automatic",
-  entries: {},
-  weighments: {},
-  tickets: {},
+  entries: { automatic: {}, manual: {} },
+  weighments: { automatic: {}, manual: {} },
+  tickets: { automatic: {}, manual: {} },
   centers: {},
   users: {},
   customers: {},

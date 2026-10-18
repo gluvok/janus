@@ -37,7 +37,7 @@ import {
   FormErrorBanner,
   FormRequiredNotice,
 } from "@/components/form-primitives";
-import { type StaffRole } from "./types";
+import { type UserRole } from "./types";
 
 export { DialogActionFooter, DialogIconBadge, FormErrorBanner, FormRequiredNotice };
 
@@ -271,8 +271,8 @@ export function CustomerPortalSwitch({ checked, onCheckedChange }: CustomerPorta
 /* -------------------------------------------------------------------------- */
 
 interface SystemRoleSelectProps {
-  value: StaffRole;
-  onChange: (role: StaffRole) => void;
+  value: UserRole;
+  onChange: (role: UserRole) => void;
   error?: string;
 }
 
@@ -293,7 +293,7 @@ export function SystemRoleSelect({ value, onChange, error }: SystemRoleSelectPro
         items={ROLE_OPTIONS}
         value={selectedOpt}
         onValueChange={(val) => {
-          if (val) onChange(val.value as StaffRole);
+          if (val) onChange(val.value as UserRole);
         }}
         itemToStringLabel={(opt) => (opt ? opt.label : "")}
         itemToStringValue={(opt) => (opt ? opt.value : "")}

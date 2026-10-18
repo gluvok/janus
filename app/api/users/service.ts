@@ -36,8 +36,6 @@ const rolesFilterSchema = z
   })
   .pipe(z.array(userRoleEnum));
 
-const isCustomerRole = (role: UserRole): boolean => role === "customer";
-
 export const ALLOWED_SORT_COLUMNS = [
   "id",
   "username",
@@ -99,8 +97,7 @@ export class ServiceError extends Error {
 }
 
 /**
- * Fetches a paginated, sorted, and filtered list of users.
- * Hardware accounts are strictly excluded from results unless includeHardware is specified.
+ * Fetches a paginated, sorted, and filtered list of staff users.
  */
 export async function fetchUsersList(searchParams: URLSearchParams) {
   const isAll = searchParams.get("all") === "true";
@@ -127,11 +124,7 @@ export async function fetchUsersList(searchParams: URLSearchParams) {
     const parsed = rolesFilterSchema.safeParse(rawRole);
     if (parsed.success && parsed.data.length > 0) {
       q = q.in("role", parsed.data);
-    } else {
-      q = q.not("role", "eq", "customer");
     }
-  } else {
-    q = q.not("role", "eq", "customer");
   }
 
   q = applyDateRange(q, searchParams);
@@ -161,18 +154,15 @@ export async function fetchUsersList(searchParams: URLSearchParams) {
 }
 
 /**
- * Creates a new user or customer account.
+ * Creates a new staff user account with mandatory credentials.
  */
 export async function createUserAccount(data: CreateUserInput) {
   const { username, name, role, password } = data;
-  const cleanUsername = username?.trim().toLowerCase() || null;
-  const cleanPassword = password?.trim() || null;
+  const cleanUsername = username.trim().toLowerCase();
 
-  if (cleanUsername) {
-    await assertUsernameAvailable(cleanUsername);
-  }
+  await assertUsernameAvailable(cleanUsername);
 
-  const passwordHash = cleanPassword ? await argon2.hash(cleanPassword) : null;
+  const passwordHash = await argon2.hash(password.trim());
 
   const { data: created, error: insertError } = await supabase
     .from("users")
@@ -194,7 +184,7 @@ export async function createUserAccount(data: CreateUserInput) {
 }
 
 /**
- * Updates an existing user or customer account with integrity guards.
+ * Updates an existing user account.
  */
 export async function updateUserAccount(data: UpdateUserInput) {
   const { id, username, name, role, password } = data;
@@ -214,37 +204,18 @@ export async function updateUserAccount(data: UpdateUserInput) {
     throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
   }
 
-  const cleanUsername = username !== undefined ? username?.trim().toLowerCase() || null : undefined;
+  const cleanUsername = username.trim().toLowerCase();
 
-  if (
-    cleanUsername !== undefined &&
-    cleanUsername !== existingUser.username &&
-    cleanUsername !== null
-  ) {
+  if (cleanUsername !== existingUser.username) {
     await assertUsernameAvailable(cleanUsername, id);
   }
 
   const updates: Record<string, unknown> = {
+    username: cleanUsername,
     name: name.trim(),
+    role,
     updated_at: new Date().toISOString(),
   };
-
-  if (cleanUsername !== undefined) {
-    updates.username = cleanUsername;
-    if (cleanUsername === null) {
-      updates.password_hash = null;
-    }
-  }
-
-  if (role && role !== existingUser.role) {
-    if (isCustomerRole(existingUser.role) !== isCustomerRole(role)) {
-      throw new ServiceError(
-        "Account role cannot be changed between staff and customer tiers.",
-        StatusCodes.FORBIDDEN,
-      );
-    }
-    updates.role = role;
-  }
 
   if (password && password.trim()) {
     updates.password_hash = await argon2.hash(password.trim());
@@ -265,7 +236,7 @@ export async function updateUserAccount(data: UpdateUserInput) {
 }
 
 /**
- * Soft-deletes user or customer accounts with batched relational pre-flight checks.
+ * Soft-deletes user accounts with batched relational pre-flight checks.
  */
 export async function deleteUserAccounts(targetIds: number[]) {
   const { data: targetUsers, error: fetchErr } = await supabase
@@ -285,48 +256,31 @@ export async function deleteUserAccounts(targetIds: number[]) {
     );
   }
 
-  const staffIds = targetUsers.filter((u) => !isCustomerRole(u.role)).map((u) => u.id);
-  const customerIds = targetUsers.filter((u) => isCustomerRole(u.role)).map((u) => u.id);
-
   // Constant O(1) batched pre-flight queries
-  const [entriesCreatedRes, ticketsRes, customerEntriesRes] = await Promise.all([
-    staffIds.length > 0
-      ? supabase
-          .from("entries")
-          .select("created_by")
-          .in("created_by", staffIds)
-          .is("deleted_at", null)
-      : Promise.resolve({ data: [] }),
-    staffIds.length > 0
-      ? supabase.from("tickets").select("user_id").in("user_id", staffIds).is("deleted_at", null)
-      : Promise.resolve({ data: [] }),
-    customerIds.length > 0
-      ? supabase
-          .from("entries")
-          .select("customer_id")
-          .in("customer_id", customerIds)
-          .is("deleted_at", null)
-      : Promise.resolve({ data: [] }),
+  const [entriesCreatedRes, ticketsRes] = await Promise.all([
+    supabase
+      .from("manual_entries")
+      .select("created_by")
+      .in("created_by", targetIds)
+      .is("deleted_at", null),
+    supabase
+      .from("manual_tickets")
+      .select("user_id")
+      .in("user_id", targetIds)
+      .is("deleted_at", null),
   ]);
 
   const entriesCreatedCounts = countOccurrences(entriesCreatedRes.data, "created_by");
   const ticketsCounts = countOccurrences(ticketsRes.data, "user_id");
-  const customerEntriesCounts = countOccurrences(customerEntriesRes.data, "customer_id");
 
   const blockedUsers: { id: number; username: string | null; reasons: string[] }[] = [];
 
   for (const u of targetUsers) {
     const reasons: string[] = [];
-
-    if (isCustomerRole(u.role)) {
-      const custEntries = customerEntriesCounts[u.id] || 0;
-      if (custEntries > 0) reasons.push(`${custEntries} linked entry(s)`);
-    } else {
-      const createdCount = entriesCreatedCounts[u.id] || 0;
-      const tickCount = ticketsCounts[u.id] || 0;
-      if (createdCount > 0) reasons.push(`${createdCount} entry(s) created`);
-      if (tickCount > 0) reasons.push(`${tickCount} ticket(s)`);
-    }
+    const createdCount = entriesCreatedCounts[u.id] || 0;
+    const tickCount = ticketsCounts[u.id] || 0;
+    if (createdCount > 0) reasons.push(`${createdCount} entry(s) created`);
+    if (tickCount > 0) reasons.push(`${tickCount} ticket(s)`);
 
     if (reasons.length > 0) {
       blockedUsers.push({ id: u.id, username: u.username, reasons });

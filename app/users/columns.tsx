@@ -60,13 +60,11 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Username" icon={TextFontIcon} />
       ),
-      cell: ({ row }) => {
-        const username = row.getValue("username") as string | null;
-        if (!username) {
-          return <span className="text-2xs text-muted-foreground italic">No portal account</span>;
-        }
-        return <span className="font-mono text-xs font-medium text-foreground">{username}</span>;
-      },
+      cell: ({ row }) => (
+        <span className="font-mono text-xs font-medium text-foreground">
+          {row.getValue("username")}
+        </span>
+      ),
       meta: {
         title: "Username",
         icon: TextFontIcon,

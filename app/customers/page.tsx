@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { UsersDataTable } from "@/app/users/data-table";
+import { CustomersDataTable } from "./customers-data-table";
 
 export const metadata: Metadata = {
-  title: "Customers | Gluvok",
-  description: "Manage client profiles, agricultural suppliers, and portal credentials.",
+  title: "Customers | Mesto",
+  description: "Manage transport and weighbridge customer profiles.",
 };
 
 export default function CustomersPage() {
-  return <UsersDataTable roleScope="customer" />;
+  return <CustomersDataTable />;
 }

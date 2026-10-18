@@ -14,11 +14,11 @@ import {
   UserDialogShell,
 } from "./user-dialog-primitives";
 import {
-  getStaffFormSchema,
-  type CreateStaffUserInput,
-  type StaffFormInput,
-  type StaffRole,
-  type UpdateStaffUserInput,
+  getUserFormSchema,
+  type CreateUserInput,
+  type UserFormInput,
+  type UserRole,
+  type UpdateUserInput,
   type User,
 } from "./types";
 
@@ -29,11 +29,11 @@ interface StaffUserDialogProps {
   onSuccess: () => void;
 }
 
-function getStaffInitialValues(user?: User | null): StaffFormInput {
+function getStaffInitialValues(user?: User | null): UserFormInput {
   return {
     id: user?.id,
     name: user?.name ?? "",
-    role: (user?.role as StaffRole) || "operator",
+    role: (user?.role as UserRole) || "operator",
     username: user?.username ?? "",
     password: "",
   };
@@ -43,7 +43,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
   const isEdit = Boolean(user);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const schema = useMemo(() => getStaffFormSchema({ isEdit }), [isEdit]);
+  const schema = useMemo(() => getUserFormSchema({ isEdit }), [isEdit]);
 
   const {
     handleSubmit,
@@ -51,7 +51,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
     watch,
     reset,
     formState: { isDirty, isValid, isSubmitting, errors },
-  } = useForm<StaffFormInput>({
+  } = useForm<UserFormInput>({
     resolver: zodResolver(schema),
     mode: "onChange",
     defaultValues: getStaffInitialValues(user),
@@ -69,7 +69,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
     }
   }, [open, user, reset]);
 
-  const onSubmit = async (values: StaffFormInput) => {
+  const onSubmit = async (values: UserFormInput) => {
     setFormError(null);
 
     const payload = {
@@ -78,7 +78,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
       role: values.role,
       username: values.username.toLowerCase().trim(),
       password: values.password?.trim() ?? "",
-    } satisfies UpdateStaffUserInput | CreateStaffUserInput;
+    } as UpdateUserInput | CreateUserInput;
 
     try {
       if (isEdit) {

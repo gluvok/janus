@@ -33,7 +33,6 @@ import { getColumns, type UsersTableMeta } from "./columns";
 import { type User } from "./types";
 import { UserDeleteDialog } from "./user-delete-dialog";
 import { StaffUserDialog } from "./staff-user-dialog";
-import { CustomerUserDialog } from "./customer-user-dialog";
 
 const ROLE_OPTIONS: FacetedFilterOption[] = [
   { label: "All Roles", value: "all", icon: SecurityCheckIcon },
@@ -61,59 +60,7 @@ const COLUMN_ICONS: Record<string, unknown> = {
   updated_at: Clock01Icon,
 };
 
-interface EntityConfig {
-  tableId: string;
-  entityLabel: string;
-  entityLabelPlural: string;
-  searchPlaceholder: string;
-  addButtonLabel: string;
-  emptyMessage: string;
-  hasRoleFilter: boolean;
-  extraParams?: Record<string, string>;
-  showRoleColumn: boolean;
-  FormDialog: React.ComponentType<{
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    user?: User | null;
-    onSuccess: () => void;
-  }>;
-}
-
-const ENTITY_CONFIG: Record<"staff" | "customer", EntityConfig> = {
-  staff: {
-    tableId: "users",
-    entityLabel: "User",
-    entityLabelPlural: "Users",
-    searchPlaceholder: "Search staff accounts...",
-    addButtonLabel: "Add Staff User",
-    emptyMessage: "No staff accounts found matching the specified filters.",
-    hasRoleFilter: true,
-    extraParams: undefined,
-    showRoleColumn: true,
-    FormDialog: StaffUserDialog,
-  },
-  customer: {
-    tableId: "customers",
-    entityLabel: "Customer",
-    entityLabelPlural: "Customers",
-    searchPlaceholder: "Search customers...",
-    addButtonLabel: "Add Customer",
-    emptyMessage: "No customers found matching the specified filters.",
-    hasRoleFilter: false,
-    extraParams: { role: "customer" },
-    showRoleColumn: false,
-    FormDialog: CustomerUserDialog,
-  },
-};
-
-interface UsersDataTableProps {
-  roleScope: "staff" | "customer";
-}
-
-export function UsersDataTable({ roleScope }: UsersDataTableProps) {
-  const config = ENTITY_CONFIG[roleScope];
-  const { FormDialog } = config;
-
+export function UsersDataTable() {
   // Dialog states
   const [formDialogOpen, setFormDialogOpen] = useState<boolean>(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<User | null>(null);
@@ -141,10 +88,7 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
     [handleEditUser, handleDeleteUser],
   );
 
-  const columns = useMemo(
-    () => getColumns({ showRole: config.showRoleColumn, entityLabel: config.entityLabel }),
-    [config.showRoleColumn, config.entityLabel],
-  );
+  const columns = useMemo(() => getColumns({ showRole: true, entityLabel: "User" }), []);
 
   const {
     table,
@@ -169,10 +113,9 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
     refresh,
     tableState,
   } = useDataTable<User>({
-    tableId: config.tableId,
+    tableId: "users",
     columns,
     endpoint: "/api/users",
-    extraParams: config.extraParams,
     meta: tableMeta,
   });
 
@@ -205,65 +148,44 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
         {/* Filters Group (Left) */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full sm:w-auto">
           {/* Search Input with Clear Button */}
-          <DataTableSearchInput
-            placeholder={config.searchPlaceholder}
-            value={search}
-            onChange={setSearch}
-          />
+          <DataTableSearchInput placeholder="Search users..." value={search} onChange={setSearch} />
 
-          {/* Faceted Role Filter (Staff view only) */}
-          {config.hasRoleFilter && (
-            <DataTableFacetedFilter
-              title="Role"
-              icon={SecurityCheckIcon}
-              options={ROLE_OPTIONS}
-              value={roleFilter}
-              onValueChange={(val) => {
-                setFilter("role", val);
-              }}
-            />
-          )}
+          {/* Faceted Role Filter */}
+          <DataTableFacetedFilter
+            title="Role"
+            icon={SecurityCheckIcon}
+            options={ROLE_OPTIONS}
+            value={roleFilter}
+            onValueChange={(val) => {
+              setFilter("role", val);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          />
         </div>
 
         {/* Action Controls Group (Right) */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          {/* Batch Delete Button (shown when rows are selected) */}
-          {selectedCount > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleBatchDelete}
-              className="h-8 gap-1.5 text-xs animate-in fade-in-0 duration-150"
-            >
-              <HugeiconsIcon icon={Delete02Icon} className="size-3.5" data-icon="inline-start" />
-              <span>Delete ({selectedCount})</span>
-            </Button>
-          )}
-
-          {/* Add User / Customer Button */}
-          <Button size="sm" onClick={handleAddUser} className="h-8 gap-1.5 text-xs">
-            <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" data-icon="inline-start" />
-            <span>{config.addButtonLabel}</span>
-          </Button>
-
-          {/* Refresh Button */}
           <DataTableRefreshButton onClick={refresh} loading={loading} />
-
-          {/* Creation Date Range Picker */}
           <DatePickerWithRange
             date={dateRange}
             onDateChange={(range) => {
               setDateRange(range);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
             }}
             className="flex-1 sm:flex-initial"
           />
 
-          {/* Column Visibility Toggle */}
           <DataTableViewOptions table={table} />
+
+          {/* Add User Button */}
+          <Button size="sm" onClick={handleAddUser} className="gap-1.5 text-xs h-8">
+            <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" />
+            <span>Add User</span>
+          </Button>
         </div>
       </div>
 
-      {/* Criteria Bar: Drag-and-drop sort priority chips */}
+      {/* Active Criteria Bar (Drag-and-Drop Sort Priority Chips) */}
       <DataTableCriteriaBar
         hasActiveSorts={hasActiveSorts}
         sorting={sorting}
@@ -275,42 +197,45 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
           removeSort(columnId);
           setPagination((prev) => ({ ...prev, pageIndex: 0 }));
         }}
+        onResetAll={resetAllCriteria}
+        onResetSorts={resetSorting}
         columnLabels={COLUMN_LABELS}
         columnIcons={COLUMN_ICONS}
-        onResetSorts={resetSorting}
-        onResetAll={resetAllCriteria}
       />
 
-      {/* Main Datatable Surface */}
-      <DataTableContent
-        table={table}
-        loading={loading}
-        error={error}
-        onRetry={refresh}
-        emptyMessage={config.emptyMessage}
-      />
+      {/* Floating Bulk Action Bar */}
+      {selectedCount > 0 && (
+        <div className="flex items-center justify-between rounded-md border border-border/80 bg-muted/40 px-3 py-1.5 text-xs">
+          <span className="font-medium text-muted-foreground">
+            {selectedCount} user{selectedCount > 1 ? "s" : ""} selected
+          </span>
+          <Button variant="destructive" size="xs" onClick={handleBatchDelete} className="gap-1.5">
+            <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+            <span>Delete Selected</span>
+          </Button>
+        </div>
+      )}
 
-      {/* Pagination Controls */}
-      <div className="shrink-0">
-        <DataTablePagination table={table} loading={loading} error={error} />
-      </div>
+      {/* Table Content Surface */}
+      <DataTableContent table={table} loading={loading} error={error} />
 
-      {/* Add / Edit User Form Modal (Dedicated Component) */}
-      <FormDialog
+      {/* Responsive Pagination Bar */}
+      <DataTablePagination table={table} />
+
+      {/* Staff User Form Dialog */}
+      <StaffUserDialog
         open={formDialogOpen}
         onOpenChange={setFormDialogOpen}
         user={selectedUserForEdit}
         onSuccess={handleMutationSuccess}
       />
 
-      {/* Delete User Confirmation Modal */}
+      {/* Delete User Dialog */}
       <UserDeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         users={usersToDelete}
         onSuccess={handleMutationSuccess}
-        entityLabel={config.entityLabel}
-        entityLabelPlural={config.entityLabelPlural}
       />
     </div>
   );

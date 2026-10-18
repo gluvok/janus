@@ -71,7 +71,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_enum') THEN
-        CREATE TYPE role_enum AS ENUM ('admin', 'manager', 'operator', 'base', 'customer');
+        CREATE TYPE role_enum AS ENUM ('admin', 'manager', 'operator', 'base');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'unit_enum') THEN
         CREATE TYPE unit_enum AS ENUM ('kg', 'q', 'gal');
@@ -111,24 +111,34 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_centers_factory_name
 ON centers (factory_id, name)
 WHERE deleted_at IS NULL;
 
+CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_factory_name
+ON customers (factory_id, name)
+WHERE deleted_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    username TEXT,
-    password_hash TEXT,
+    username TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
     role role_enum NOT NULL DEFAULT 'base',
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
-    CONSTRAINT chk_staff_credentials CHECK (
-        role = 'customer' OR (username IS NOT NULL AND password_hash IS NOT NULL)
-    )
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_active 
 ON users (username) 
-WHERE deleted_at IS NULL AND username IS NOT NULL;
+WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS devices (
     id SERIAL PRIMARY KEY,
@@ -177,7 +187,7 @@ CREATE TABLE IF NOT EXISTS manual_entries (
     vehicle_number TEXT NOT NULL,
     weight NUMERIC(10, 2) NOT NULL,
     center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
-    customer_id INT REFERENCES users(id) ON DELETE RESTRICT,
+    customer_id INT REFERENCES customers(id) ON DELETE RESTRICT,
     created_by INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     images TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -217,7 +227,7 @@ CREATE TABLE IF NOT EXISTS automatic_entries (
     id SERIAL PRIMARY KEY,
     device_id INT NOT NULL REFERENCES devices(id) ON DELETE RESTRICT,
     center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
-    customer_id INT REFERENCES users(id) ON DELETE RESTRICT,
+    customer_id INT REFERENCES customers(id) ON DELETE RESTRICT,
     detected_vehicle_number TEXT,
     vehicle_number TEXT NOT NULL,
     weight NUMERIC(10, 2) NOT NULL,
@@ -615,38 +625,38 @@ NOTIFY pgrst, 'reload schema';
 
 -- ==============================================================================
 -- PART 2: STORAGE BUCKET & POLICIES SETUP
--- Target Bucket: 'gluvok'
+-- Target Bucket: 'mesto'
 -- ==============================================================================
 
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('gluvok', 'gluvok', true)
+VALUES ('mesto', 'mesto', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
-DROP POLICY IF EXISTS "Public Read Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated Read Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Allow read access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Public Insert Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated Insert Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Allow insert access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Public Update Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated Update Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Allow update access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Public Delete Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated Delete Access for gluvok bucket" ON storage.objects;
-DROP POLICY IF EXISTS "Allow delete access for gluvok bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Read Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow read access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public Insert Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Insert Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow insert access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public Update Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Update Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow update access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Public Delete Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Delete Access for mesto bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow delete access for mesto bucket" ON storage.objects;
 
-CREATE POLICY "Allow insert access for gluvok bucket"
+CREATE POLICY "Allow insert access for mesto bucket"
 ON storage.objects FOR INSERT TO authenticated, service_role
 WITH CHECK (
-    bucket_id = 'gluvok' AND
+    bucket_id = 'mesto' AND
     name ~ '^[0-9]+/[^/]+$'
 );
 
-CREATE POLICY "Allow update access for gluvok bucket"
+CREATE POLICY "Allow update access for mesto bucket"
 ON storage.objects FOR UPDATE TO authenticated, service_role
-USING (bucket_id = 'gluvok')
-WITH CHECK (bucket_id = 'gluvok');
+USING (bucket_id = 'mesto')
+WITH CHECK (bucket_id = 'mesto');
 
-CREATE POLICY "Allow delete access for gluvok bucket"
+CREATE POLICY "Allow delete access for mesto bucket"
 ON storage.objects FOR DELETE TO authenticated, service_role
-USING (bucket_id = 'gluvok');
+USING (bucket_id = 'mesto');
