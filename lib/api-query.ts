@@ -30,12 +30,7 @@ export const paginationQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).catch(15).default(15),
 });
 
-const dateQuerySchema = z
-  .string()
-  .trim()
-  .refine((val) => !isNaN(new Date(val).getTime()), {
-    message: "Invalid date format",
-  });
+const dateQuerySchema = z.string().trim().pipe(z.coerce.date());
 
 /**
  * Parses and validates pagination parameters from URL search params using Zod.
@@ -51,37 +46,47 @@ export function parsePagination(searchParams: URLSearchParams): PaginationParams
 }
 
 /**
- * Parses multi-column sorting parameters from URL search params (e.g. "?sort=col1.asc,col2.desc").
- * Validates each requested column against an allowed whitelist and applies the default fallback if empty.
+ * Creates a reusable Zod schema to parse and validate multi-column sort queries.
  */
-export function parseSorting<T extends string>(
-  searchParams: URLSearchParams,
-  allowedColumns: readonly T[],
-  defaultSort: SortRule<T> = { col: "id" as T, ascending: false },
-): SortRule<T>[] {
-  const requestedSort = searchParams.get("sort")?.trim();
-  const sortRules: SortRule<T>[] = [];
-
-  if (requestedSort) {
-    const parts = requestedSort.split(",");
+export function createSortRulesSchema<T extends string>(allowedColumns: readonly T[]) {
+  const allowedSet = new Set<string>(allowedColumns);
+  return z.string().transform((val) => {
+    const rules: SortRule<T>[] = [];
+    const parts = val.split(",");
     for (const part of parts) {
       const [colName, dir] = part.split(/[.:]/);
-      const trimmedCol = colName?.trim();
-      if (allowedColumns.includes(trimmedCol as T)) {
+      const trimmedCol = colName?.trim() as T;
+      if (allowedSet.has(trimmedCol)) {
         const isAsc = dir?.trim().toLowerCase() !== "desc";
-        sortRules.push({
-          col: trimmedCol as T,
+        rules.push({
+          col: trimmedCol,
           ascending: isAsc,
         });
       }
     }
+    return rules;
+  });
+}
+
+/**
+ * Parses multi-column sorting parameters from URL search params (e.g. "?sort=col1.asc,col2.desc") using Zod.
+ * Validates each requested column against an allowed whitelist and applies the explicit default fallback if empty.
+ */
+export function parseSorting<T extends string>(
+  searchParams: URLSearchParams,
+  allowedColumns: readonly T[],
+  defaultSort: SortRule<T>,
+): SortRule<T>[] {
+  const requestedSort = searchParams.get("sort")?.trim();
+  if (requestedSort) {
+    const schema = createSortRulesSchema(allowedColumns);
+    const parsed = schema.safeParse(requestedSort);
+    if (parsed.success && parsed.data.length > 0) {
+      return parsed.data;
+    }
   }
 
-  if (sortRules.length === 0) {
-    sortRules.push(defaultSort);
-  }
-
-  return sortRules;
+  return [defaultSort];
 }
 
 /**
@@ -93,14 +98,13 @@ export function applyDateRange<
     gte(col: string, val: string): TQuery;
     lte(col: string, val: string): TQuery;
   },
->(query: TQuery, searchParams: URLSearchParams, column = "created_at"): TQuery {
+>(query: TQuery, searchParams: URLSearchParams): TQuery {
   let updated = query;
   const rawFrom = searchParams.get("from");
   if (rawFrom) {
     const parsed = dateQuerySchema.safeParse(rawFrom);
     if (parsed.success) {
-      const fromDate = new Date(parsed.data);
-      updated = updated.gte(column, fromDate.toISOString());
+      updated = updated.gte("created_at", parsed.data.toISOString());
     }
   }
 
@@ -110,7 +114,7 @@ export function applyDateRange<
     if (parsed.success) {
       const toDate = new Date(parsed.data);
       toDate.setHours(23, 59, 59, 999);
-      updated = updated.lte(column, toDate.toISOString());
+      updated = updated.lte("created_at", toDate.toISOString());
     }
   }
 

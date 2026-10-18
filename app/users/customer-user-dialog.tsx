@@ -175,7 +175,6 @@ export function CustomerUserDialog({
             setValue("password", val, { shouldValidate: true, shouldDirty: true })
           }
           passwordError={errors.password?.message}
-          isEdit={isEdit}
           isPasswordRequired={isPasswordRequired}
           usernamePlaceholder="e.g. kisan_ramesh"
           usernameDescription="Lowercase portal login handle."

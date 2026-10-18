@@ -18,7 +18,10 @@ export async function GET(request: Request) {
     const isAll = searchParams.get("all") === "true";
 
     const pagination = parsePagination(searchParams);
-    const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS);
+    const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS, {
+      col: "name",
+      ascending: true,
+    });
 
     let query = supabase
       .from("centers")

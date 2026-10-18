@@ -5,12 +5,11 @@ import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
-  ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
-} from "@/components/kibo-ui/combobox";
+} from "@/components/ui/combobox";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -25,7 +24,6 @@ import {
   LayoutTwoColumnIcon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
-import { ChevronsUpDownIcon } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { type Factory } from "./types";
 
@@ -57,11 +55,11 @@ export function FactoryForm({
   onReceiptImagesPerRowChange,
   receiptImagesError,
 }: FactoryFormProps) {
-  const selectedOption = RECEIPT_IMAGE_OPTIONS.find(
-    (opt) => opt.value === String(receiptImagesPerRow),
-  );
-  const selectedLabel = selectedOption?.label ?? `${receiptImagesPerRow} per row`;
-  const SelectedIcon = selectedOption?.icon ?? Image01Icon;
+  const selectedOption =
+    RECEIPT_IMAGE_OPTIONS.find((opt) => opt.value === String(receiptImagesPerRow)) ??
+    RECEIPT_IMAGE_OPTIONS[2];
+  const selectedLabel = selectedOption.label;
+  const SelectedIcon = selectedOption.icon;
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,16 +100,18 @@ export function FactoryForm({
             </span>
           </FieldLabel>
           <Combobox
-            data={RECEIPT_IMAGE_OPTIONS}
-            type="receipt images"
-            value={String(receiptImagesPerRow)}
+            items={RECEIPT_IMAGE_OPTIONS}
+            value={selectedOption}
             onValueChange={(val) => {
-              if (val) onReceiptImagesPerRowChange(Number(val));
+              if (val) onReceiptImagesPerRowChange(Number(val.value));
             }}
+            itemToStringLabel={(opt) => (opt ? opt.label : "")}
+            itemToStringValue={(opt) => (opt ? opt.value : "")}
+            isItemEqualToValue={(a, b) => a?.value === b?.value}
           >
             <ComboboxTrigger
               id="receipt-images"
-              className="h-8 w-full justify-between border-input bg-input/20 px-2.5 text-xs font-normal hover:bg-accent/50 dark:bg-input/30"
+              className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-input/20 px-2.5 text-xs font-normal hover:bg-accent/50 dark:bg-input/30 cursor-pointer"
             >
               <span className="flex items-center gap-1.5 truncate">
                 <HugeiconsIcon
@@ -120,31 +120,30 @@ export function FactoryForm({
                 />
                 <span className="truncate">{selectedLabel}</span>
               </span>
-              <ChevronsUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
             </ComboboxTrigger>
-            <ComboboxContent
-              className="min-w-56"
-              popoverOptions={{
-                align: "start",
-                sideOffset: 4,
-              }}
-            >
-              <ComboboxInput placeholder="Search options..." className="h-8 text-xs" />
+            <ComboboxContent className="w-max min-w-(--anchor-width) max-w-xs sm:max-w-sm">
+              <ComboboxInput
+                showTrigger={false}
+                placeholder="Search options..."
+                className="h-8 text-xs"
+              />
               <ComboboxEmpty className="py-2 text-center text-xs text-muted-foreground">
                 No option found.
               </ComboboxEmpty>
               <ComboboxList>
-                <ComboboxGroup>
-                  {RECEIPT_IMAGE_OPTIONS.map((opt) => (
-                    <ComboboxItem key={opt.value} value={opt.value} className="text-xs">
-                      <HugeiconsIcon
-                        icon={opt.icon}
-                        className="mr-1.5 size-3.5 text-muted-foreground"
-                      />
-                      <span>{opt.label}</span>
-                    </ComboboxItem>
-                  ))}
-                </ComboboxGroup>
+                {(opt) => (
+                  <ComboboxItem
+                    key={opt.value}
+                    value={opt}
+                    className="text-xs whitespace-nowrap cursor-pointer pr-6"
+                  >
+                    <HugeiconsIcon
+                      icon={opt.icon}
+                      className="mr-1.5 size-3.5 shrink-0 text-muted-foreground"
+                    />
+                    <span>{opt.label}</span>
+                  </ComboboxItem>
+                )}
               </ComboboxList>
             </ComboboxContent>
           </Combobox>

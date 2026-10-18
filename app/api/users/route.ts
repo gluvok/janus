@@ -116,8 +116,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const targetIds = "ids" in validation.data ? validation.data.ids : [validation.data.id];
-    const { deletedCount } = await deleteUserAccounts(targetIds);
+    const { deletedCount } = await deleteUserAccounts(validation.data.ids);
 
     return NextResponse.json({
       success: true,

@@ -8,14 +8,13 @@ import type {
 import {
   type TableItemState,
   type GlobalMode,
-  type EntryMode,
   DEFAULT_TABLE_ITEM_STATE,
   TABLES_COOKIE_NAME,
   parseTablesCookie,
   writeTablesCookie,
 } from "@/lib/table-cookie";
 
-export type { TableItemState, GlobalMode, EntryMode };
+export type { TableItemState, GlobalMode };
 export { DEFAULT_TABLE_ITEM_STATE };
 
 function resolveUpdater<T>(updaterOrValue: Updater<T>, previousValue: T): T {
@@ -240,4 +239,3 @@ export function useTableHydrated() {
 export function useGlobalMode() {
   return useDataTableStore((state) => state.globalMode);
 }
-export const useActiveEntryMode = useGlobalMode;

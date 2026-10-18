@@ -1,5 +1,6 @@
 "use client";
 
+import { z } from "zod";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
@@ -107,6 +108,18 @@ async function fetchFilterOptions() {
   };
 }
 
+function createFilterSanitizerSchema(validIds: Set<string>) {
+  return z.string().transform((val) => {
+    if (!val || val === "all") return "all";
+    const ids = val
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const valid = ids.filter((id) => validIds.has(id));
+    return valid.length === 0 ? "all" : valid.join(",");
+  });
+}
+
 function validateAndSanitizeFilters(
   currentFilters: Record<string, string>,
   centers: Center[],
@@ -116,27 +129,26 @@ function validateAndSanitizeFilters(
 ): { sanitizedFilters: Record<string, string>; needsFallback: boolean } {
   let needsFallback = false;
   const sanitizedFilters = { ...currentFilters };
-  const dynamicEntityChecks: Array<{ key: string; items: Array<{ id: number | string }> }> = [
-    { key: "center_id", items: centers },
-    { key: "customer_id", items: customers },
-    { key: "created_by", items: creators },
+  const dynamicEntityChecks: Array<{ key: string; validIds: Set<string> }> = [
+    { key: "center_id", validIds: new Set(centers.map((c) => String(c.id))) },
+    { key: "customer_id", validIds: new Set(customers.map((c) => String(c.id))) },
+    { key: "created_by", validIds: new Set(creators.map((c) => String(c.id))) },
   ];
 
-  for (const { key, items } of dynamicEntityChecks) {
-    const activeVal = sanitizedFilters[key];
-    if (activeVal && activeVal !== "all") {
-      if (key === "center_id") {
-        const ids = activeVal.split(",").filter(Boolean);
-        const validIds = ids.filter((id) => items.some((item) => String(item.id) === id));
-        if (validIds.length === 0) {
-          sanitizedFilters[key] = "all";
-          onReset(key);
+  for (const { key, validIds } of dynamicEntityChecks) {
+    const rawVal = sanitizedFilters[key];
+    if (rawVal && rawVal !== "all") {
+      const schema = createFilterSanitizerSchema(validIds);
+      const parsed = schema.safeParse(rawVal);
+      if (parsed.success) {
+        if (parsed.data !== rawVal) {
+          sanitizedFilters[key] = parsed.data;
           needsFallback = true;
-        } else if (validIds.length !== ids.length) {
-          sanitizedFilters[key] = validIds.join(",");
-          needsFallback = true;
+          if (parsed.data === "all") {
+            onReset(key);
+          }
         }
-      } else if (!items.some((item) => String(item.id) === activeVal)) {
+      } else {
         sanitizedFilters[key] = "all";
         onReset(key);
         needsFallback = true;
@@ -378,9 +390,6 @@ export function EntriesDataTable() {
         onResetFilters={resetAllFilters}
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
-        filterConfigs={filterConfigs}
-        filters={tableState.filters}
-        onFilterChange={(key, val) => setFilter(key, val)}
         dateRange={dateRange}
         onDateRangeChange={(range) => setDateRange(range)}
       />

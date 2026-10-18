@@ -187,7 +187,7 @@ For any JavaScript / TypeScript / Node modifications:
 
 **Keep only props that are actively called and consumed by parent components.**
 
-- **No Speculative or Pass-Through Props**: In custom and feature components (outside `components/ui/` and `components/kibo-ui/`), NEVER define or retain props, optional props (e.g. `className?: string`, `label?: string`), or catch-all spreads (`...props`, `extends ComponentProps<...>`) that are not passed by any parent component.
+- **No Speculative or Pass-Through Props**: In custom and feature components (outside `components/ui/`), NEVER define or retain props, optional props (e.g. `className?: string`, `label?: string`), or catch-all spreads (`...props`, `extends ComponentProps<...>`) that are not passed by any parent component.
 - **Prune Unused Prop Definitions**: When writing or refactoring components, inspect all parent call sites. If a prop is not passed by any caller, remove it completely from both the component parameters and its TypeScript props interface/type definition.
 - **Zero Raw Spreads**: Do not add `...props` to internal custom components unless there is a concrete, actively used requirement across callers.
 - **Parent-Driven API Design**: Components must expose the minimum prop surface required by their current usage in the application. Do not anticipate future callers by adding unused props.
@@ -244,6 +244,15 @@ For any JavaScript / TypeScript / Node modifications:
 - **No Masking Caller Intent**: In custom and feature components, NEVER assign arbitrary default values in prop destructuring (e.g. `isValid = true`, `submitLabel = "Save Changes"`, `title = "Default"`, `showIcon = true`).
 - **Explicit Call Sites**: Every prop that controls behavioral flow, validation, action labels, or callback triggers must be declared strictly mandatory (`isValid: boolean`, `submitLabel: string`) in the TypeScript interface and explicitly passed by each consuming component.
 - **Minimum Prop Surface**: If a value is constant or never varied across callers, hardcode it directly in the component rather than adding a configurable prop with a default fallback.
+
+## 18. Universal Zod Validation Across Codebase (Zero Manual Parsing/Validation)
+
+**Across the entire codebase outside `components/ui/`, all validation must strictly use Zod schemas.**
+
+- **Zero Manual Parsing/Validation**: Strictly prohibit manual `isNaN(...)` checks, ad-hoc string splitting or regex parsing without Zod schemas, manual range checks, or custom type-assertion checks.
+- **Query Parameter Validation**: Validate all URL search parameters (pagination, sorting, date ranges, entity IDs, comma-separated lists, enum filters, search strings) using declared, typed Zod schemas with `.parse()` or `.safeParse()`.
+- **Payload & Body Validation**: Validate all API request bodies (POST, PATCH, DELETE) and cookie payloads using strict Zod schemas with descriptive error messages.
+- **Frontend Filter Sanitization**: Validate and transform active table filter states, options matching, and fallback derivations through Zod schemas.
 
 ---
 

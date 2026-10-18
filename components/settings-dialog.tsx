@@ -36,14 +36,6 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const DEFAULT_FACTORY_FALLBACK: Factory = {
-  id: 0,
-  name: "",
-  receipt_images_per_row: 3,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 function getFactoryFormValues(f: Factory): FactoryFormInput {
   return {
     name: f.name,
@@ -55,8 +47,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [factory, setFactory] = useState<Factory | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  const effectiveFactory = factory ?? DEFAULT_FACTORY_FALLBACK;
 
   const {
     handleSubmit,
@@ -145,7 +135,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               Retry
             </Button>
           </div>
-        ) : (
+        ) : factory ? (
           <div className="relative">
             {loading && (
               <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur-sm">
@@ -163,7 +153,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               <FormRequiredNotice />
 
               <FactoryForm
-                factory={effectiveFactory}
+                factory={factory}
                 name={name}
                 onNameChange={(val) =>
                   setValue("name", val, { shouldValidate: true, shouldDirty: true })
@@ -187,6 +177,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 submitLabel="Save Changes"
               />
             </form>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <Spinner className="size-6 text-primary" />
           </div>
         )}
       </DialogContent>

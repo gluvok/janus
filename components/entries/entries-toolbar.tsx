@@ -5,7 +5,6 @@ import type { DateRange } from "react-day-picker";
 import {
   DataTableSearchInput,
   DataTableFacetedFilter,
-  DataTableMultiComboboxFilter,
   DataTableRefreshButton,
   type FacetedFilterOption,
   DataTableViewOptions,
@@ -19,7 +18,7 @@ export interface EntriesFilterConfig {
   title: string;
   options: FacetedFilterOption[];
   variant: "stone" | "emerald" | "orange" | "primary";
-  categoryIcon?: unknown;
+  categoryIcon: React.ComponentProps<typeof HugeiconsIcon>["icon"];
 }
 
 export interface EntriesToolbarProps<TData extends RowData> {
@@ -72,26 +71,16 @@ export function EntriesToolbar<TData extends RowData>({
 
       {/* Row 2: Filter Comboboxes via declarative loop */}
       <div className="flex flex-wrap items-center gap-2">
-        {filterConfigs.map((config) =>
-          config.key === "center_id" ? (
-            <DataTableMultiComboboxFilter
-              key={config.key}
-              title={config.title}
-              icon={config.categoryIcon as React.ComponentProps<typeof HugeiconsIcon>["icon"]}
-              options={config.options}
-              value={filters[config.key] ?? "all"}
-              onValueChange={(val: string) => onFilterChange(config.key, val)}
-            />
-          ) : (
-            <DataTableFacetedFilter
-              key={config.key}
-              title={config.title}
-              options={config.options}
-              value={filters[config.key] ?? "all"}
-              onValueChange={(val: string) => onFilterChange(config.key, val)}
-            />
-          ),
-        )}
+        {filterConfigs.map((config) => (
+          <DataTableFacetedFilter
+            key={config.key}
+            title={config.title}
+            icon={config.categoryIcon}
+            options={config.options}
+            value={filters[config.key] ?? "all"}
+            onValueChange={(val: string) => onFilterChange(config.key, val)}
+          />
+        ))}
       </div>
     </div>
   );

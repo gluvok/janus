@@ -23,8 +23,8 @@ interface UserDeleteDialogProps {
   onOpenChange: (open: boolean) => void;
   users: User[];
   onSuccess: () => void;
-  entityLabel?: string;
-  entityLabelPlural?: string;
+  entityLabel: string;
+  entityLabelPlural: string;
 }
 
 export function UserDeleteDialog({
@@ -32,8 +32,8 @@ export function UserDeleteDialog({
   onOpenChange,
   users,
   onSuccess,
-  entityLabel = "User",
-  entityLabelPlural = "Users",
+  entityLabel,
+  entityLabelPlural,
 }: UserDeleteDialogProps) {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function UserDeleteDialog({
     setIsDeleting(true);
 
     try {
-      const payload = isBatch ? { ids: users.map((u) => u.id) } : { id: users[0].id };
+      const payload = { ids: users.map((u) => u.id) };
 
       await axios.delete("/api/users", { data: payload });
 

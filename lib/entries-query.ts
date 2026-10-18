@@ -4,6 +4,7 @@
  * Deduplicates search weight parsing, filter extraction, in-memory relational sorting, and pagination slicing.
  */
 
+import { z } from "zod";
 import type { SortRule, PaginationParams } from "@/lib/api-query";
 
 export interface SortableEntry {
@@ -14,45 +15,65 @@ export interface SortableEntry {
   created_by_user?: { name?: string | null } | null;
 }
 
+export const numericWeightSchema = z
+  .string()
+  .transform((val) => Number(val.replace(/[, ]/g, "").replace(/kg$/i, "")))
+  .pipe(z.number().positive());
+
 /**
  * Extracts numeric weight when a user searches for numeric values or values ending in 'kg'.
- * Returns null if the search term is not a positive number.
+ * Validates through numericWeightSchema. Returns null if invalid or non-positive.
  */
 export function parseNumericWeight(search: string): number | null {
-  const numericStr = search.replace(/[, ]/g, "").replace(/kg$/i, "");
-  const numericVal = Number(numericStr);
-  return !isNaN(numericVal) && numericStr.length > 0 && numericVal > 0 ? numericVal : null;
+  const result = numericWeightSchema.safeParse(search);
+  return result.success ? result.data : null;
 }
 
 /**
- * Applies common center_id and customer_id filters from URL search params to an entries query.
+ * Zod schema to parse and sanitize comma-separated numeric IDs from URL query params.
+ */
+export const commaSeparatedIdsSchema = z
+  .string()
+  .transform((val) => {
+    const rawItems = val
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const valid: number[] = [];
+    for (const item of rawItems) {
+      const parsed = z.coerce.number().int().positive().safeParse(item);
+      if (parsed.success) {
+        valid.push(parsed.data);
+      }
+    }
+    return valid;
+  })
+  .pipe(z.array(z.number().int().positive()));
+
+/**
+ * Applies common center_id and customer_id filters from URL search params to an entries query
+ * using strict Zod schema validation.
  */
 export function applyCommonEntriesFilters<
   TQuery extends {
-    eq(col: string, val: number): TQuery;
     in(col: string, vals: number[]): TQuery;
   },
 >(query: TQuery, searchParams: URLSearchParams): TQuery {
   let updated = query;
 
-  const centerId = searchParams.get("center_id")?.trim();
-  if (centerId && centerId !== "all") {
-    const ids = centerId
-      .split(",")
-      .map((id) => Number(id.trim()))
-      .filter((n) => !isNaN(n) && n > 0);
-    if (ids.length === 1) {
-      updated = updated.eq("center_id", ids[0]);
-    } else if (ids.length > 1) {
-      updated = updated.in("center_id", ids);
+  const rawCenterId = searchParams.get("center_id")?.trim();
+  if (rawCenterId && rawCenterId !== "all") {
+    const parsed = commaSeparatedIdsSchema.safeParse(rawCenterId);
+    if (parsed.success && parsed.data.length > 0) {
+      updated = updated.in("center_id", parsed.data);
     }
   }
 
-  const customerId = searchParams.get("customer_id")?.trim();
-  if (customerId && customerId !== "all") {
-    const parsedCustomerId = Number(customerId);
-    if (!isNaN(parsedCustomerId)) {
-      updated = updated.eq("customer_id", parsedCustomerId);
+  const rawCustomerId = searchParams.get("customer_id")?.trim();
+  if (rawCustomerId && rawCustomerId !== "all") {
+    const parsed = commaSeparatedIdsSchema.safeParse(rawCustomerId);
+    if (parsed.success && parsed.data.length > 0) {
+      updated = updated.in("customer_id", parsed.data);
     }
   }
 

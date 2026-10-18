@@ -152,7 +152,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
           setValue("password", val, { shouldValidate: true, shouldDirty: true })
         }
         passwordError={errors.password?.message}
-        isEdit={isEdit}
+        isPasswordRequired={!isEdit}
         usernamePlaceholder="e.g. alex_operator"
         usernameDescription="Unique lowercase login handle."
       />

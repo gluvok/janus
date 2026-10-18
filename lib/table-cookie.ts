@@ -1,10 +1,12 @@
+import { z } from "zod";
 import type { ColumnVisibilityState, SortingState, PaginationState } from "@tanstack/react-table";
 
 export const TABLES_COOKIE_NAME = "gluvok_tables_state";
 export const TABLES_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+export const DEFAULT_PAGE_SIZE = 15;
 
-export type GlobalMode = "automatic" | "manual";
-export type EntryMode = GlobalMode;
+export const globalModeSchema = z.enum(["automatic", "manual"]);
+export type GlobalMode = z.infer<typeof globalModeSchema>;
 
 /**
  * Derives the partitioned tableId for any dual-mode entity.
@@ -30,24 +32,30 @@ export const DEFAULT_TABLE_ITEM_STATE: TableItemState = {
   filters: {},
   dateRange: undefined,
   sorting: [],
-  pagination: { pageIndex: 0, pageSize: 15 },
+  pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
   columnVisibility: {},
 };
 
-export type PrunedTableState = Partial<{
-  search: string;
-  filters: Record<string, string>;
-  dateRange: { from?: string; to?: string };
-  sorting: SortingState;
-  pagination: Partial<PaginationState>;
-  columnVisibility: ColumnVisibilityState;
-}>;
+export const prunedTableStateSchema = z.object({
+  search: z.string().optional(),
+  filters: z.record(z.string(), z.string()).optional(),
+  dateRange: z.object({ from: z.string().optional(), to: z.string().optional() }).optional(),
+  sorting: z.array(z.object({ id: z.string(), desc: z.boolean() })).optional(),
+  pagination: z
+    .object({
+      pageIndex: z.number().int().nonnegative().optional(),
+      pageSize: z.number().int().positive().optional(),
+    })
+    .optional(),
+  columnVisibility: z.record(z.string(), z.boolean()).optional(),
+});
+export type PrunedTableState = z.infer<typeof prunedTableStateSchema>;
 
-export interface SerializedCookiePayload {
-  globalMode?: GlobalMode;
-  mode?: GlobalMode;
-  tables: Record<string, PrunedTableState>;
-}
+export const tablesCookiePayloadSchema = z.object({
+  globalMode: globalModeSchema,
+  tables: z.record(z.string(), prunedTableStateSchema),
+});
+export type TablesCookiePayload = z.infer<typeof tablesCookiePayloadSchema>;
 
 /**
  * Prunes default/empty values to minimize cookie payload size.
@@ -78,11 +86,13 @@ export function pruneTableState(
 
     if (
       state.pagination &&
-      (state.pagination.pageIndex !== 0 || state.pagination.pageSize !== 15)
+      (state.pagination.pageIndex !== 0 || state.pagination.pageSize !== DEFAULT_PAGE_SIZE)
     ) {
       item.pagination = {
         ...(state.pagination.pageIndex !== 0 ? { pageIndex: state.pagination.pageIndex } : {}),
-        ...(state.pagination.pageSize !== 15 ? { pageSize: state.pagination.pageSize } : {}),
+        ...(state.pagination.pageSize !== DEFAULT_PAGE_SIZE
+          ? { pageSize: state.pagination.pageSize }
+          : {}),
       };
     }
 
@@ -103,10 +113,10 @@ export function pruneTableState(
  */
 export function serializeTablesCookie(
   tables: Record<string, TableItemState>,
-  globalMode: GlobalMode = "automatic",
+  globalMode: GlobalMode,
 ): string {
   const pruned = pruneTableState(tables);
-  const payload: SerializedCookiePayload = {
+  const payload: TablesCookiePayload = {
     globalMode,
     tables: pruned,
   };
@@ -118,9 +128,25 @@ export interface ParsedTablesCookieResult {
   globalMode: GlobalMode;
 }
 
+function parseJsonString(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    if (raw.startsWith("%7B") || raw.startsWith("%7b") || raw.includes("%")) {
+      try {
+        return JSON.parse(decodeURIComponent(raw));
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
 /**
  * Safely parses cookie value (from server cookies() or document.cookie)
  * into a complete Record<string, TableItemState> and active global mode.
+ * Gracefully defaults on invalid or missing data.
  */
 export function parseTablesCookie(rawCookie?: string | null): ParsedTablesCookieResult {
   const defaultResult: ParsedTablesCookieResult = {
@@ -130,43 +156,34 @@ export function parseTablesCookie(rawCookie?: string | null): ParsedTablesCookie
 
   if (!rawCookie) return defaultResult;
 
-  try {
-    const decoded = rawCookie.includes("%") ? decodeURIComponent(rawCookie) : rawCookie;
-    const parsed = JSON.parse(decoded);
-    if (!parsed || typeof parsed !== "object") return defaultResult;
+  const parsedJson = parseJsonString(rawCookie);
+  if (!parsedJson) return defaultResult;
 
-    const rawTables =
-      "tables" in parsed && typeof parsed.tables === "object" && parsed.tables !== null
-        ? (parsed.tables as Record<string, PrunedTableState>)
-        : (parsed as Record<string, PrunedTableState>);
+  const parseResult = tablesCookiePayloadSchema.safeParse(parsedJson);
+  if (!parseResult.success) return defaultResult;
 
-    const rawGlobalMode = parsed.globalMode ?? parsed.mode;
-    const globalMode: GlobalMode = rawGlobalMode === "manual" ? "manual" : "automatic";
+  const { globalMode, tables } = parseResult.data;
+  const resultTables: Record<string, TableItemState> = {};
 
-    const resultTables: Record<string, TableItemState> = {};
-    for (const [tableId, pruned] of Object.entries(rawTables)) {
-      if (!pruned || typeof pruned !== "object") continue;
-      resultTables[tableId] = {
-        ...DEFAULT_TABLE_ITEM_STATE,
-        ...(pruned.search ? { search: pruned.search } : {}),
-        ...(pruned.filters ? { filters: pruned.filters } : {}),
-        ...(pruned.dateRange ? { dateRange: pruned.dateRange } : {}),
-        ...(pruned.sorting ? { sorting: pruned.sorting } : {}),
-        ...(pruned.columnVisibility ? { columnVisibility: pruned.columnVisibility } : {}),
-        pagination: {
-          pageIndex: pruned.pagination?.pageIndex ?? 0,
-          pageSize: pruned.pagination?.pageSize ?? 15,
-        },
-      };
-    }
-
-    return {
-      tables: resultTables,
-      globalMode,
+  for (const [tableId, pruned] of Object.entries(tables)) {
+    resultTables[tableId] = {
+      ...DEFAULT_TABLE_ITEM_STATE,
+      ...(pruned.search ? { search: pruned.search } : {}),
+      ...(pruned.filters ? { filters: pruned.filters } : {}),
+      ...(pruned.dateRange ? { dateRange: pruned.dateRange } : {}),
+      ...(pruned.sorting ? { sorting: pruned.sorting } : {}),
+      ...(pruned.columnVisibility ? { columnVisibility: pruned.columnVisibility } : {}),
+      pagination: {
+        pageIndex: pruned.pagination?.pageIndex ?? 0,
+        pageSize: pruned.pagination?.pageSize ?? DEFAULT_PAGE_SIZE,
+      },
     };
-  } catch {
-    return defaultResult;
   }
+
+  return {
+    tables: resultTables,
+    globalMode,
+  };
 }
 
 /**
@@ -174,7 +191,7 @@ export function parseTablesCookie(rawCookie?: string | null): ParsedTablesCookie
  */
 export function writeTablesCookie(
   tables: Record<string, TableItemState>,
-  globalMode: GlobalMode = "automatic",
+  globalMode: GlobalMode,
 ): void {
   if (typeof document === "undefined") return;
 

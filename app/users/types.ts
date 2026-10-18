@@ -19,7 +19,6 @@ export interface User {
 
 export const userRoleEnum = z.enum(USER_ROLES);
 export const staffRoleEnum = z.enum(STAFF_ROLES);
-export const assignableRoleEnum = z.enum(["admin", "manager", "operator", "base", "customer"]);
 
 // Reusable single-source field validation schemas
 export const usernameSchema = z
@@ -121,10 +120,9 @@ export const updateUserSchema = z.discriminatedUnion("role", [
   updateCustomerUserSchema,
 ]);
 
-export const deleteUserSchema = z.union([
-  z.object({ id: z.number().int().positive() }),
-  z.object({ ids: z.array(z.number().int().positive()).min(1, "At least one ID required") }),
-]);
+export const deleteUserSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1, "At least one ID required"),
+});
 
 /* -------------------------------------------------------------------------- */
 /* Dialog Form Schemas (React Hook Form + Zod Resolvers)                      */

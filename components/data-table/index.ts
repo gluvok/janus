@@ -16,11 +16,6 @@ export {
   type FacetedFilterOption,
 } from "./data-table-faceted-filter";
 
-export {
-  DataTableMultiComboboxFilter,
-  type DataTableMultiComboboxFilterProps,
-} from "./data-table-multi-combobox-filter";
-
 export { features, type DataTableFeatures } from "./data-table-features";
 
 export { DataTableFilterChip, type FilterChipVariant } from "./data-table-filter-chip";

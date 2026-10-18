@@ -7,7 +7,6 @@ import {
   DataTableFacetedFilter,
   type FacetedFilterOption,
   DataTableCriteriaBar,
-  DataTableFilterChip,
   DataTableDateRangeChip,
   DataTableContent,
   DataTablePagination,
@@ -219,6 +218,7 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
           {config.hasRoleFilter && (
             <DataTableFacetedFilter
               title="Role"
+              icon={SecurityCheckIcon}
               options={ROLE_OPTIONS}
               value={roleFilter}
               onValueChange={(val) => {
@@ -285,39 +285,6 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
       >
-        {/* Role Chip (Staff view only) with matching RoleBadge color variant */}
-        {config.hasRoleFilter &&
-          roleFilter !== "all" &&
-          (() => {
-            const activeRoleOption = ROLE_OPTIONS.find((o) => o.value === roleFilter);
-            const RoleIcon =
-              (activeRoleOption?.icon as typeof SecurityCheckIcon) ?? SecurityCheckIcon;
-            const roleVariant =
-              roleFilter === "admin"
-                ? "zinc"
-                : roleFilter === "manager"
-                  ? "amber"
-                  : roleFilter === "operator"
-                    ? "primary"
-                    : roleFilter === "customer"
-                      ? "emerald"
-                      : roleFilter === "hardware"
-                        ? "orange"
-                        : "stone";
-            return (
-              <DataTableFilterChip
-                label="Role"
-                value={activeRoleOption?.label ?? roleFilter}
-                categoryIcon={SecurityCheckIcon}
-                valueIcon={RoleIcon}
-                variant={roleVariant}
-                onRemove={() => {
-                  setFilter("role", "all");
-                }}
-              />
-            );
-          })()}
-
         <DataTableDateRangeChip dateRange={dateRange} onRemove={() => setDateRange(undefined)} />
       </DataTableCriteriaBar>
 

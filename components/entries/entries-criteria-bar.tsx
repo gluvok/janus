@@ -2,12 +2,7 @@
 
 import type { SortingState, Updater } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
-import {
-  DataTableCriteriaBar,
-  DataTableFilterChip,
-  DataTableDateRangeChip,
-} from "@/components/data-table";
-import type { EntriesFilterConfig } from "./entries-toolbar";
+import { DataTableCriteriaBar, DataTableDateRangeChip } from "@/components/data-table";
 
 export interface EntriesCriteriaBarProps {
   hasActiveFilters: boolean;
@@ -20,9 +15,6 @@ export interface EntriesCriteriaBarProps {
   onResetFilters: () => void;
   onResetSorts: () => void;
   onResetAll: () => void;
-  filterConfigs: EntriesFilterConfig[];
-  filters: Record<string, string>;
-  onFilterChange: (key: string, value: string) => void;
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
 }
@@ -38,9 +30,6 @@ export function EntriesCriteriaBar({
   onResetFilters,
   onResetSorts,
   onResetAll,
-  filterConfigs,
-  filters,
-  onFilterChange,
   dateRange,
   onDateRangeChange,
 }: EntriesCriteriaBarProps) {
@@ -57,34 +46,6 @@ export function EntriesCriteriaBar({
       onResetSorts={onResetSorts}
       onResetAll={onResetAll}
     >
-      {/* Dynamic & Static Active Filter Chips via declarative loop (center_id is omitted as it has inline chips) */}
-      {filterConfigs.map((config) => {
-        if (config.key === "center_id") return null;
-        const activeVal = filters[config.key] ?? "all";
-        if (!activeVal || activeVal === "all") return null;
-
-        const selectedOption = config.options.find((o) => o.value === activeVal);
-        const label = selectedOption
-          ? selectedOption.idPrefix
-            ? `${selectedOption.idPrefix} ${selectedOption.label}`
-            : selectedOption.label
-          : `${config.title} #${activeVal}`;
-
-        const chipVariant = config.variant;
-
-        return (
-          <DataTableFilterChip
-            key={config.key}
-            label={config.title}
-            value={label}
-            categoryIcon={config.categoryIcon}
-            valueIcon={selectedOption?.icon}
-            variant={chipVariant}
-            onRemove={() => onFilterChange(config.key, "all")}
-          />
-        );
-      })}
-
       {/* Active Date Range Chip (Golden Honey Amber) */}
       <DataTableDateRangeChip dateRange={dateRange} onRemove={() => onDateRangeChange(undefined)} />
     </DataTableCriteriaBar>

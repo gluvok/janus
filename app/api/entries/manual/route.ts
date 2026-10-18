@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-query";
 import {
   parseNumericWeight,
+  commaSeparatedIdsSchema,
   applyCommonEntriesFilters,
   sortEntriesRelational,
   paginateInMemory,
@@ -32,7 +33,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const pagination = parsePagination(searchParams);
-    const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS);
+    const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS, {
+      col: "id",
+      ascending: false,
+    });
 
     let query = supabase
       .from("manual_entries")
@@ -69,9 +73,9 @@ export async function GET(request: Request) {
 
     const createdBy = searchParams.get("created_by")?.trim();
     if (createdBy && createdBy !== "all") {
-      const parsedCreatedBy = Number(createdBy);
-      if (!isNaN(parsedCreatedBy)) {
-        query = query.eq("created_by", parsedCreatedBy);
+      const parsed = commaSeparatedIdsSchema.safeParse(createdBy);
+      if (parsed.success && parsed.data.length > 0) {
+        query = query.in("created_by", parsed.data);
       }
     }
 

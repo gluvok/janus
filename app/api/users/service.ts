@@ -1,3 +1,4 @@
+import { z } from "zod";
 import argon2 from "argon2";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
@@ -10,12 +11,30 @@ import {
   formatPaginatedResponse,
 } from "@/lib/api-query";
 import {
-  USER_ROLES,
+  userRoleEnum,
   type User,
   type UserRole,
   type CreateUserInput,
   type UpdateUserInput,
 } from "@/app/users/types";
+
+const rolesFilterSchema = z
+  .string()
+  .transform((val) => {
+    const parts = val
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const validRoles: UserRole[] = [];
+    for (const part of parts) {
+      const parsed = userRoleEnum.safeParse(part);
+      if (parsed.success) {
+        validRoles.push(parsed.data);
+      }
+    }
+    return validRoles;
+  })
+  .pipe(z.array(userRoleEnum));
 
 const isCustomerRole = (role: UserRole): boolean => role === "customer";
 
@@ -86,7 +105,10 @@ export class ServiceError extends Error {
 export async function fetchUsersList(searchParams: URLSearchParams) {
   const isAll = searchParams.get("all") === "true";
   const pagination = parsePagination(searchParams);
-  const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS);
+  const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS, {
+    col: "id",
+    ascending: false,
+  });
 
   let q = supabase
     .from("users")
@@ -100,9 +122,14 @@ export async function fetchUsersList(searchParams: URLSearchParams) {
     q = q.or(`name.ilike.%${search}%,username.ilike.%${search}%`);
   }
 
-  const role = searchParams.get("role")?.trim();
-  if (role && USER_ROLES.includes(role as (typeof USER_ROLES)[number])) {
-    q = q.eq("role", role);
+  const rawRole = searchParams.get("role")?.trim();
+  if (rawRole && rawRole !== "all") {
+    const parsed = rolesFilterSchema.safeParse(rawRole);
+    if (parsed.success && parsed.data.length > 0) {
+      q = q.in("role", parsed.data);
+    } else {
+      q = q.not("role", "eq", "customer");
+    }
   } else {
     q = q.not("role", "eq", "customer");
   }

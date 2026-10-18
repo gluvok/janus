@@ -32,7 +32,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const pagination = parsePagination(searchParams);
-    const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS);
+    const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS, {
+      col: "id",
+      ascending: false,
+    });
 
     let query = supabase
       .from("automatic_entries")

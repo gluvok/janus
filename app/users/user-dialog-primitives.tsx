@@ -16,12 +16,11 @@ import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
-  ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
-} from "@/components/kibo-ui/combobox";
+} from "@/components/ui/combobox";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Briefcase01Icon,
@@ -32,7 +31,6 @@ import {
   TextFontIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
-import { ChevronsUpDownIcon } from "lucide-react";
 import {
   DialogActionFooter,
   DialogIconBadge,
@@ -174,10 +172,9 @@ interface CredentialsFieldsProps {
   password: string;
   setPassword: (val: string) => void;
   passwordError?: string;
-  isEdit: boolean;
-  isPasswordRequired?: boolean;
-  usernamePlaceholder?: string;
-  usernameDescription?: string;
+  isPasswordRequired: boolean;
+  usernamePlaceholder: string;
+  usernameDescription: string;
 }
 
 export function CredentialsFields({
@@ -187,10 +184,9 @@ export function CredentialsFields({
   password,
   setPassword,
   passwordError,
-  isEdit,
-  isPasswordRequired = !isEdit,
-  usernamePlaceholder = "e.g. alex_operator",
-  usernameDescription = "Unique lowercase login handle.",
+  isPasswordRequired,
+  usernamePlaceholder,
+  usernameDescription,
 }: CredentialsFieldsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -281,8 +277,8 @@ interface SystemRoleSelectProps {
 }
 
 export function SystemRoleSelect({ value, onChange, error }: SystemRoleSelectProps) {
-  const selectedOpt = ROLE_OPTIONS.find((o) => o.value === value);
-  const IconComponent = selectedOpt?.icon ?? SecurityCheckIcon;
+  const selectedOpt = ROLE_OPTIONS.find((o) => o.value === value) ?? ROLE_OPTIONS[0];
+  const IconComponent = selectedOpt.icon;
 
   return (
     <Field data-invalid={Boolean(error)}>
@@ -294,49 +290,46 @@ export function SystemRoleSelect({ value, onChange, error }: SystemRoleSelectPro
         </span>
       </FieldLabel>
       <Combobox
-        data={ROLE_OPTIONS}
-        type="role"
-        value={value}
+        items={ROLE_OPTIONS}
+        value={selectedOpt}
         onValueChange={(val) => {
-          if (val) onChange(val as StaffRole);
+          if (val) onChange(val.value as StaffRole);
         }}
+        itemToStringLabel={(opt) => (opt ? opt.label : "")}
+        itemToStringValue={(opt) => (opt ? opt.value : "")}
+        isItemEqualToValue={(a, b) => a?.value === b?.value}
       >
         <ComboboxTrigger
           id="user-role"
-          className="h-8 w-full justify-between border-input bg-input/20 px-2.5 text-xs font-normal hover:bg-accent/50 dark:bg-input/30"
+          className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-input/20 px-2.5 text-xs font-normal hover:bg-accent/50 dark:bg-input/30 cursor-pointer"
         >
           <span className="flex items-center gap-1.5 truncate">
             <HugeiconsIcon
               icon={IconComponent}
               className="size-3.5 shrink-0 text-muted-foreground"
             />
-            <span className="truncate">{selectedOpt?.label ?? "Select role..."}</span>
+            <span className="truncate">{selectedOpt.label}</span>
           </span>
-          <ChevronsUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
         </ComboboxTrigger>
-        <ComboboxContent
-          className="min-w-56"
-          popoverOptions={{
-            align: "start",
-            sideOffset: 4,
-          }}
-        >
-          <ComboboxInput placeholder="Search role..." className="h-8 text-xs" />
+        <ComboboxContent className="w-max min-w-(--anchor-width) max-w-xs sm:max-w-sm">
+          <ComboboxInput showTrigger={false} placeholder="Search role..." className="h-8 text-xs" />
           <ComboboxEmpty className="py-2 text-center text-xs text-muted-foreground">
             No role found.
           </ComboboxEmpty>
           <ComboboxList>
-            <ComboboxGroup>
-              {ROLE_OPTIONS.map((opt) => (
-                <ComboboxItem key={opt.value} value={opt.value} className="text-xs">
-                  <HugeiconsIcon
-                    icon={opt.icon}
-                    className="mr-1.5 size-3.5 text-muted-foreground"
-                  />
-                  <span>{opt.label}</span>
-                </ComboboxItem>
-              ))}
-            </ComboboxGroup>
+            {(opt) => (
+              <ComboboxItem
+                key={opt.value}
+                value={opt}
+                className="text-xs whitespace-nowrap cursor-pointer pr-6"
+              >
+                <HugeiconsIcon
+                  icon={opt.icon}
+                  className="mr-1.5 size-3.5 shrink-0 text-muted-foreground"
+                />
+                <span>{opt.label}</span>
+              </ComboboxItem>
+            )}
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
