@@ -1,11 +1,10 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CpuIcon, UserIcon } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
 import { useDataTableStore, useTableHydrated } from "@/stores/use-data-table-store";
-import type { GlobalMode } from "@/lib/table-cookie";
+import { globalModeSchema, type GlobalMode } from "@/lib/table-cookie";
 
 export interface HeaderModeToggleProps {
   initialGlobalMode: GlobalMode;
@@ -18,25 +17,27 @@ export function HeaderModeToggle({ initialGlobalMode }: HeaderModeToggleProps) {
 
   const globalMode = hasHydrated ? storeGlobalMode : initialGlobalMode;
 
+  const handleValueChange = (values: string[]) => {
+    if (values.length === 0) return;
+    const parsed = globalModeSchema.safeParse(values[0]);
+    if (parsed.success) {
+      setGlobalMode(parsed.data);
+    }
+  };
+
   return (
-    <div
-      role="radiogroup"
+    <ToggleGroup
+      value={[globalMode]}
+      onValueChange={handleValueChange}
+      variant="outline"
+      spacing={0}
       aria-label="Table mode"
-      className="inline-flex h-8 w-fit items-center rounded-md border border-border bg-muted/40 p-0.5 text-muted-foreground shrink-0"
+      className="h-8"
     >
-      <Button
-        type="button"
-        role="radio"
-        aria-checked={globalMode === "automatic"}
-        variant="ghost"
-        size="sm"
-        onClick={() => setGlobalMode("automatic")}
-        className={cn(
-          "h-7 gap-1 rounded-sm px-2 text-2xs sm:gap-1.5 sm:px-2.5 sm:text-xs font-medium transition-all cursor-pointer",
-          globalMode === "automatic"
-            ? "bg-background text-foreground shadow-xs border border-border/50 font-semibold"
-            : "text-muted-foreground hover:text-foreground hover:bg-transparent",
-        )}
+      <ToggleGroupItem
+        value="automatic"
+        aria-label="Automatic mode"
+        className="h-7 gap-1 px-2 text-2xs sm:gap-1.5 sm:px-2.5 sm:text-xs font-medium cursor-pointer transition-all data-pressed:bg-background data-pressed:text-foreground data-pressed:shadow-xs data-pressed:font-semibold aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-xs aria-pressed:font-semibold"
       >
         <HugeiconsIcon
           icon={CpuIcon}
@@ -44,27 +45,18 @@ export function HeaderModeToggle({ initialGlobalMode }: HeaderModeToggleProps) {
         />
         <span className="sm:hidden">Auto</span>
         <span className="hidden sm:inline">Automatic</span>
-      </Button>
-      <Button
-        type="button"
-        role="radio"
-        aria-checked={globalMode === "manual"}
-        variant="ghost"
-        size="sm"
-        onClick={() => setGlobalMode("manual")}
-        className={cn(
-          "h-7 gap-1 rounded-sm px-2 text-2xs sm:gap-1.5 sm:px-2.5 sm:text-xs font-medium transition-all cursor-pointer",
-          globalMode === "manual"
-            ? "bg-background text-foreground shadow-xs border border-border/50 font-semibold"
-            : "text-muted-foreground hover:text-foreground hover:bg-transparent",
-        )}
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="manual"
+        aria-label="Manual mode"
+        className="h-7 gap-1 px-2 text-2xs sm:gap-1.5 sm:px-2.5 sm:text-xs font-medium cursor-pointer transition-all data-pressed:bg-background data-pressed:text-foreground data-pressed:shadow-xs data-pressed:font-semibold aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-xs aria-pressed:font-semibold"
       >
         <HugeiconsIcon
           icon={UserIcon}
           className="size-3 text-stone-600 dark:text-stone-400 sm:size-3.5"
         />
         <span>Manual</span>
-      </Button>
-    </div>
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }
