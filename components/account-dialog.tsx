@@ -186,53 +186,57 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
               <FormRequiredNotice />
               <FormErrorBanner error={formError} />
 
-              <Field data-invalid={Boolean(errors.name)}>
-                <FieldLabel htmlFor="account-name">
-                  <HugeiconsIcon icon={UserIcon} className="size-3.5 text-muted-foreground" />
-                  <span>Full Name</span>
-                  <span className="text-destructive font-semibold" aria-hidden="true">
-                    *
-                  </span>
-                </FieldLabel>
-                <Input
-                  id="account-name"
-                  value={name}
-                  onChange={(e) =>
-                    setValue("name", e.target.value, { shouldValidate: true, shouldDirty: true })
-                  }
-                  placeholder="e.g. Alex Morgan"
-                  aria-invalid={Boolean(errors.name)}
-                  className="h-8 text-xs"
-                />
-                {errors.name && <FieldError errors={[{ message: errors.name.message }]} />}
-                <FieldDescription>Your legal or administrative display name.</FieldDescription>
-              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field data-invalid={Boolean(errors.name)}>
+                  <FieldLabel htmlFor="account-name">
+                    <HugeiconsIcon icon={UserIcon} className="size-3.5 text-muted-foreground" />
+                    <span>Full Name</span>
+                    <span className="text-destructive font-semibold" aria-hidden="true">
+                      *
+                    </span>
+                  </FieldLabel>
+                  <Input
+                    id="account-name"
+                    value={name}
+                    onChange={(e) =>
+                      setValue("name", e.target.value, { shouldValidate: true, shouldDirty: true })
+                    }
+                    placeholder="e.g. Alex Morgan"
+                    aria-invalid={Boolean(errors.name)}
+                    className="h-8 text-xs"
+                  />
+                  {errors.name && <FieldError errors={[{ message: errors.name.message }]} />}
+                  <FieldDescription>Your display name.</FieldDescription>
+                </Field>
 
-              <Field data-invalid={Boolean(errors.username)}>
-                <FieldLabel htmlFor="account-username">
-                  <HugeiconsIcon icon={TextFontIcon} className="size-3.5 text-muted-foreground" />
-                  <span>Username</span>
-                  <span className="text-destructive font-semibold" aria-hidden="true">
-                    *
-                  </span>
-                </FieldLabel>
-                <Input
-                  id="account-username"
-                  value={username}
-                  onChange={(e) =>
-                    setValue("username", e.target.value.toLowerCase(), {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    })
-                  }
-                  placeholder="e.g. admin1"
-                  aria-invalid={Boolean(errors.username)}
-                  className="h-8 text-xs font-mono"
-                  autoComplete="off"
-                />
-                {errors.username && <FieldError errors={[{ message: errors.username.message }]} />}
-                <FieldDescription>Unique lowercase system login handle.</FieldDescription>
-              </Field>
+                <Field data-invalid={Boolean(errors.username)}>
+                  <FieldLabel htmlFor="account-username">
+                    <HugeiconsIcon icon={TextFontIcon} className="size-3.5 text-muted-foreground" />
+                    <span>Username</span>
+                    <span className="text-destructive font-semibold" aria-hidden="true">
+                      *
+                    </span>
+                  </FieldLabel>
+                  <Input
+                    id="account-username"
+                    value={username}
+                    onChange={(e) =>
+                      setValue("username", e.target.value.toLowerCase(), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      })
+                    }
+                    placeholder="e.g. admin1"
+                    aria-invalid={Boolean(errors.username)}
+                    className="h-8 text-xs font-mono"
+                    autoComplete="off"
+                  />
+                  {errors.username && (
+                    <FieldError errors={[{ message: errors.username.message }]} />
+                  )}
+                  <FieldDescription>Lowercase handle.</FieldDescription>
+                </Field>
+              </div>
 
               <Field data-invalid={Boolean(errors.password)}>
                 <FieldLabel htmlFor="account-password">

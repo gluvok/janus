@@ -88,6 +88,10 @@ export function sortEntriesRelational<T extends SortableEntry>(
   entries: T[],
   sortRules: readonly SortRule<string>[],
 ): T[] {
+  if (sortRules.length === 0) {
+    return entries;
+  }
+
   return [...entries].sort((a, b) => {
     for (const rule of sortRules) {
       let valA: string | number = "";

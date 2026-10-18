@@ -57,32 +57,32 @@ export default function Home() {
               className="group rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Card className="h-full border border-border/80 bg-card/70 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-xs">
-                <CardHeader className="flex flex-col h-full justify-between gap-4 p-4">
-                  <div className="flex flex-col gap-3">
+                <CardHeader className="flex flex-col justify-between gap-3 p-3.5 h-full">
+                  <div className="flex items-start gap-3">
                     <div
                       className={cn(
-                        "flex size-9 items-center justify-center rounded-lg border border-border/40 transition-transform duration-200 group-hover:scale-105",
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/40 transition-transform duration-200 group-hover:scale-105",
                         config.accentClass,
                       )}
                     >
-                      <HugeiconsIcon icon={section.icon} className="size-4.5" />
+                      <HugeiconsIcon icon={section.icon} className="size-4" />
                     </div>
 
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-0.5 min-w-0">
                       <CardTitle className="text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
                         {section.title}
                       </CardTitle>
-                      <CardDescription className="text-xs/relaxed text-muted-foreground line-clamp-2">
+                      <CardDescription className="text-xs text-muted-foreground line-clamp-2">
                         {section.description}
                       </CardDescription>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-border/40 pt-2.5 text-2xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+                  <div className="flex items-center justify-between border-t border-border/40 pt-2 text-2xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
                     <span>Manage {section.title.toLowerCase()}</span>
                     <HugeiconsIcon
                       icon={ArrowRight01Icon}
-                      className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
+                      className="size-3 transition-transform duration-200 group-hover:translate-x-0.5"
                     />
                   </div>
                 </CardHeader>

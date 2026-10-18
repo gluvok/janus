@@ -166,7 +166,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
         ...state.tables,
         [tableId]: {
           ...prev,
-          sorting: updated.length > 0 ? updated : [{ id: "id", desc: true }],
+          sorting: updated,
         },
       };
       writeTablesCookie(nextTables, state.globalMode);
@@ -180,7 +180,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
         ...state.tables,
         [tableId]: {
           ...prev,
-          sorting: [{ id: "id", desc: true }],
+          sorting: [],
         },
       };
       writeTablesCookie(nextTables, state.globalMode);

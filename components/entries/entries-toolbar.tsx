@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactTable, RowData } from "@tanstack/react-table";
+import type { ReactTable, RowData, SortingState, Updater } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
 import {
   DataTableSearchInput,
@@ -10,6 +10,7 @@ import {
   DataTableViewOptions,
   DatePickerWithRange,
   type DataTableFeatures,
+  DataTableCriteriaBar,
 } from "@/components/data-table";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -32,6 +33,14 @@ export interface EntriesToolbarProps<TData extends RowData> {
   filterConfigs: EntriesFilterConfig[];
   filters: Record<string, string>;
   onFilterChange: (key: string, value: string) => void;
+  hasActiveSorts: boolean;
+  sorting: SortingState;
+  onSortingChange: (updater: Updater<SortingState>) => void;
+  onRemoveSort: (columnId: string) => void;
+  columnLabels: Record<string, string>;
+  columnIcons: Record<string, unknown>;
+  onResetSorts: () => void;
+  onResetAll: () => void;
 }
 
 export function EntriesToolbar<TData extends RowData>({
@@ -45,6 +54,14 @@ export function EntriesToolbar<TData extends RowData>({
   filterConfigs,
   filters,
   onFilterChange,
+  hasActiveSorts,
+  sorting,
+  onSortingChange,
+  onRemoveSort,
+  columnLabels,
+  columnIcons,
+  onResetSorts,
+  onResetAll,
 }: EntriesToolbarProps<TData>) {
   return (
     <div className="flex flex-col gap-2 shrink-0">
@@ -69,7 +86,7 @@ export function EntriesToolbar<TData extends RowData>({
         </div>
       </div>
 
-      {/* Row 2: Filter Comboboxes via declarative loop */}
+      {/* Row 2: Filter Comboboxes + Multi-Sort Priority Chips */}
       <div className="flex flex-wrap items-center gap-2">
         {filterConfigs.map((config) => (
           <DataTableFacetedFilter
@@ -81,6 +98,17 @@ export function EntriesToolbar<TData extends RowData>({
             onValueChange={(val: string) => onFilterChange(config.key, val)}
           />
         ))}
+
+        <DataTableCriteriaBar
+          hasActiveSorts={hasActiveSorts}
+          sorting={sorting}
+          onSortingChange={onSortingChange}
+          onRemoveSort={onRemoveSort}
+          columnLabels={columnLabels}
+          columnIcons={columnIcons}
+          onResetSorts={onResetSorts}
+          onResetAll={onResetAll}
+        />
       </div>
     </div>
   );

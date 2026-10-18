@@ -8,6 +8,25 @@ export const DEFAULT_PAGE_SIZE = 15;
 export const globalModeSchema = z.enum(["automatic", "manual"]);
 export type GlobalMode = z.infer<typeof globalModeSchema>;
 
+export const DUAL_MODE_ENTITIES = ["entries", "weighments", "tickets"] as const;
+export type DualModeEntity = (typeof DUAL_MODE_ENTITIES)[number];
+
+export function isDualModeEntity(tableName: string): boolean {
+  return (DUAL_MODE_ENTITIES as readonly string[]).includes(tableName);
+}
+
+/**
+ * Checks whether a given pathname belongs to a dual-mode route.
+ * Dual-mode routes: "/", "/entries", "/weighments", "/tickets".
+ * Single-mode routes: "/centers", "/users", "/customers", etc.
+ */
+export function isDualModeRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  if (pathname === "/") return true;
+  const segment = pathname.split("/").filter(Boolean)[0];
+  return isDualModeEntity(segment ?? "");
+}
+
 /**
  * Derives the partitioned tableId for any dual-mode entity.
  * e.g., getDualModeTableId("entries", "manual") => "entries_manual"

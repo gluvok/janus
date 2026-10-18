@@ -28,7 +28,6 @@ import { type TableItemState, getDualModeTableId } from "@/lib/table-cookie";
 import {
   EntryPhotosDialog,
   EntriesToolbar,
-  EntriesCriteriaBar,
   EntriesErrorState,
   type EntriesFilterConfig,
 } from "@/components/entries";
@@ -361,7 +360,7 @@ export function EntriesDataTable() {
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
-      {/* Primary Toolbar - 2-Tier Layout with Scoped Refresh */}
+      {/* Primary Toolbar - 2-Tier Layout with Integrated Multi-Sort */}
       <EntriesToolbar
         table={table}
         search={search}
@@ -373,10 +372,6 @@ export function EntriesDataTable() {
         filterConfigs={filterConfigs}
         filters={tableState.filters}
         onFilterChange={(key, val) => setFilter(key, val)}
-      />
-
-      {/* Active Criteria Bar (Drag-and-Drop Sort Priority Chips) */}
-      <EntriesCriteriaBar
         hasActiveSorts={hasActiveSorts}
         sorting={sorting}
         onSortingChange={(updater) => setSorting(updater)}

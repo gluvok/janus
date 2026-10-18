@@ -135,9 +135,9 @@ export function useDataTable<TData extends RowData>({
     const queryParams: Record<string, unknown> = {
       page: pagination.pageIndex + 1,
       pageSize: pagination.pageSize,
-      ...(sorting.length > 0 && {
-        sort: sorting.map((s) => `${s.id}.${s.desc ? "desc" : "asc"}`).join(","),
-      }),
+      ...(sorting.length > 0
+        ? { sort: sorting.map((s) => `${s.id}.${s.desc ? "desc" : "asc"}`).join(",") }
+        : { sort: "none" }),
       ...(activeSearch && { search: activeSearch }),
       ...(fromIso && { from: fromIso }),
       ...(toIso && { to: toIso }),
@@ -233,7 +233,8 @@ export function useDataTable<TData extends RowData>({
     },
   });
 
-  const hasActiveSorts = sorting.length > 0;
+  // On one sort or zero sort, never show sort chips (header arrow handles single sort)
+  const hasActiveSorts = sorting.length > 1;
   const hasActiveFilters = Boolean(
     dateRange?.from ||
     Object.entries(tableState.filters).some(([k, v]) => {

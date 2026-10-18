@@ -31,6 +31,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Mesto",
   description: "Mesto Automations Platform",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
