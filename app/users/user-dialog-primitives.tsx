@@ -99,7 +99,7 @@ export function UserDialogShell({
               onSubmit();
             }
           }}
-          className="flex flex-col gap-4 py-2"
+          className="flex flex-col gap-4 pt-1 pb-0"
         >
           <FormErrorBanner error={formError} />
           <FormRequiredNotice />

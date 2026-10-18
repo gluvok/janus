@@ -48,16 +48,27 @@ export function EntriesToolbar<TData extends RowData>({
 }: EntriesToolbarProps<TData>) {
   return (
     <div className="flex flex-col gap-2 shrink-0">
-      {/* Row 1: Search Box (Left) + Refresh Button, Date Range Picker & Columns (Right) */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+        {/* Left: Search Box & Filters side-by-side */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <DataTableSearchInput
             placeholder="Search entries..."
             value={search}
             onChange={onSearchChange}
           />
+          {filterConfigs.map((config) => (
+            <DataTableFacetedFilter
+              key={config.key}
+              title={config.title}
+              icon={config.categoryIcon}
+              options={config.options}
+              value={filters[config.key] ?? "all"}
+              onValueChange={(val: string) => onFilterChange(config.key, val)}
+            />
+          ))}
         </div>
 
+        {/* Right: Refresh Button, Date Range Picker & Columns */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
           <DataTableRefreshButton onClick={onRefresh} loading={loading} />
           <DatePickerWithRange
@@ -67,20 +78,6 @@ export function EntriesToolbar<TData extends RowData>({
           />
           <DataTableViewOptions table={table} />
         </div>
-      </div>
-
-      {/* Row 2: Filter Comboboxes via declarative loop */}
-      <div className="flex flex-wrap items-center gap-2">
-        {filterConfigs.map((config) => (
-          <DataTableFacetedFilter
-            key={config.key}
-            title={config.title}
-            icon={config.categoryIcon}
-            options={config.options}
-            value={filters[config.key] ?? "all"}
-            onValueChange={(val: string) => onFilterChange(config.key, val)}
-          />
-        ))}
       </div>
     </div>
   );

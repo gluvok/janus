@@ -146,7 +146,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <form
               onSubmit={handleSubmit(onSubmit)}
               className={cn(
-                "flex flex-col gap-4 py-2 transition-opacity",
+                "flex flex-col gap-4 pt-1 pb-0 transition-opacity",
                 loading ? "pointer-events-none opacity-40 select-none" : "opacity-100",
               )}
             >
@@ -179,7 +179,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </form>
           </div>
         ) : (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex h-72 items-center justify-center">
             <Spinner className="size-6 text-primary" />
           </div>
         )}

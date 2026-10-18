@@ -90,7 +90,6 @@ function formatCreatorOptions(creators: User[]): FacetedFilterOption[] {
       idPrefix: `#${u.id}`,
       label: u.name,
       value: String(u.id),
-      icon: UserIcon,
     })),
   ];
 }
@@ -344,7 +343,7 @@ export function EntriesDataTable() {
     if (mode === "manual") {
       configs.push({
         key: "created_by",
-        title: "Created by",
+        title: "Creator",
         options: creatorOptions,
         variant: "primary",
         categoryIcon: UserIcon,

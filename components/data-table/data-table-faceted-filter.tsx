@@ -109,18 +109,19 @@ export function DataTableFacetedFilter({
                 key={item.value}
                 className="gap-1 border-stone-300/80 dark:border-stone-700/80 text-2xs"
               >
-                {item.icon && (
-                  <HugeiconsIcon
-                    icon={item.icon}
-                    className="size-3 shrink-0 text-muted-foreground mr-0.5"
-                  />
-                )}
-                {item.idPrefix && (
-                  <span className="shrink-0 text-muted-foreground font-mono mr-1">
-                    {item.idPrefix}
-                  </span>
-                )}
-                <span className="truncate">{item.label}</span>
+                <div className="flex items-center gap-1">
+                  {item.icon ? (
+                    <HugeiconsIcon
+                      icon={item.icon}
+                      className="size-3 shrink-0 text-muted-foreground"
+                    />
+                  ) : item.idPrefix ? (
+                    <span className="shrink-0 text-muted-foreground font-mono">
+                      {item.idPrefix}
+                    </span>
+                  ) : null}
+                  <span className="truncate">{item.label}</span>
+                </div>
               </ComboboxChip>
             ))}
           </ComboboxValue>
@@ -130,7 +131,7 @@ export function DataTableFacetedFilter({
             onBlur={() => setIsFocused(false)}
             className={cn(
               "text-2xs placeholder:text-muted-foreground",
-              selectedOptions.length === 0 ? "min-w-28" : isActive ? "min-w-20" : "w-0 min-w-0 p-0",
+              selectedOptions.length === 0 ? "min-w-20" : isActive ? "min-w-16" : "w-0 min-w-0 p-0",
             )}
           />
           <ComboboxTrigger className="ml-auto shrink-0 cursor-pointer p-0.5 text-muted-foreground hover:text-foreground transition-colors" />
@@ -149,18 +150,19 @@ export function DataTableFacetedFilter({
                 value={item}
                 className="text-xs whitespace-nowrap cursor-pointer pr-6"
               >
-                {item.icon && (
-                  <HugeiconsIcon
-                    icon={item.icon}
-                    className="mr-1.5 size-3.5 shrink-0 text-muted-foreground"
-                  />
-                )}
-                {item.idPrefix && (
-                  <span className="inline-block w-6 shrink-0 text-muted-foreground font-mono tabular-nums text-left mr-1">
-                    {item.idPrefix}
-                  </span>
-                )}
-                <span>{item.label}</span>
+                <div className="flex items-center gap-1.5">
+                  {item.icon ? (
+                    <HugeiconsIcon
+                      icon={item.icon}
+                      className="size-3.5 shrink-0 text-muted-foreground"
+                    />
+                  ) : item.idPrefix ? (
+                    <span className="shrink-0 text-muted-foreground font-mono tabular-nums text-left">
+                      {item.idPrefix}
+                    </span>
+                  ) : null}
+                  <span>{item.label}</span>
+                </div>
               </ComboboxItem>
             )}
           </ComboboxList>
