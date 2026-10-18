@@ -118,6 +118,7 @@ export function CustomerFormDialog({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormErrorBanner error={serverError} />
+          <FormRequiredNotice />
 
           <div className="space-y-1.5">
             <Label htmlFor="customer-name" className="text-xs font-medium">
@@ -131,8 +132,6 @@ export function CustomerFormDialog({
             />
             {errors.name?.message && <FieldError>{errors.name.message}</FieldError>}
           </div>
-
-          <FormRequiredNotice />
 
           <DialogActionFooter
             isDirty={isDirty}

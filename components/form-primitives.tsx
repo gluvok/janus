@@ -72,23 +72,18 @@ export function DialogActionFooter({
           type="submit"
           size="sm"
           disabled={!isValid || isSubmitting || !isDirty}
-          className="h-8 w-32 text-xs"
+          className="h-8 gap-1.5 text-xs"
         >
           {isSubmitting ? (
-            <>
-              <Spinner className="size-3.5" data-icon="inline-start" />
-              <span>Saving...</span>
-            </>
+            <Spinner className="size-3.5" data-icon="inline-start" />
           ) : (
-            <>
-              <HugeiconsIcon
-                icon={FloppyDiskIcon}
-                className="size-3.5 text-primary-foreground"
-                data-icon="inline-start"
-              />
-              <span>{submitLabel}</span>
-            </>
+            <HugeiconsIcon
+              icon={FloppyDiskIcon}
+              className="size-3.5 text-primary-foreground"
+              data-icon="inline-start"
+            />
           )}
+          <span>{submitLabel}</span>
         </Button>
       </div>
     </DialogFooter>
