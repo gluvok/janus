@@ -62,13 +62,9 @@ export async function GET(request: Request) {
     if (search) {
       const numericVal = parseNumericWeight(search);
       if (numericVal !== null) {
-        query = query.or(
-          `vehicle_number.ilike.%${search}%,detected_vehicle_number.ilike.%${search}%,weight.eq.${numericVal}`,
-        );
+        query = query.or(`vehicle_number.ilike.%${search}%,weight.eq.${numericVal}`);
       } else {
-        query = query.or(
-          `vehicle_number.ilike.%${search}%,detected_vehicle_number.ilike.%${search}%`,
-        );
+        query = query.or(`vehicle_number.ilike.%${search}%`);
       }
     }
 

@@ -93,7 +93,19 @@ The `/centers` route provides a full-featured data table built with **TanStack T
   - **Fluid Responsive Pagination with ButtonGroup**: Clean 2-row layout on mobile viewports: selection summary on row 1 and spaced rows-per-page, page count, and icon-only previous/next controls connected in a unified `ButtonGroup` on row 2, smoothly transitioning to single-line on desktop.
   - **Server-Side Pagination**: TanStack Table `manualPagination` defaulting to 15 rows per page with multiples-of-15 rows-per-page selector (`15, 30, 45, 60`), interactive Page jump Select dropdown (`1` to `totalPages`), and connected Previous/Next buttons via `ButtonGroup`.
   - **Accurate & Stabilized Selection Counter**: Selection count displays `{selectedCount} of {currentRowsCount} row(s) selected.` inside a locked `sm:min-w-48` container with `tabular-nums` formatting, preventing layout shifts or control movement when transitioning between 0, single-digit, and double-digit row counts.
-  - **Unified Multi-Table Cookie Persistence (`gluvok_tables_state`)**: Powered by a server-synchronized cookie store (`stores/use-data-table-store.ts`, `lib/table-cookie.ts`). Retains user preferences (`search`, `filters`, `dateRange`, `sorting`, `pagination.pageSize`, and `columnVisibility`) per partitioned table ID alongside the root `globalMode` ("automatic" | "manual") across browser restarts and route transitions via a compact pruned cookie (~200 bytes). Dual-mode entities derive table partition keys via `getDualModeTableId(tableName, globalMode)` (`${tableName}_${mode}`).
+  - **Smart-Grouped Multi-Table Cookie Persistence (`gluvok_tables_state`)**: Powered by a server-synchronized cookie store (`stores/use-data-table-store.ts`, `lib/table-cookie.ts`). Retains user preferences (`search`, `filters`, `dateRange`, `sorting`, `pagination.pageSize`, and `columnVisibility`) per entity using a smart-grouped JSON structure:
+    ```json
+    {
+      "mode": "automatic",
+      "entries": { "automatic": { ... }, "manual": { ... } },
+      "weighments": { "automatic": { ... }, "manual": { ... } },
+      "tickets": { "automatic": { ... }, "manual": { ... } },
+      "centers": { ... },
+      "users": { ... },
+      "customers": { ... }
+    }
+    ```
+    Dual-mode status is derived directly from the cookie schema definition (`isDualModeRoute`), eliminating hardcoded route constants. Strictly enforces clean target schemas with zero backward compatibility fallbacks (Rule 19).
   - **Instant SSR Hydration & Zero Layout Shift**: Server Components in `app/layout.tsx` read `gluvok_tables_state` synchronously before generating HTML, eliminating client-side hydration delay. Tables and toolbars render immediately on first paint with 0ms mount delay.
   - **Column Visibility & Actions**: Columns dropdown toggle, indeterminate select-all checkbox, and row actions dropdown (`Copy Center ID`, `Copy Center Name`).
 
@@ -109,7 +121,7 @@ The `/entries` route provides an inspection-focused data table for transport and
   - `manual_entries`: Operator captured via `created_by REFERENCES users(id)`, `center_id`, `customer_id`, `vehicle_number`, `weight`, `images`. Strictly omits redundant `factory_id` (resolved via `center_id`) and `detected_vehicle_number`.
   - Corresponding split tables for weighments (`automatic_weighments`, `manual_weighments`) and tickets (`automatic_tickets`, `manual_tickets`).
 - **Features & UX**:
-  - **Top Layout Header Mode Toggle (`HeaderModeToggle`)**: Powered by the canonical shadcn `ToggleGroup` and `ToggleGroupItem` components with Base UI (`components/ui/toggle-group.tsx`). Connected segmented buttons (`spacing={0}`) inside a recessed container (`bg-muted/60`) with an elevated active card. Dynamically scoped using `isDualModeRoute(pathname)` derived from `lib/table-cookie.ts`, rendering strictly on dual-mode routes (`/entries`, `/weighments`, `/tickets`, `/`) and automatically hidden on single-mode pages (`/centers`, `/users`, `/customers`). Enforces mandatory single selection and immediately switches `globalMode` in the unified table store and cookie.
+  - **Top Layout Header Mode Toggle (`HeaderModeToggle`)**: Powered by the canonical shadcn `ToggleGroup` and `ToggleGroupItem` components with Base UI (`components/ui/toggle-group.tsx`). Connected segmented buttons (`spacing={0}`) inside a recessed container (`bg-muted/60`) with an elevated active card. Dynamically scoped using `isDualModeRoute(pathname)` derived from `DEFAULT_TABLES_COOKIE` in `lib/table-cookie.ts`, rendering strictly on dual-mode routes (`/entries`, `/weighments`, `/tickets`, `/`) and automatically hidden on single-mode pages (`/centers`, `/users`, `/customers`). Enforces mandatory single selection and immediately switches `mode` in the unified table store and cookie.
   - **Full-Screen Booting Up Splash Screen (`BootingScreen`) & Favicon**: Displays a warm minimalist full-screen splash screen (official Mesto brand logo image, delicate spinner, and "Booting up..." text) on browser reload or initial load until client cookie preferences and store hydration complete, unmounting immediately with 0ms delay. The official brand logo is integrated as the application favicon via `app/icon.png` and `metadata.icons`.
   - **Official Brand Logo Integration (`public/logo.png`)**: Displays the official Mesto icon across `BootingScreen`, `AppSidebar` header, and browser favicon.
   - **Combobox Column Alignment**: Center combobox menu items enforce a fixed width (`w-8 tabular-nums`) on `#ID` prefixes to keep center names vertically aligned without horizontal shift across 1-digit, 2-digit, and 3-digit IDs.

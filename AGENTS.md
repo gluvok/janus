@@ -30,17 +30,15 @@ Before implementing:
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
-## 2. Simplicity First
+## 2. Simplicity First & Clean-Break Architecture
 
-**Minimum code that solves the problem. Nothing speculative.**
+**Minimum code that solves the problem. Nothing speculative. Zero backward-compatibility shims.**
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+- **Minimum Surface**: No features beyond what was asked. No abstractions for single-use code. No "flexibility" or "configurability" that wasn't requested.
+- **No Impossible Scenarios**: Never write defensive code, regexes, or fallback branches for impossible URL structures, non-existent database states, or fabricated conditions.
+- **Conciseness**: If you write 200 lines and it could be 50, rewrite it.
+- **Clean-Break Architecture**: When redesigning or updating schemas, cookie structures, data shapes, or APIs, always target the latest clean design directly.
+- **Strict Prohibition of Legacy Cruft**: Strictly prohibit backward-compatibility fallbacks, migration loops, or legacy schema adapters. If old state exists or parsing fails, cleanly initialize fresh default state on parse failure.
 
 ## 3. Surgical Changes
 
@@ -80,44 +78,44 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-## 5. JavaScript / TypeScript / Node Quality & Verification Gates
+## 5. Mandatory Quality, Verification & Code Audit Gates
 
 **Always enforce the verification loop. Use `pnpm` exclusively (never `npm`, `yarn`, or `bun`).**
 
 For any JavaScript / TypeScript / Node modifications:
 
 1. **Package Manager**: Use `pnpm` explicitly for all package installations and script executions. Do not use `npm`, `yarn`, or `bun`.
-2. **Lint & Code Style**: Run `pnpm lint` and `pnpm fmt`. Fix any remaining issues cleanly without disabling rules.
+2. **Lint & Code Style**: Run `pnpm lint` (`oxlint --fix`) and `pnpm fmt` (`oxfmt`). Fix any remaining issues cleanly without disabling rules.
 3. **Type Checking**: Run `pnpm type-check` (`tsc --noEmit`). Fix type diagnostics cleanly without using `@ts-ignore` or arbitrary `any`.
 4. **Test Suite**: Run `pnpm test` (`vitest run`) to confirm all tests pass without regression.
 5. **Build Verification**: Run `pnpm run build` (`next build`) to confirm production builds compile cleanly.
 6. **Iterative Verification**: Keep looping through `pnpm lint`, `pnpm fmt`, `pnpm type-check`, `pnpm test`, and `pnpm run build` until all yield **0 errors, 0 warnings, and clean builds**.
 
-**The mandatory commands that must always pass:**
+**Mandatory Pre-Completion Audits (Must all yield 0 violations):**
 
-- `pnpm run lint` (0 errors, 0 warnings)
-- `pnpm run fmt` (0 formatting issues)
-- `pnpm run type-check` (0 errors, 0 warnings)
-- `pnpm test` (all tests pass)
-- `pnpm run build` (clean exit 0)
+1. **Audit for Raw HTML Tags**:
+   ```bash
+   git diff --name-only | grep -E '\.(tsx|jsx)$' | xargs grep -E '<(button|input|select|dialog)\b'
+   ```
+2. **Audit for Arbitrary Bracket Classes**:
+   ```bash
+   git diff --name-only | grep -E '\.(tsx|jsx)$' | xargs grep -E '(w|h|max-w|min-w|p|m|text)-\[[^\]]+\]'
+   ```
+3. **Audit for Inline Axios Error Parsing**:
+   ```bash
+   git diff --name-only | grep -E '\.(tsx|ts)$' | grep -v 'lib/utils.ts' | xargs grep -E 'err\.response' || true
+   ```
 
-## 6. Update README.md
-
-**Always keep `README.md` in sync with codebase changes.**
-
-- Explicitly update `README.md` whenever adding, modifying, or removing features, API endpoints, environment variables, dependencies, or workflows.
-- Ensure all setup instructions, configuration options, and usage examples remain accurate and up-to-date.
-
-## 7. Database Schema & Migrations
+## 6. Database Schema & Migrations
 
 **Read `schema.sql` before writing code. Track changes in `migration.sql`.**
 
 - **Inspect schema first**: Always read `schema.sql` before writing any code to understand the existing database tables, columns, relationships, types, and constraints. Never assume database structures.
 - **Update migrations on schema changes**: In case the schema is modified or new tables, columns, triggers, or policies are introduced, update `schema.sql` to reflect the target state and record the corresponding migration statements in `migration.sql`.
 
-## 8. shadcn / UI Components & Documentation
+## 7. shadcn / UI Components, Design Scale & Theming
 
-**Official shadcn docs are in the `docs/` folder. Never manually create `components/ui/` files.**
+**Official shadcn docs are in the `docs/` folder. Never manually create `components/ui/` files. Never introduce off-theme colors or arbitrary bracket values.**
 
 - **Official Documentation**: Canonical shadcn / UI documentation for components in this repository is kept inside the `docs/` folder (e.g., `docs/datatable.md`, `docs/pagination.md`, `docs/spinner.md`, `docs/select.md`). Always consult `docs/` first for canonical component APIs, props, and design guidelines.
 - **CLI Component Addition**: NEVER create components inside the `components/ui/` directory manually. Always install and scaffold UI components using the `pnpm shadcn` CLI command (e.g., `pnpm dlx shadcn@latest add <component>` or `pnpm shadcn add <component>`). If project-specific adjustments or imports need tuning after installation, edit the CLI-generated file rather than crafting it from scratch.
@@ -131,21 +129,28 @@ For any JavaScript / TypeScript / Node modifications:
 - **Strict Zero Arbitrary Bracket Values (e.g., `[70px]`, `[calc(...)]`)**: NEVER use raw bracket arbitrary values in class names (e.g., `w-[70px]`, `min-w-[70px]`, `max-w-[calc(...)]`, `h-[30px]`, `p-[12px]`, `[scrollbar-width:none]`, `[&::-webkit-scrollbar]:hidden`).
   - Always use standard Tailwind design system scale utilities (e.g., `w-16`, `w-20`, `min-w-16`, `min-w-20`, `h-7`, `p-3`) or semantic theme tokens.
   - If a custom reusable CSS utility is required (such as hiding scrollbars), register it declaratively in `app/globals.css` using Tailwind v4 `@utility` (e.g. `@utility no-scrollbar { ... }`) instead of inlining brackets into JSX.
+- **Responsive Architecture: Pure CSS Over JS Hooks**:
+  - NEVER use `useIsMobile()` JS hooks for responsive layout shifts. Window-width JS hooks cause hydration mismatches, layout shifts during load, and flash of desktop layout on mobile devices.
+  - Always use pure Tailwind CSS responsive utilities (`sm:`, `md:`, `lg:`, `hidden sm:flex`, `block sm:hidden`). Pure CSS media queries render correctly on the server and hydrate with zero layout shift.
+- **Strict Brand Theme Color Compliance & Earth-Tones Palette**:
+  - The application is anchored on a warm alabaster cream background (`oklch(0.992 0.005 105)`) and signature Rikyū-cha tea-moss green (`--primary: #66684f` / dark: `#8a8d6e`).
+  - NEVER introduce arbitrary, saturated primary or accent colors (such as neon violet, purple, fuchsia, cyan, magenta, or royal blue).
+  - **Two-Tier Color Strategy Hierarchy**:
+    - **Tier 1: Filter Chips & Criteria Controls**: All active filter chips share a unified calm natural stone container (`border-stone-300/80 bg-stone-500/5 hover:bg-stone-500/10 text-stone-800`), using subtle colored accent icons or indicator dots for entity differentiation (e.g., emerald icon for Customer, orange icon for Hardware, amber icon for Date Range, stone icon for Center).
+    - **Tier 2: Table Row Status & Role Badges**: Vibrant earth tones are reserved strictly for row-level entity classification and status tags:
+      - **Signature Tea-Moss / Primary**: `--primary` (`#66684f`), `bg-primary/10`, `border-primary/30`, `text-primary` (active navigation, sort priority capsules, operator role, primary actions).
+      - **Terracotta Orange**: `text-orange-900 border-orange-300/80 bg-orange-600/10 dark:text-orange-200 dark:border-orange-800/50 dark:bg-orange-950/30` (Hardware source, hardware creator accounts, and hardware role).
+      - **Deep Forest Emerald**: `text-emerald-900 border-emerald-300/80 bg-emerald-600/10 dark:text-emerald-200 dark:border-emerald-800/50 dark:bg-emerald-950/30` (Customers and customer role).
+      - **Golden Honey Amber**: `text-amber-900 border-amber-300/80 bg-amber-600/10 dark:text-amber-200 dark:border-amber-800/50 dark:bg-amber-950/30` (Date range filters and Manager role).
+      - **Warm Natural Stone**: `text-stone-800 border-stone-300/80 bg-stone-500/10 dark:text-stone-200 dark:border-stone-700/80 dark:bg-stone-900/30` (Centers and Base user role).
+      - **Monochrome Zinc**: `text-zinc-900 border-zinc-300 bg-zinc-600/10 dark:text-zinc-100 dark:border-zinc-700 dark:bg-zinc-800/40` (Admin role and neutral utility controls).
 
-## 9. Responsive Architecture: Pure CSS Over JS Hooks
+## 8. Strict Code DRY, Single Source of Truth & Batch Operations
 
-**Never use `useIsMobile()` JS hooks for responsive layout shifts.**
-
-- Always use pure Tailwind CSS responsive utilities (`sm:`, `md:`, `lg:`, `hidden sm:flex`, `block sm:hidden`).
-- Window-width JS hooks like `useIsMobile()` cause hydration mismatches, layout shifts during load, and flash of desktop layout on mobile devices.
-- Pure CSS media queries render correctly on the server and hydrate with zero layout shift.
-
-## 10. Strict Code DRY & Single Source of Truth
-
-**Never duplicate code, types, navigation registries, or parallel component logic.**
+**Never duplicate code, types, navigation registries, or execute queries in iterative loops.**
 
 - **Single Source of Truth**: Define entity routes, metadata, column titles, and navigation structures in centralized config files (e.g. `lib/navigation.ts`, `app/<entity>/types.ts`). Never maintain duplicate dictionaries or parallel arrays across components and pages.
-- **Consolidate Identical Components**: If two or more components share identical or near-identical JSX structure (such as menu lists, buttons, or filters), generalize them into a single reusable component (e.g. `components/nav-group.tsx`, `components/page-refresh-button.tsx`) parameterized by props.
+- **Consolidate Identical Components**: If two or more components share identical or near-identical JSX structure (such as menu lists, buttons, or filters), generalize them into a single reusable component parameterized by props.
 - **Eliminate Redundant Wrapper Files**: Do not keep pass-through wrapper components or legacy file aliases that only re-export or delegate to a generalized component. Delete redundant files directly and update imports at callers.
 - **Audit for Duplication Before Coding**: Before implementing a feature or entity table, check if reusable abstractions already exist in `components/data-table/` or `components/`. Never copy-paste whole table files or sensor setups.
 - **Centralized Backend API Query Utilities (`lib/api-query.ts`)**: Never duplicate API pagination, multi-column sorting, date filtering, or response formatting across route handlers (`app/api/**/route.ts`). All paginated entity endpoints MUST consume `lib/api-query.ts` (`parsePagination`, `parseSorting`, `applyDateRange`, `applySortingAndPagination`, `formatPaginatedResponse`). Entity routes must strictly contain only entity-specific projections, sort column whitelists, and custom filters. Zero inline duplication of pagination math or sort regexes.
@@ -155,55 +160,33 @@ For any JavaScript / TypeScript / Node modifications:
 - **Payload Construction & Unified Toasts**: Avoid duplicating entire payload structures or toast invocations across `isEdit` branches; use object spreads (`...(isEdit && user ? { id: user.id } : {})`) and parameterized strings for toasts.
 - **Prohibition of Redundant Variable Aliases**: NEVER declare alias variables (e.g. `const singularLabel = entityLabel; const pluralLabel = entityLabelPlural;`) that merely re-assign existing props or variables without transformation.
 - **Strict Prohibition of Raw Magic HTTP Status Codes (`http-status-codes`)**: Always import and use `StatusCodes` from `http-status-codes` across all API route handlers and responses (e.g. `StatusCodes.OK`, `StatusCodes.CREATED`, `StatusCodes.BAD_REQUEST`, `StatusCodes.NOT_FOUND`, `StatusCodes.CONFLICT`, `StatusCodes.INTERNAL_SERVER_ERROR`). NEVER write raw numeric status literals like `200`, `201`, `400`, `404`, `409`, or `500` in `NextResponse.json(...)`.
-- **Strict Prohibition of Parallel Entity Directories for Shared Tables**: When multiple domain concepts or user roles share the same underlying database table (e.g. `users` storing both staff and customers), NEVER create parallel feature directories with duplicated tables, dialogs, types, or schemas (e.g. `app/customers/` duplicating `app/users/`). Parameterize the single authoritative entity components (e.g. `UsersDataTable roleScope="staff" | "customer"`, `UserFormDialog fixedRole="customer"`) and render them directly in the respective page routes (`app/customers/page.tsx`).
+- **Strict Prohibition of Parallel Entity Directories for Shared Tables**: When multiple domain concepts or user roles share the same underlying database table (e.g. `users` storing both staff and customers), NEVER create parallel feature directories with duplicated tables, dialogs, types, or schemas. Parameterize the single authoritative entity components (`UsersDataTable roleScope="staff" | "customer"`, `UserFormDialog fixedRole="customer"`) and render them directly in the respective page routes (`app/customers/page.tsx`).
+- **Strict Elimination of N+1 Queries**:
+  - NEVER run database queries (e.g. Supabase `.from(...)`, SQL `SELECT`/`UPDATE`/`DELETE`), HTTP requests, or asynchronous fetches inside `for`, `for...of`, `while`, `.map()`, or `.forEach()` loops.
+  - Constant O(1) Batch Queries: When checking, fetching, or mutating records for multiple identifiers or foreign keys, aggregate target IDs into an array and execute a single batch query (e.g. `.in("id", targetIds)`, SQL `IN (...)`).
+  - In-Memory Aggregation: Aggregate counts, maps, lookups, or conflicts in application memory after fetching the batched result set rather than querying row-by-row.
+  - Bulk Mutations: Use bulk updates/deletions (`.in("id", targetIds).delete()` or `.in("id", targetIds).update(...)`) instead of individual per-record operations.
 
-## 11. Mandatory Pre-Completion Code Audit Gates
+## 9. Component Architecture, Props Hygiene & Module Exports
 
-**Before declaring any task complete, verify these audits return 0 violations:**
+**Keep only props that are actively called. Declare mandatory explicit props without speculative defaults. Export from unified feature barrels.**
 
-1. **Audit for Raw HTML Tags**:
-   ```bash
-   git diff --name-only | grep -E '\.(tsx|jsx)$' | xargs grep -E '<(button|input|select|dialog)\b'
-   # Must yield 0 lines.
-   ```
-2. **Audit for Arbitrary Bracket Classes**:
-   ```bash
-   git diff --name-only | grep -E '\.(tsx|jsx)$' | xargs grep -E '(w|h|max-w|min-w|p|m|text)-\[[^\]]+\]'
-   # Must yield 0 lines.
-   ```
-3. **Audit for Inline Axios Error Parsing**:
-   ```bash
-   git diff --name-only | grep -E '\.(tsx|ts)$' | grep -v 'lib/utils.ts' | xargs grep -E 'err\.response' || true
-   # Must yield 0 lines.
-   ```
-4. **Mandatory Quality Gates**:
-   - `pnpm run lint` (0 errors, 0 warnings)
-   - `pnpm run fmt` (0 formatting issues)
-   - `pnpm run type-check` (0 errors, 0 warnings)
-   - `pnpm test` (all tests pass)
-   - `pnpm run build` (clean exit 0)
-
-## 12. Strict Component Props Hygiene: Zero Uncalled Props
-
-**Keep only props that are actively called and consumed by parent components.**
-
-- **No Speculative or Pass-Through Props**: In custom and feature components (outside `components/ui/`), NEVER define or retain props, optional props (e.g. `className?: string`, `label?: string`), or catch-all spreads (`...props`, `extends ComponentProps<...>`) that are not passed by any parent component.
+- **Strict Zero Uncalled Props**: In custom and feature components (outside `components/ui/`), NEVER define or retain props, optional props (e.g. `className?: string`, `label?: string`), or catch-all spreads (`...props`, `extends ComponentProps<...>`) that are not passed by any parent component.
 - **Prune Unused Prop Definitions**: When writing or refactoring components, inspect all parent call sites. If a prop is not passed by any caller, remove it completely from both the component parameters and its TypeScript props interface/type definition.
 - **Zero Raw Spreads**: Do not add `...props` to internal custom components unless there is a concrete, actively used requirement across callers.
 - **Parent-Driven API Design**: Components must expose the minimum prop surface required by their current usage in the application. Do not anticipate future callers by adding unused props.
+- **Strict Zero Default Fallback Props in Component Signatures**:
+  - NEVER assign arbitrary default values in prop destructuring (e.g. `isValid = true`, `submitLabel = "Save Changes"`, `title = "Default"`, `showIcon = true`).
+  - Every prop that controls behavioral flow, validation, action labels, or callback triggers must be declared strictly mandatory (`isValid: boolean`, `submitLabel: string`) in the TypeScript interface and explicitly passed by each consuming component.
+  - If a value is constant or never varied across callers, hardcode it directly in the component rather than adding a configurable prop with a default fallback.
+- **Unified Feature Module Barrel Exports (`index.ts`)**:
+  - In reusable feature modules (such as `components/data-table/`, `components/entries/`), maintain an authoritative `index.ts` barrel file.
+  - All public components, hooks, utilities, and types within a reusable feature module must be exported from its root `index.ts`.
+  - Consuming callers MUST import directly from the module root (e.g. `@/components/data-table`) rather than scattering multi-line deep imports.
 
-## 13. Strict Prohibition of N+1 Queries & Batch Operations
+## 10. Universal Zod Validation & Form State Delegation
 
-**Strictly eliminate N+1 queries. Never execute queries or API calls inside iterative loops.**
-
-- **Zero DB/API Calls in Loops**: NEVER run database queries (e.g. Supabase `.from(...)`, SQL `SELECT`/`UPDATE`/`DELETE`), HTTP requests, or asynchronous fetches inside `for`, `for...of`, `while`, `.map()`, or `.forEach()` loops.
-- **Constant O(1) Batch Queries**: When checking, fetching, or mutating records for multiple identifiers or foreign keys, aggregate target IDs into an array and execute a single batch query (e.g. `.in("id", targetIds)`, `.in("user_id", targetIds)`, SQL `IN (...)`).
-- **In-Memory Aggregation**: Aggregate counts, maps, lookups, or conflicts in application memory after fetching the batched result set rather than querying row-by-row.
-- **Bulk Mutations**: Use bulk updates/deletions (`.in("id", targetIds).delete()` or `.in("id", targetIds).update(...)`) instead of individual per-record operations.
-
-## 14. Form State & Zod Validation Delegation
-
-**Standardize on `react-hook-form` + `zodResolver`. Delegate all boundary and conditional logic to Zod.**
+**Standardize on `react-hook-form` + `zodResolver`. Across the entire codebase outside `components/ui/`, all validation must strictly use Zod schemas.**
 
 - **Form State Management**: Use `react-hook-form` with `@hookform/resolvers/zod` (`useForm({ resolver: zodResolver(schema), mode: "onChange" })`) for all interactive forms. Never manage multiple input states via scattered `useState` or ad-hoc dirty checking.
 - **Zod Schema Boundary Delegation**:
@@ -212,47 +195,17 @@ For any JavaScript / TypeScript / Node modifications:
 - **Zero Fallback Math for Schemas with Defaults**:
   - When a Zod schema defines defaults or fallbacks (`.default(...)`, `.catch(...)`), never write manual fallback arithmetic or nullish coalescing checks (`defaults?.page ?? 1`, `Math.max(1, ...)`). Rely directly on Zod's parse guarantees.
 - **Inline Error Feedback**: Display inline `<FieldError>` messages dynamically beneath fields bound to `errors.<field>?.message`. Indicate mandatory fields with visual asterisks (`*`) in field labels.
+- **Universal Zod Validation (Zero Manual Parsing/Validation)**:
+  - Strictly prohibit manual `isNaN(...)` checks, ad-hoc string splitting or regex parsing without Zod schemas, manual range checks, or custom type-assertion checks.
+  - Query Parameter Validation: Validate all URL search parameters (pagination, sorting, date ranges, entity IDs, comma-separated lists, enum filters, search strings) using declared, typed Zod schemas with `.parse()` or `.safeParse()`.
+  - Payload & Body Validation: Validate all API request bodies (POST, PATCH, DELETE) and cookie payloads using strict Zod schemas with descriptive error messages.
 
-## 15. Strict Brand Theme Color Compliance & Earth-Tones Palette
+## 11. Update README.md
 
-**Never introduce arbitrary or off-theme colors. Always adhere strictly to the project's Rikyū-cha theme and warm earth-tones palette.**
+**Always keep `README.md` in sync with codebase changes.**
 
-- **Project Brand Foundation**: The application is anchored on a warm alabaster cream background (`oklch(0.992 0.005 105)`) and signature Rikyū-cha tea-moss green (`--primary: #66684f` / dark: `#8a8d6e`).
-- **Strict Prohibition of Off-Theme Colors**: NEVER introduce arbitrary, saturated primary or accent colors (such as neon violet, purple, fuchsia, cyan, magenta, or royal blue) into components or styles.
-- **Two-Tier Color Strategy Hierarchy**:
-  - **Tier 1: Filter Chips & Criteria Controls**: All active filter chips share a unified calm natural stone container (`border-stone-300/80 bg-stone-500/5 hover:bg-stone-500/10 text-stone-800`), using subtle colored accent icons or indicator dots for entity differentiation (e.g., emerald icon for Customer, orange icon for Hardware, amber icon for Date Range, stone icon for Center). This maintains serene visual rhythm without creating multi-colored background clutter.
-  - **Tier 2: Table Row Status & Role Badges**: Vibrant earth tones are reserved strictly for row-level entity classification and status tags:
-    - **Signature Tea-Moss / Primary**: `--primary` (`#66684f`), `bg-primary/10`, `border-primary/30`, `text-primary` (active navigation, sort priority capsules, operator role, primary actions).
-    - **Terracotta Orange**: `text-orange-900 border-orange-300/80 bg-orange-600/10 dark:text-orange-200 dark:border-orange-800/50 dark:bg-orange-950/30` (Hardware source, hardware creator accounts, and hardware role).
-    - **Deep Forest Emerald**: `text-emerald-900 border-emerald-300/80 bg-emerald-600/10 dark:text-emerald-200 dark:border-emerald-800/50 dark:bg-emerald-950/30` (Customers and customer role).
-    - **Golden Honey Amber**: `text-amber-900 border-amber-300/80 bg-amber-600/10 dark:text-amber-200 dark:border-amber-800/50 dark:bg-amber-950/30` (Date range filters and Manager role).
-    - **Warm Natural Stone**: `text-stone-800 border-stone-300/80 bg-stone-500/10 dark:text-stone-200 dark:border-stone-700/80 dark:bg-stone-900/30` (Centers and Base user role).
-    - **Monochrome Zinc**: `text-zinc-900 border-zinc-300 bg-zinc-600/10 dark:text-zinc-100 dark:border-zinc-700 dark:bg-zinc-800/40` (Admin role and neutral utility controls).
-
-## 16. Unified Feature Module Barrel Exports (`index.ts`)
-
-**In reusable feature modules (such as `components/data-table/`), maintain an authoritative `index.ts` barrel file.**
-
-- **Module-Level Exports**: All public components, hooks, utilities, and types within a reusable feature module must be exported from its root `index.ts`.
-- **Clean Call Sites**: Callers MUST import directly from the module root (e.g. `@/components/data-table`) rather than scattering multi-line deep imports (e.g. `@/components/data-table/data-table-content`, `@/components/data-table/use-data-table`).
-- **Unified Surface**: Keeps imports cohesive, clean, and prevents circular dependencies or duplicate definitions across consuming pages and components.
-
-## 17. Strict Zero Default Fallback Props in Component Signatures
-
-**Never assign speculative default fallback values to component props in parameter destructuring.**
-
-- **No Masking Caller Intent**: In custom and feature components, NEVER assign arbitrary default values in prop destructuring (e.g. `isValid = true`, `submitLabel = "Save Changes"`, `title = "Default"`, `showIcon = true`).
-- **Explicit Call Sites**: Every prop that controls behavioral flow, validation, action labels, or callback triggers must be declared strictly mandatory (`isValid: boolean`, `submitLabel: string`) in the TypeScript interface and explicitly passed by each consuming component.
-- **Minimum Prop Surface**: If a value is constant or never varied across callers, hardcode it directly in the component rather than adding a configurable prop with a default fallback.
-
-## 18. Universal Zod Validation Across Codebase (Zero Manual Parsing/Validation)
-
-**Across the entire codebase outside `components/ui/`, all validation must strictly use Zod schemas.**
-
-- **Zero Manual Parsing/Validation**: Strictly prohibit manual `isNaN(...)` checks, ad-hoc string splitting or regex parsing without Zod schemas, manual range checks, or custom type-assertion checks.
-- **Query Parameter Validation**: Validate all URL search parameters (pagination, sorting, date ranges, entity IDs, comma-separated lists, enum filters, search strings) using declared, typed Zod schemas with `.parse()` or `.safeParse()`.
-- **Payload & Body Validation**: Validate all API request bodies (POST, PATCH, DELETE) and cookie payloads using strict Zod schemas with descriptive error messages.
-- **Frontend Filter Sanitization**: Validate and transform active table filter states, options matching, and fallback derivations through Zod schemas.
+- Explicitly update `README.md` whenever adding, modifying, or removing features, API endpoints, environment variables, dependencies, or workflows.
+- Ensure all setup instructions, configuration options, and usage examples remain accurate and up-to-date.
 
 ---
 

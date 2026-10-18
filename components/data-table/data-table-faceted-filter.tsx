@@ -95,7 +95,7 @@ export function DataTableFacetedFilter({
       >
         <ComboboxChips
           ref={anchor}
-          className="relative min-h-8 w-full sm:w-auto border-input bg-input/20 px-2.5 pr-7 text-2xs font-normal dark:bg-input/30 cursor-text"
+          className="relative min-h-8 w-full sm:w-auto border-input bg-input/20 px-2.5 pr-7 has-data-[slot=combobox-chip]:pr-7 text-2xs font-normal dark:bg-input/30 cursor-text"
         >
           {triggerIcon && (
             <HugeiconsIcon

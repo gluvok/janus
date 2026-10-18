@@ -8,35 +8,6 @@ export const DEFAULT_PAGE_SIZE = 15;
 export const globalModeSchema = z.enum(["automatic", "manual"]);
 export type GlobalMode = z.infer<typeof globalModeSchema>;
 
-export const DUAL_MODE_ENTITIES = ["entries", "weighments", "tickets"] as const;
-export type DualModeEntity = (typeof DUAL_MODE_ENTITIES)[number];
-
-export function isDualModeEntity(tableName: string): boolean {
-  return (DUAL_MODE_ENTITIES as readonly string[]).includes(tableName);
-}
-
-/**
- * Checks whether a given pathname belongs to a dual-mode route.
- * Dual-mode routes: "/", "/entries", "/weighments", "/tickets".
- * Single-mode routes: "/centers", "/users", "/customers", etc.
- */
-export function isDualModeRoute(pathname: string | null | undefined): boolean {
-  if (!pathname) return false;
-  if (pathname === "/") return true;
-  const segment = pathname.split("/").filter(Boolean)[0];
-  return isDualModeEntity(segment ?? "");
-}
-
-/**
- * Derives the partitioned tableId for any dual-mode entity.
- * e.g., getDualModeTableId("entries", "manual") => "entries_manual"
- * e.g., getDualModeTableId("weighments", "automatic") => "weighments_automatic"
- * e.g., getDualModeTableId("tickets", "manual") => "tickets_manual"
- */
-export function getDualModeTableId(baseTableName: string, mode: GlobalMode): string {
-  return `${baseTableName}_${mode}`;
-}
-
 export interface TableItemState {
   search: string;
   filters: Record<string, string>;
@@ -70,11 +41,59 @@ export const prunedTableStateSchema = z.object({
 });
 export type PrunedTableState = z.infer<typeof prunedTableStateSchema>;
 
+export const dualModeEntitySchema = z.object({
+  automatic: prunedTableStateSchema.optional(),
+  manual: prunedTableStateSchema.optional(),
+});
+export type DualModeEntityState = z.infer<typeof dualModeEntitySchema>;
+
+/**
+ * Smart-grouped cookie payload schema.
+ * Dual-mode entities (entries, weighments, tickets) have 'automatic' and 'manual' subkeys.
+ * Single-mode entities (centers, users, customers) store table preferences directly.
+ * Root 'mode' governs global platform mode and Home ('/').
+ */
 export const tablesCookiePayloadSchema = z.object({
-  globalMode: globalModeSchema,
-  tables: z.record(z.string(), prunedTableStateSchema),
+  mode: globalModeSchema,
+  entries: dualModeEntitySchema.optional(),
+  weighments: dualModeEntitySchema.optional(),
+  tickets: dualModeEntitySchema.optional(),
+  centers: prunedTableStateSchema.optional(),
+  users: prunedTableStateSchema.optional(),
+  customers: prunedTableStateSchema.optional(),
 });
 export type TablesCookiePayload = z.infer<typeof tablesCookiePayloadSchema>;
+
+export const DEFAULT_TABLES_COOKIE: TablesCookiePayload = {
+  mode: "automatic",
+  entries: {},
+  weighments: {},
+  tickets: {},
+  centers: {},
+  users: {},
+  customers: {},
+};
+
+/**
+ * Checks whether a given pathname belongs to a dual-mode route.
+ * Derives dynamic status directly from DEFAULT_TABLES_COOKIE schema definition:
+ * if the entity contains 'automatic' and 'manual' subkeys, it has dual mode.
+ * Home ('/') uses the root mode.
+ */
+export function isDualModeRoute(pathname: string | null | undefined): boolean {
+  if (!pathname || pathname === "/") return pathname === "/";
+  const route = pathname.slice(1);
+  const entry = (DEFAULT_TABLES_COOKIE as Record<string, unknown>)[route];
+  return typeof entry === "object" && entry !== null && "automatic" in entry;
+}
+
+/**
+ * Derives the partitioned tableId for any dual-mode entity.
+ * e.g., getDualModeTableId("entries", "manual") => "entries_manual"
+ */
+export function getDualModeTableId(baseTableName: string, mode: GlobalMode): string {
+  return `${baseTableName}_${mode}`;
+}
 
 /**
  * Prunes default/empty values to minimize cookie payload size.
@@ -128,7 +147,7 @@ export function pruneTableState(
 }
 
 /**
- * Serializes pruned table states and active global mode into a compact JSON string.
+ * Serializes pruned table states and active global mode into a compact smart-grouped JSON string.
  */
 export function serializeTablesCookie(
   tables: Record<string, TableItemState>,
@@ -136,8 +155,22 @@ export function serializeTablesCookie(
 ): string {
   const pruned = pruneTableState(tables);
   const payload: TablesCookiePayload = {
-    globalMode,
-    tables: pruned,
+    mode: globalMode,
+    entries: {
+      ...(pruned["entries_automatic"] ? { automatic: pruned["entries_automatic"] } : {}),
+      ...(pruned["entries_manual"] ? { manual: pruned["entries_manual"] } : {}),
+    },
+    weighments: {
+      ...(pruned["weighments_automatic"] ? { automatic: pruned["weighments_automatic"] } : {}),
+      ...(pruned["weighments_manual"] ? { manual: pruned["weighments_manual"] } : {}),
+    },
+    tickets: {
+      ...(pruned["tickets_automatic"] ? { automatic: pruned["tickets_automatic"] } : {}),
+      ...(pruned["tickets_manual"] ? { manual: pruned["tickets_manual"] } : {}),
+    },
+    ...(pruned["centers"] ? { centers: pruned["centers"] } : {}),
+    ...(pruned["users"] ? { users: pruned["users"] } : {}),
+    ...(pruned["customers"] ? { customers: pruned["customers"] } : {}),
   };
   return JSON.stringify(payload);
 }
@@ -162,10 +195,26 @@ function parseJsonString(raw: string): unknown {
   }
 }
 
+function hydrateState(pruned?: PrunedTableState): TableItemState {
+  if (!pruned) return DEFAULT_TABLE_ITEM_STATE;
+  return {
+    ...DEFAULT_TABLE_ITEM_STATE,
+    ...(pruned.search ? { search: pruned.search } : {}),
+    ...(pruned.filters ? { filters: pruned.filters } : {}),
+    ...(pruned.dateRange ? { dateRange: pruned.dateRange } : {}),
+    ...(pruned.sorting ? { sorting: pruned.sorting } : {}),
+    ...(pruned.columnVisibility ? { columnVisibility: pruned.columnVisibility } : {}),
+    pagination: {
+      pageIndex: pruned.pagination?.pageIndex ?? 0,
+      pageSize: pruned.pagination?.pageSize ?? DEFAULT_PAGE_SIZE,
+    },
+  };
+}
+
 /**
  * Safely parses cookie value (from server cookies() or document.cookie)
  * into a complete Record<string, TableItemState> and active global mode.
- * Gracefully defaults on invalid or missing data.
+ * Strictly enforces target schema: returns clean default state on parse failure with zero legacy fallbacks.
  */
 export function parseTablesCookie(rawCookie?: string | null): ParsedTablesCookieResult {
   const defaultResult: ParsedTablesCookieResult = {
@@ -181,27 +230,23 @@ export function parseTablesCookie(rawCookie?: string | null): ParsedTablesCookie
   const parseResult = tablesCookiePayloadSchema.safeParse(parsedJson);
   if (!parseResult.success) return defaultResult;
 
-  const { globalMode, tables } = parseResult.data;
+  const { mode, entries, weighments, tickets, centers, users, customers } = parseResult.data;
   const resultTables: Record<string, TableItemState> = {};
 
-  for (const [tableId, pruned] of Object.entries(tables)) {
-    resultTables[tableId] = {
-      ...DEFAULT_TABLE_ITEM_STATE,
-      ...(pruned.search ? { search: pruned.search } : {}),
-      ...(pruned.filters ? { filters: pruned.filters } : {}),
-      ...(pruned.dateRange ? { dateRange: pruned.dateRange } : {}),
-      ...(pruned.sorting ? { sorting: pruned.sorting } : {}),
-      ...(pruned.columnVisibility ? { columnVisibility: pruned.columnVisibility } : {}),
-      pagination: {
-        pageIndex: pruned.pagination?.pageIndex ?? 0,
-        pageSize: pruned.pagination?.pageSize ?? DEFAULT_PAGE_SIZE,
-      },
-    };
-  }
+  if (entries?.automatic) resultTables["entries_automatic"] = hydrateState(entries.automatic);
+  if (entries?.manual) resultTables["entries_manual"] = hydrateState(entries.manual);
+  if (weighments?.automatic)
+    resultTables["weighments_automatic"] = hydrateState(weighments.automatic);
+  if (weighments?.manual) resultTables["weighments_manual"] = hydrateState(weighments.manual);
+  if (tickets?.automatic) resultTables["tickets_automatic"] = hydrateState(tickets.automatic);
+  if (tickets?.manual) resultTables["tickets_manual"] = hydrateState(tickets.manual);
+  if (centers) resultTables["centers"] = hydrateState(centers);
+  if (users) resultTables["users"] = hydrateState(users);
+  if (customers) resultTables["customers"] = hydrateState(customers);
 
   return {
     tables: resultTables,
-    globalMode,
+    globalMode: mode,
   };
 }
 
