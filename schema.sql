@@ -71,11 +71,8 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_enum') THEN
         CREATE TYPE role_enum AS ENUM ('admin', 'manager', 'operator', 'base');
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'unit_enum') THEN
-        CREATE TYPE unit_enum AS ENUM ('kg', 'q', 'gal');
-    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'weighment_type') THEN
-        CREATE TYPE weighment_type AS ENUM ('unassigned', 'in', 'out');
+        CREATE TYPE weighment_type AS ENUM ('in', 'out');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ticket_status') THEN
         CREATE TYPE ticket_status AS ENUM ('pending', 'approved', 'rejected');
@@ -251,8 +248,7 @@ CREATE TABLE IF NOT EXISTS manual_weighments (
     id SERIAL PRIMARY KEY,
     in_entry_id INT NOT NULL UNIQUE REFERENCES manual_entries(id) ON DELETE RESTRICT,
     out_entry_id INT NOT NULL UNIQUE REFERENCES manual_entries(id) ON DELETE RESTRICT,
-    unit unit_enum NOT NULL DEFAULT 'kg',
-    type weighment_type NOT NULL DEFAULT 'unassigned',
+    type weighment_type NOT NULL DEFAULT 'in',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
@@ -270,8 +266,7 @@ CREATE TABLE IF NOT EXISTS automatic_weighments (
     id SERIAL PRIMARY KEY,
     in_entry_id INT NOT NULL UNIQUE REFERENCES automatic_entries(id) ON DELETE RESTRICT,
     out_entry_id INT NOT NULL UNIQUE REFERENCES automatic_entries(id) ON DELETE RESTRICT,
-    unit unit_enum NOT NULL DEFAULT 'kg',
-    type weighment_type NOT NULL DEFAULT 'unassigned',
+    type weighment_type NOT NULL DEFAULT 'in',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,

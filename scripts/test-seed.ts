@@ -10,8 +10,7 @@ import argon2 from "argon2";
 import { supabase } from "./supabase.ts";
 
 type Role = "admin" | "manager" | "operator" | "base";
-type Unit = "kg" | "q" | "gal";
-type WeighmentType = "unassigned" | "in" | "out";
+type WeighmentType = "in" | "out";
 type TicketStatus = "pending" | "approved" | "rejected";
 
 const TABLES_IN_CLEAR_ORDER = [
@@ -961,7 +960,6 @@ async function main() {
   interface WeighmentInsert {
     in_entry_id: number;
     out_entry_id: number;
-    unit: Unit;
     type: WeighmentType;
     created_at: string;
   }
@@ -972,8 +970,7 @@ async function main() {
     autoWeighmentsToInsert.push({
       in_entry_id: createdAutoIn[i].id,
       out_entry_id: createdAutoOut[i].id,
-      unit: "kg",
-      type: i % 4 === 0 ? "out" : i % 7 === 0 ? "unassigned" : "in",
+      type: i % 4 === 0 ? "out" : "in",
       created_at: daysAgo(pv.daysOffset, pv.minutesOffset),
     });
   }
@@ -994,8 +991,7 @@ async function main() {
     manualWeighmentsToInsert.push({
       in_entry_id: createdManualIn[i].id,
       out_entry_id: createdManualOut[i].id,
-      unit: "kg",
-      type: i % 4 === 0 ? "out" : i % 7 === 0 ? "unassigned" : "in",
+      type: i % 4 === 0 ? "out" : "in",
       created_at: daysAgo(pv.daysOffset, pv.minutesOffset),
     });
   }
