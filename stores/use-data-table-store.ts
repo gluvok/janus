@@ -66,6 +66,23 @@ function getInitialClientData(): {
 
 const initialClientData = getInitialClientData();
 
+function updateTableState(
+  state: DataTableStoreState,
+  tableId: string,
+  updater: (prev: TableItemState) => Partial<TableItemState>,
+): { tables: Record<string, TableItemState> } {
+  const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
+  const nextTables = {
+    ...state.tables,
+    [tableId]: {
+      ...prev,
+      ...updater(prev),
+    },
+  };
+  writeTablesCookie(nextTables, state.globalMode);
+  return { tables: nextTables };
+}
+
 export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
   tables: initialClientData.tables,
   globalMode: initialClientData.globalMode,
@@ -79,158 +96,86 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
     }),
 
   initFromCookies: ({ tables, initialGlobalMode }) =>
-    set((state) => {
-      const mergedTables = {
-        ...tables,
-        ...state.tables,
-      };
-      return {
-        tables: mergedTables,
-        globalMode: initialGlobalMode,
-        _hasHydrated: true,
-      };
-    }),
+    set((state) => ({
+      tables: { ...tables, ...state.tables },
+      globalMode: initialGlobalMode,
+      _hasHydrated: true,
+    })),
 
   getTableState: (tableId) => get().tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE,
 
   setTableSearch: (tableId, search) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          search,
-          pagination: { ...prev.pagination, pageIndex: 0 },
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        search,
+        pagination: { ...prev.pagination, pageIndex: 0 },
+      })),
+    ),
 
   setTableFilter: (tableId, key, value) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const updatedFilters = { ...prev.filters };
-      if (value === "all" || !value) {
-        delete updatedFilters[key];
-      } else {
-        updatedFilters[key] = value;
-      }
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
+    set((state) =>
+      updateTableState(state, tableId, (prev) => {
+        const updatedFilters = { ...prev.filters };
+        if (value === "all" || !value) {
+          delete updatedFilters[key];
+        } else {
+          updatedFilters[key] = value;
+        }
+        return {
           filters: updatedFilters,
           pagination: { ...prev.pagination, pageIndex: 0 },
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+        };
+      }),
+    ),
 
   setTableDateRange: (tableId, dateRange) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          dateRange,
-          pagination: { ...prev.pagination, pageIndex: 0 },
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        dateRange,
+        pagination: { ...prev.pagination, pageIndex: 0 },
+      })),
+    ),
 
   setTableSorting: (tableId, updaterOrValue) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          sorting: resolveUpdater(updaterOrValue, prev.sorting),
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        sorting: resolveUpdater(updaterOrValue, prev.sorting),
+      })),
+    ),
 
   removeTableSort: (tableId, columnId) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const updated = prev.sorting.filter((s) => s.id !== columnId);
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          sorting: updated,
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        sorting: prev.sorting.filter((s) => s.id !== columnId),
+      })),
+    ),
 
   resetTableSorting: (tableId) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          sorting: [],
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) => updateTableState(state, tableId, () => ({ sorting: [] }))),
 
   setTablePagination: (tableId, updaterOrValue) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          pagination: resolveUpdater(updaterOrValue, prev.pagination),
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        pagination: resolveUpdater(updaterOrValue, prev.pagination),
+      })),
+    ),
 
   setTableColumnVisibility: (tableId, updaterOrValue) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          columnVisibility: resolveUpdater(updaterOrValue, prev.columnVisibility),
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        columnVisibility: resolveUpdater(updaterOrValue, prev.columnVisibility),
+      })),
+    ),
 
   resetTableFilters: (tableId) =>
-    set((state) => {
-      const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
-      const nextTables = {
-        ...state.tables,
-        [tableId]: {
-          ...prev,
-          search: "",
-          filters: {},
-          dateRange: undefined,
-          pagination: { ...prev.pagination, pageIndex: 0 },
-        },
-      };
-      writeTablesCookie(nextTables, state.globalMode);
-      return { tables: nextTables };
-    }),
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        search: "",
+        filters: {},
+        dateRange: undefined,
+        pagination: { ...prev.pagination, pageIndex: 0 },
+      })),
+    ),
 }));
 
 export function useTableHydrated() {

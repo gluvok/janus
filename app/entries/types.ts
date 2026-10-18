@@ -39,8 +39,8 @@ export interface AutomaticEntry extends BaseEntry {
 }
 
 export interface ManualEntry extends BaseEntry {
-  created_by: number;
-  created_by_user?: EntryOperator | null;
+  creator_id: number;
+  creator?: EntryOperator | null;
 }
 
 export type Entry = AutomaticEntry | ManualEntry;
@@ -52,5 +52,5 @@ export function isAutomaticEntry(entry: Entry): entry is AutomaticEntry {
 }
 
 export function isManualEntry(entry: Entry): entry is ManualEntry {
-  return "created_by" in entry;
+  return "creator_id" in entry;
 }

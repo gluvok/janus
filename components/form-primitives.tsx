@@ -76,14 +76,14 @@ export function DialogActionFooter({
         >
           {isSubmitting ? (
             <>
-              <Spinner className="size-3.5 mr-1.5" />
+              <Spinner className="size-3.5" data-icon="inline-start" />
               <span>Saving...</span>
             </>
           ) : (
             <>
               <HugeiconsIcon
                 icon={FloppyDiskIcon}
-                className="size-3.5 mr-1.5 text-primary-foreground"
+                className="size-3.5 text-primary-foreground"
                 data-icon="inline-start"
               />
               <span>{submitLabel}</span>

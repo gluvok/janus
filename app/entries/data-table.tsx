@@ -43,7 +43,7 @@ const COLUMN_LABELS: Record<string, string> = {
   weight: "Weight",
   center: "Center",
   customer: "Customer",
-  created_by: "Created by",
+  creator: "Creator",
   images: "Photos",
   created_at: "Created At",
   updated_at: "Updated At",
@@ -55,7 +55,7 @@ const COLUMN_ICONS: Record<string, unknown> = {
   weight: WeightScale01Icon,
   center: Building01Icon,
   customer: UserGroupIcon,
-  created_by: UserIcon,
+  creator: UserIcon,
   images: Image01Icon,
   created_at: Calendar01Icon,
   updated_at: Clock01Icon,
@@ -131,7 +131,7 @@ function validateAndSanitizeFilters(
   const dynamicEntityChecks: Array<{ key: string; validIds: Set<string> }> = [
     { key: "center_id", validIds: new Set(centers.map((c) => String(c.id))) },
     { key: "customer_id", validIds: new Set(customers.map((c) => String(c.id))) },
-    { key: "created_by", validIds: new Set(creators.map((c) => String(c.id))) },
+    { key: "creator", validIds: new Set(creators.map((c) => String(c.id))) },
   ];
 
   for (const { key, validIds } of dynamicEntityChecks) {
@@ -340,7 +340,7 @@ export function EntriesDataTable() {
 
     if (mode === "manual") {
       configs.push({
-        key: "created_by",
+        key: "creator",
         title: "Creator",
         options: creatorOptions,
         variant: "primary",

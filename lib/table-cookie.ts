@@ -47,6 +47,12 @@ export const dualModeEntitySchema = z.object({
 });
 export type DualModeEntityState = z.infer<typeof dualModeEntitySchema>;
 
+export const DUAL_MODE_ENTITIES = ["entries", "weighments", "tickets"] as const;
+export const SINGLE_MODE_ENTITIES = ["centers", "users", "customers"] as const;
+
+export type DualModeEntity = (typeof DUAL_MODE_ENTITIES)[number];
+export type SingleModeEntity = (typeof SINGLE_MODE_ENTITIES)[number];
+
 /**
  * Smart-grouped cookie payload schema.
  * Dual-mode entities (entries, weighments, tickets) have 'automatic' and 'manual' subkeys.
@@ -76,15 +82,12 @@ export const DEFAULT_TABLES_COOKIE: TablesCookiePayload = {
 
 /**
  * Checks whether a given pathname belongs to a dual-mode route.
- * Derives dynamic status directly from DEFAULT_TABLES_COOKIE schema definition:
- * if the entity contains 'automatic' and 'manual' subkeys, it has dual mode.
  * Home ('/') uses the root mode.
  */
 export function isDualModeRoute(pathname: string | null | undefined): boolean {
   if (!pathname || pathname === "/") return pathname === "/";
   const route = pathname.slice(1);
-  const entry = (DEFAULT_TABLES_COOKIE as Record<string, unknown>)[route];
-  return typeof entry === "object" && entry !== null && "automatic" in entry;
+  return (DUAL_MODE_ENTITIES as readonly string[]).includes(route);
 }
 
 /**
@@ -156,22 +159,26 @@ export function serializeTablesCookie(
   const pruned = pruneTableState(tables);
   const payload: TablesCookiePayload = {
     mode: globalMode,
-    entries: {
-      ...(pruned["entries_automatic"] ? { automatic: pruned["entries_automatic"] } : {}),
-      ...(pruned["entries_manual"] ? { manual: pruned["entries_manual"] } : {}),
-    },
-    weighments: {
-      ...(pruned["weighments_automatic"] ? { automatic: pruned["weighments_automatic"] } : {}),
-      ...(pruned["weighments_manual"] ? { manual: pruned["weighments_manual"] } : {}),
-    },
-    tickets: {
-      ...(pruned["tickets_automatic"] ? { automatic: pruned["tickets_automatic"] } : {}),
-      ...(pruned["tickets_manual"] ? { manual: pruned["tickets_manual"] } : {}),
-    },
-    ...(pruned["centers"] ? { centers: pruned["centers"] } : {}),
-    ...(pruned["users"] ? { users: pruned["users"] } : {}),
-    ...(pruned["customers"] ? { customers: pruned["customers"] } : {}),
   };
+
+  for (const entity of DUAL_MODE_ENTITIES) {
+    const autoKey = `${entity}_automatic`;
+    const manKey = `${entity}_manual`;
+    const dualState: DualModeEntityState = {
+      ...(pruned[autoKey] ? { automatic: pruned[autoKey] } : {}),
+      ...(pruned[manKey] ? { manual: pruned[manKey] } : {}),
+    };
+    if (dualState.automatic || dualState.manual) {
+      payload[entity] = dualState;
+    }
+  }
+
+  for (const entity of SINGLE_MODE_ENTITIES) {
+    if (pruned[entity]) {
+      payload[entity] = pruned[entity];
+    }
+  }
+
   return JSON.stringify(payload);
 }
 
@@ -230,23 +237,23 @@ export function parseTablesCookie(rawCookie?: string | null): ParsedTablesCookie
   const parseResult = tablesCookiePayloadSchema.safeParse(parsedJson);
   if (!parseResult.success) return defaultResult;
 
-  const { mode, entries, weighments, tickets, centers, users, customers } = parseResult.data;
+  const data = parseResult.data;
   const resultTables: Record<string, TableItemState> = {};
 
-  if (entries?.automatic) resultTables["entries_automatic"] = hydrateState(entries.automatic);
-  if (entries?.manual) resultTables["entries_manual"] = hydrateState(entries.manual);
-  if (weighments?.automatic)
-    resultTables["weighments_automatic"] = hydrateState(weighments.automatic);
-  if (weighments?.manual) resultTables["weighments_manual"] = hydrateState(weighments.manual);
-  if (tickets?.automatic) resultTables["tickets_automatic"] = hydrateState(tickets.automatic);
-  if (tickets?.manual) resultTables["tickets_manual"] = hydrateState(tickets.manual);
-  if (centers) resultTables["centers"] = hydrateState(centers);
-  if (users) resultTables["users"] = hydrateState(users);
-  if (customers) resultTables["customers"] = hydrateState(customers);
+  for (const entity of DUAL_MODE_ENTITIES) {
+    const dual = data[entity];
+    if (dual?.automatic) resultTables[`${entity}_automatic`] = hydrateState(dual.automatic);
+    if (dual?.manual) resultTables[`${entity}_manual`] = hydrateState(dual.manual);
+  }
+
+  for (const entity of SINGLE_MODE_ENTITIES) {
+    const single = data[entity];
+    if (single) resultTables[entity] = hydrateState(single);
+  }
 
   return {
     tables: resultTables,
-    globalMode: mode,
+    globalMode: data.mode,
   };
 }
 

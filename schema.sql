@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS manual_entries (
     weight NUMERIC(10, 2) NOT NULL,
     center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
     customer_id INT REFERENCES customers(id) ON DELETE RESTRICT,
-    created_by INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     images TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -190,8 +190,8 @@ CREATE INDEX IF NOT EXISTS idx_manual_entries_created_at
 ON manual_entries (created_at DESC)
 WHERE deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_manual_entries_created_by
-ON manual_entries (created_by)
+CREATE INDEX IF NOT EXISTS idx_manual_entries_creator_id
+ON manual_entries (creator_id)
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_manual_entries_center

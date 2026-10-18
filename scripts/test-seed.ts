@@ -909,7 +909,7 @@ async function main() {
     weight: number;
     center_id: number;
     customer_id: number | null;
-    created_by: number;
+    creator_id: number;
     images: string[];
     created_at: string;
   }
@@ -923,7 +923,7 @@ async function main() {
       weight: pv.grossWeight,
       center_id: pv.centerId,
       customer_id: pv.customerId,
-      created_by: pv.operatorId,
+      creator_id: pv.operatorId,
       images: [],
       created_at: daysAgo(pv.daysOffset, pv.minutesOffset + 120),
     });
@@ -933,7 +933,7 @@ async function main() {
       weight: pv.tareWeight,
       center_id: pv.centerId,
       customer_id: pv.customerId,
-      created_by: pv.operatorId,
+      creator_id: pv.operatorId,
       images: [],
       created_at: daysAgo(pv.daysOffset, pv.minutesOffset),
     });
@@ -1076,7 +1076,7 @@ async function main() {
       weight: 16000 + ((i * 1250) % 28000),
       center_id: mainWeighbridgeId,
       customer_id: customerId,
-      created_by: operatorId,
+      creator_id: operatorId,
       images: [],
       created_at: daysAgo(Math.floor(i / 2) + 1, (i * 47) % 720),
     });
@@ -1092,7 +1092,7 @@ async function main() {
       weight: 18000 + ((i * 1150) % 22000),
       center_id: centerId,
       customer_id: customerId,
-      created_by: operator1Id,
+      creator_id: operator1Id,
       images: [],
       created_at: daysAgo(5 + i, (i * 35) % 60),
     });
@@ -1107,7 +1107,7 @@ async function main() {
       weight: 14000 + ((i * 2100) % 36000),
       center_id: centerId,
       customer_id: null,
-      created_by: operator2Id,
+      creator_id: operator2Id,
       images: [],
       created_at: daysAgo(8 + i, (i * 50) % 60),
     });

@@ -23,7 +23,7 @@ export interface SortableEntry {
   weight: number | string;
   center?: { name?: string | null } | null;
   customer?: { name?: string | null } | null;
-  created_by_user?: { name?: string | null } | null;
+  creator?: { name?: string | null } | null;
 }
 
 export const numericWeightSchema = z
@@ -91,8 +91,16 @@ export function applyCommonEntriesFilters<
   return updated;
 }
 
+const RELATIONAL_VALUE_GETTERS: Record<string, (item: SortableEntry) => string | number> = {
+  center: (item) => item.center?.name ?? "",
+  customer: (item) => item.customer?.name ?? "",
+  creator: (item) => item.creator?.name ?? "",
+  weight: (item) => Number(item.weight ?? 0),
+  id: (item) => Number(item.id ?? 0),
+};
+
 /**
- * Sorts entries in-memory when sorting across relational joins (center.name, customer.name, created_by_user.name)
+ * Sorts entries in-memory when sorting across relational joins (center.name, customer.name, creator.name)
  * or composite fields, strictly following multi-column precedence rules.
  */
 export function sortEntriesRelational<T extends SortableEntry>(
@@ -105,32 +113,14 @@ export function sortEntriesRelational<T extends SortableEntry>(
 
   return [...entries].sort((a, b) => {
     for (const rule of sortRules) {
-      let valA: string | number = "";
-      let valB: string | number = "";
+      const getter = RELATIONAL_VALUE_GETTERS[rule.col];
+      const valA = getter ? getter(a) : String((a as Record<string, unknown>)[rule.col] ?? "");
+      const valB = getter ? getter(b) : String((b as Record<string, unknown>)[rule.col] ?? "");
 
-      if (rule.col === "center") {
-        valA = a.center?.name ?? "";
-        valB = b.center?.name ?? "";
-      } else if (rule.col === "customer") {
-        valA = a.customer?.name ?? "";
-        valB = b.customer?.name ?? "";
-      } else if (rule.col === "created_by") {
-        valA = a.created_by_user?.name ?? "";
-        valB = b.created_by_user?.name ?? "";
-      } else if (rule.col === "weight" || rule.col === "id") {
-        valA = Number((a as Record<string, unknown>)[rule.col] ?? 0);
-        valB = Number((b as Record<string, unknown>)[rule.col] ?? 0);
-      } else {
-        valA = String((a as Record<string, unknown>)[rule.col] ?? "");
-        valB = String((b as Record<string, unknown>)[rule.col] ?? "");
-      }
-
-      let comparison = 0;
-      if (typeof valA === "number" && typeof valB === "number") {
-        comparison = valA - valB;
-      } else {
-        comparison = String(valA).localeCompare(String(valB));
-      }
+      const comparison =
+        typeof valA === "number" && typeof valB === "number"
+          ? valA - valB
+          : String(valA).localeCompare(String(valB));
 
       if (comparison !== 0) {
         return rule.ascending ? comparison : -comparison;
@@ -148,57 +138,58 @@ export function paginateInMemory<T>(items: T[], pagination: PaginationParams): T
   return items.slice(startIndex, startIndex + pagination.pageSize);
 }
 
-const AUTOMATIC_SORT_COLUMNS = [
+const BASE_SORT_COLUMNS = [
   "id",
   "vehicle_number",
+  "weight",
+  "center",
+  "customer",
+  "created_at",
+  "updated_at",
+] as const;
+
+const AUTOMATIC_SORT_COLUMNS = [...BASE_SORT_COLUMNS, "detected_vehicle_number"] as const;
+const MANUAL_SORT_COLUMNS = [...BASE_SORT_COLUMNS, "creator", "creator_id"] as const;
+
+const BASE_SELECT_FIELDS = [
+  "id",
+  "center_id",
+  "customer_id",
+  "vehicle_number",
+  "weight",
+  "images",
+  "created_at",
+  "updated_at",
+  "center:centers(id, name)",
+  "customer:customers(id, name)",
+];
+
+const AUTOMATIC_SELECT_PROJECTION = [
+  ...BASE_SELECT_FIELDS,
+  "device_id",
   "detected_vehicle_number",
-  "weight",
-  "center",
-  "customer",
-  "created_at",
-  "updated_at",
-] as const;
+].join(",\n  ");
 
-const MANUAL_SORT_COLUMNS = [
-  "id",
-  "vehicle_number",
-  "weight",
-  "center",
-  "customer",
-  "created_by",
-  "created_at",
-  "updated_at",
-] as const;
+const MANUAL_SELECT_PROJECTION = [
+  ...BASE_SELECT_FIELDS,
+  "creator_id",
+  "creator:users(id, name, role)",
+].join(",\n  ");
 
-const AUTOMATIC_SELECT_PROJECTION = `
-  id,
-  device_id,
-  center_id,
-  customer_id,
-  detected_vehicle_number,
-  vehicle_number,
-  weight,
-  images,
-  created_at,
-  updated_at,
-  center:centers(id, name),
-  customer:customers(id, name)
-`;
-
-const MANUAL_SELECT_PROJECTION = `
-  id,
-  center_id,
-  customer_id,
-  created_by,
-  vehicle_number,
-  weight,
-  images,
-  created_at,
-  updated_at,
-  center:centers(id, name),
-  customer:customers(id, name),
-  created_by_user:users!manual_entries_created_by_fkey(id, name, role)
-`;
+const ENTRY_CONFIGS = {
+  automatic: {
+    tableName: "automatic_entries" as const,
+    projection: AUTOMATIC_SELECT_PROJECTION,
+    allowedSortColumns: AUTOMATIC_SORT_COLUMNS,
+    relationalSortCols: new Set(["center", "customer"]),
+  },
+  manual: {
+    tableName: "manual_entries" as const,
+    projection: MANUAL_SELECT_PROJECTION,
+    allowedSortColumns: MANUAL_SORT_COLUMNS,
+    relationalSortCols: new Set(["center", "customer", "creator"]),
+  },
+} as const;
 
 /**
  * Executes entries query for /api/entries/automatic and /api/entries/manual,
@@ -211,20 +202,16 @@ export async function executeEntriesGetQuery(
   try {
     const { searchParams } = new URL(request.url);
     const pagination = parsePagination(searchParams);
+    const config = ENTRY_CONFIGS[mode];
 
-    const isAutomatic = mode === "automatic";
-    const allowedColumns = isAutomatic ? AUTOMATIC_SORT_COLUMNS : MANUAL_SORT_COLUMNS;
-    const sortRules = parseSorting(searchParams, allowedColumns, {
+    const sortRules = parseSorting(searchParams, config.allowedSortColumns, {
       col: "id",
       ascending: false,
     });
 
-    const tableName = isAutomatic ? "automatic_entries" : "manual_entries";
-    const projection = isAutomatic ? AUTOMATIC_SELECT_PROJECTION : MANUAL_SELECT_PROJECTION;
-
     let query: any = (supabase as any)
-      .from(tableName)
-      .select(projection, { count: "exact" })
+      .from(config.tableName)
+      .select(config.projection, { count: "exact" })
       .is("deleted_at", null);
 
     const search = searchParams.get("search")?.trim();
@@ -239,22 +226,20 @@ export async function executeEntriesGetQuery(
 
     query = applyCommonEntriesFilters(query, searchParams);
 
-    if (!isAutomatic) {
-      const createdBy = searchParams.get("created_by")?.trim();
-      if (createdBy && createdBy !== "all") {
-        const parsed = commaSeparatedIdsSchema.safeParse(createdBy);
+    if (mode === "manual") {
+      const creatorParam =
+        searchParams.get("creator")?.trim() ?? searchParams.get("creator_id")?.trim();
+      if (creatorParam && creatorParam !== "all") {
+        const parsed = commaSeparatedIdsSchema.safeParse(creatorParam);
         if (parsed.success && parsed.data.length > 0) {
-          query = query.in("created_by", parsed.data);
+          query = query.in("creator_id", parsed.data);
         }
       }
     }
 
     query = applyDateRange(query, searchParams);
 
-    const relationalCols = isAutomatic
-      ? ["center", "customer"]
-      : ["center", "customer", "created_by"];
-    const hasRelationalSort = sortRules.some((r) => relationalCols.includes(r.col));
+    const hasRelationalSort = sortRules.some((r) => config.relationalSortCols.has(r.col));
 
     if (hasRelationalSort) {
       const { data, count, error } = await query;

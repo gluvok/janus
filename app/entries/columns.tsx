@@ -83,21 +83,21 @@ export function getColumns(mode: EntryMode) {
     }),
     ...(mode === "manual"
       ? [
-          columnHelper.accessor((row) => (isManualEntry(row) ? row.created_by : undefined), {
-            id: "created_by",
+          columnHelper.accessor((row) => (isManualEntry(row) ? row.creator_id : undefined), {
+            id: "creator",
             header: ({ column }) => (
-              <DataTableColumnHeader column={column} title="Created by" icon={UserIcon} />
+              <DataTableColumnHeader column={column} title="Creator" icon={UserIcon} />
             ),
             cell: ({ row }) => {
-              const creator = isManualEntry(row.original) ? row.original.created_by_user : null;
-              const createdBy = isManualEntry(row.original) ? row.original.created_by : null;
+              const creator = isManualEntry(row.original) ? row.original.creator : null;
+              const creatorId = isManualEntry(row.original) ? row.original.creator_id : null;
               if (!creator) {
-                return <span className="text-2xs text-muted-foreground">User #{createdBy}</span>;
+                return <span className="text-2xs text-muted-foreground">User #{creatorId}</span>;
               }
               return <span className="text-xs text-muted-foreground">{creator.name}</span>;
             },
             meta: {
-              title: "Created by",
+              title: "Creator",
               icon: UserIcon,
             },
             enableSorting: true,

@@ -89,4 +89,19 @@ BEGIN
 END;
 $$;
 
+-- 9. Rename created_by to creator_id in manual_entries
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'manual_entries' AND column_name = 'created_by'
+    ) THEN
+        ALTER TABLE manual_entries RENAME COLUMN created_by TO creator_id;
+    END IF;
+END $$;
 
+DROP INDEX IF EXISTS idx_manual_entries_created_by;
+CREATE INDEX IF NOT EXISTS idx_manual_entries_creator_id
+ON manual_entries (creator_id)
+WHERE deleted_at IS NULL;

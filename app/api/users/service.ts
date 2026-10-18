@@ -225,8 +225,8 @@ export async function deleteUserAccounts(targetIds: number[]) {
   const [entriesCreatedRes, ticketsRes] = await Promise.all([
     supabase
       .from("manual_entries")
-      .select("created_by")
-      .in("created_by", targetIds)
+      .select("creator_id")
+      .in("creator_id", targetIds)
       .is("deleted_at", null),
     supabase
       .from("manual_tickets")
@@ -235,7 +235,7 @@ export async function deleteUserAccounts(targetIds: number[]) {
       .is("deleted_at", null),
   ]);
 
-  const entriesCreatedCounts = countOccurrences(entriesCreatedRes.data, "created_by");
+  const entriesCreatedCounts = countOccurrences(entriesCreatedRes.data, "creator_id");
   const ticketsCounts = countOccurrences(ticketsRes.data, "user_id");
 
   const blockedUsers: { id: number; username: string | null; reasons: string[] }[] = [];
