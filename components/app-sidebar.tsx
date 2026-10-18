@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import axios from "axios";
 import {
   Sidebar,
   SidebarContent,
@@ -37,23 +36,6 @@ const DEFAULT_USER_PROPS: UserProps = {
 export function AppSidebar() {
   const [accountUser, setAccountUser] = React.useState<User | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    let mounted = true;
-    axios
-      .get<{ data: User }>("/api/users/me")
-      .then((res) => {
-        if (mounted && res.data?.data) {
-          setAccountUser(res.data.data);
-        }
-      })
-      .catch(() => {
-        // Fallback silently to default user props
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const userProps: UserProps = React.useMemo(() => {
     if (!accountUser) return DEFAULT_USER_PROPS;

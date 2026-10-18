@@ -127,14 +127,21 @@ export function DataTableFacetedFilter({
           </ComboboxValue>
           <ComboboxChipsInput
             placeholder={placeholderText}
+            size={
+              selectedOptions.length === 0
+                ? Math.max(placeholderText.length, 1)
+                : isActive
+                  ? Math.max(placeholderText.length, 1)
+                  : 1
+            }
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             className={cn(
-              "text-2xs placeholder:text-muted-foreground",
-              selectedOptions.length === 0 ? "min-w-20" : isActive ? "min-w-16" : "w-0 min-w-0 p-0",
+              "flex-initial min-w-0 text-2xs placeholder:text-muted-foreground",
+              selectedOptions.length > 0 && !isActive && "w-0 min-w-0 p-0",
             )}
           />
-          <ComboboxTrigger className="ml-auto shrink-0 cursor-pointer p-0.5 text-muted-foreground hover:text-foreground transition-colors" />
+          <ComboboxTrigger className="ml-1.5 shrink-0 cursor-pointer p-0.5 text-muted-foreground hover:text-foreground transition-colors" />
         </ComboboxChips>
         <ComboboxContent
           anchor={anchor}

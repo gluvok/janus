@@ -83,7 +83,7 @@ export function UserDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md pb-3">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-md bg-destructive/10 text-destructive">

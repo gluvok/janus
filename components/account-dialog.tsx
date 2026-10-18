@@ -131,7 +131,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md pb-3">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <DialogIconBadge icon={UserCircleIcon} />
@@ -149,32 +149,38 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
 
           <div
             className={cn(
-              "flex flex-col gap-4 py-2 transition-opacity",
+              "flex flex-col gap-4 pt-1 pb-0 transition-opacity",
               loading ? "pointer-events-none opacity-40 select-none" : "opacity-100",
             )}
           >
-            {displayUser && (
-              <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Assigned Role</span>
+            <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Assigned Role</span>
+                {displayUser ? (
                   <RoleBadge role={displayUser.role} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <HugeiconsIcon icon={Calendar01Icon} className="size-3" />
-                    <span>Member Since</span>
-                  </span>
-                  <span className="text-foreground">{formatDateTime(displayUser.created_at)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <HugeiconsIcon icon={Clock01Icon} className="size-3" />
-                    <span>Last Updated</span>
-                  </span>
-                  <span className="text-foreground">{formatDateTime(displayUser.updated_at)}</span>
-                </div>
+                ) : (
+                  <span className="text-muted-foreground font-mono">—</span>
+                )}
               </div>
-            )}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <HugeiconsIcon icon={Calendar01Icon} className="size-3" />
+                  <span>Member Since</span>
+                </span>
+                <span className="text-foreground">
+                  {displayUser ? formatDateTime(displayUser.created_at) : "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <HugeiconsIcon icon={Clock01Icon} className="size-3" />
+                  <span>Last Updated</span>
+                </span>
+                <span className="text-foreground">
+                  {displayUser ? formatDateTime(displayUser.updated_at) : "—"}
+                </span>
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
               <FormRequiredNotice />

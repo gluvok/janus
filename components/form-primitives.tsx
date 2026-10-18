@@ -50,7 +50,7 @@ export function DialogActionFooter({
   submitLabel,
 }: DialogActionFooterProps) {
   return (
-    <DialogFooter className="flex flex-row items-center justify-between sm:justify-between w-full gap-2 pt-2 border-t border-border/40">
+    <DialogFooter className="flex flex-row items-center justify-between sm:justify-between w-full gap-2 pt-3.5 border-t border-border/40">
       <FormDirtyIndicator isDirty={isDirty} className="mr-auto" />
       <div className="flex items-center gap-2">
         <Button

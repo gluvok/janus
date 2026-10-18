@@ -112,7 +112,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg pb-3">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <DialogIconBadge icon={Factory01Icon} />
@@ -135,7 +135,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               Retry
             </Button>
           </div>
-        ) : factory ? (
+        ) : (
           <div className="relative">
             {loading && (
               <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur-sm">
@@ -177,10 +177,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 submitLabel="Save Changes"
               />
             </form>
-          </div>
-        ) : (
-          <div className="flex h-72 items-center justify-center">
-            <Spinner className="size-6 text-primary" />
           </div>
         )}
       </DialogContent>

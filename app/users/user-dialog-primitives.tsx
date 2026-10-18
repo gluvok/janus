@@ -83,7 +83,7 @@ export function UserDialogShell({
 }: UserDialogShellProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg pb-3">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <DialogIconBadge icon={headerIcon} />
