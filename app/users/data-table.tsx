@@ -166,8 +166,8 @@ export function UsersDataTable() {
         {/* Action Controls Group (Right) */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
           {/* Add User Button */}
-          <Button size="sm" onClick={handleAddUser} className="gap-1.5 text-xs h-8">
-            <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" />
+          <Button size="sm" onClick={handleAddUser} className="h-7 gap-1 px-2 text-2xs">
+            <HugeiconsIcon icon={UserAdd01Icon} data-icon="inline-start" />
             <span>Add User</span>
           </Button>
 

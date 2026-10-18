@@ -9,9 +9,14 @@ import { cn } from "@/lib/utils";
 export interface DataTableRefreshButtonProps {
   onClick?: () => void;
   loading?: boolean;
+  className?: string;
 }
 
-export function DataTableRefreshButton({ onClick, loading }: DataTableRefreshButtonProps) {
+export function DataTableRefreshButton({
+  onClick,
+  loading,
+  className,
+}: DataTableRefreshButtonProps) {
   const [internalSpinning, setInternalSpinning] = useState<boolean>(false);
 
   const isSpinning = loading ?? internalSpinning;
@@ -30,7 +35,10 @@ export function DataTableRefreshButton({ onClick, loading }: DataTableRefreshBut
       size="sm"
       onClick={handleClick}
       disabled={isSpinning}
-      className="h-8 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+      className={cn(
+        "h-7 gap-1 px-2 text-2xs text-muted-foreground hover:text-foreground cursor-pointer shrink-0",
+        className,
+      )}
       title="Refresh data"
       aria-label="Refresh data"
     >

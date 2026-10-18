@@ -517,18 +517,18 @@ ALTER TABLE IF EXISTS automatic_weighments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS manual_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS automatic_tickets ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow access factories" ON factories FOR ALL USING (true);
-CREATE POLICY "Allow access users" ON users FOR ALL USING (true);
-CREATE POLICY "Allow access devices" ON devices FOR ALL USING (true);
-CREATE POLICY "Allow access sessions" ON sessions FOR ALL USING (true);
-CREATE POLICY "Allow access centers" ON centers FOR ALL USING (true);
-CREATE POLICY "Allow access customers" ON customers FOR ALL USING (true);
-CREATE POLICY "Allow access manual_entries" ON manual_entries FOR ALL USING (true);
-CREATE POLICY "Allow access automatic_entries" ON automatic_entries FOR ALL USING (true);
-CREATE POLICY "Allow access manual_weighments" ON manual_weighments FOR ALL USING (true);
-CREATE POLICY "Allow access automatic_weighments" ON automatic_weighments FOR ALL USING (true);
-CREATE POLICY "Allow access manual_tickets" ON manual_tickets FOR ALL USING (true);
-CREATE POLICY "Allow access automatic_tickets" ON automatic_tickets FOR ALL USING (true);
+CREATE POLICY "Allow access factories" ON factories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access users" ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access devices" ON devices FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access sessions" ON sessions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access centers" ON centers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access customers" ON customers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access manual_entries" ON manual_entries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access automatic_entries" ON automatic_entries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access manual_weighments" ON manual_weighments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access automatic_weighments" ON automatic_weighments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access manual_tickets" ON manual_tickets FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access automatic_tickets" ON automatic_tickets FOR ALL USING (true) WITH CHECK (true);
 
 -- ==============================================================================
 -- SEQUENCE RESET FUNCTIONS

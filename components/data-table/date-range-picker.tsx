@@ -120,7 +120,7 @@ export function DatePickerWithRange({
               variant="outline"
               id="date-picker-range"
               className={cn(
-                "h-8 max-w-full justify-start gap-1.5 px-2.5 text-2xs font-normal",
+                "h-7 max-w-full justify-start gap-1 px-2 text-2xs font-normal",
                 !date?.from && "text-muted-foreground",
               )}
             >

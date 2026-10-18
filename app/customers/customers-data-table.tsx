@@ -143,9 +143,9 @@ export function CustomersDataTable() {
               setEditingCustomer(null);
               setFormDialogOpen(true);
             }}
-            className="gap-1.5 text-xs h-8"
+            className="h-7 gap-1 px-2 text-2xs"
           >
-            <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" />
+            <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
             <span>Add Customer</span>
           </Button>
 
