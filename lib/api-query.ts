@@ -4,6 +4,9 @@
  * date range filtering, and standardized paginated response envelopes across route handlers.
  */
 
+import { NextResponse } from "next/server";
+import { StatusCodes } from "http-status-codes";
+import { supabase } from "@/lib/supabase";
 import { z } from "zod";
 
 export interface PaginationParams {
@@ -172,4 +175,100 @@ export function formatPaginatedResponse<T>(
     pageSize: pagination.pageSize,
     totalPages,
   };
+}
+
+export interface PaginatedEntityQueryOptions<TCol extends string> {
+  request: Request;
+  table: string;
+  select?: string;
+  allowedSortColumns: readonly TCol[];
+  defaultSort?: SortRule<TCol>;
+  searchColumns?: readonly string[];
+  filterDeleted?: boolean;
+  applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
+}
+
+/**
+ * Builds and executes a standard Supabase entity query, returning raw PaginatedResult<TData>.
+ */
+export async function buildPaginatedEntityResult<TCol extends string, TData = unknown>({
+  searchParams,
+  table,
+  select = "*",
+  allowedSortColumns,
+  defaultSort,
+  searchColumns = [],
+  filterDeleted = true,
+  applyCustomFilters,
+}: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
+  searchParams: URLSearchParams;
+}): Promise<PaginatedResult<TData>> {
+  const isAll = searchParams.get("all") === "true";
+  const pagination = parsePagination(searchParams);
+  const sortRules = parseSorting(searchParams, allowedSortColumns, defaultSort);
+
+  let query: any = supabase.from(table).select(select, { count: "exact" });
+
+  if (filterDeleted) {
+    query = query.is("deleted_at", null);
+  }
+
+  const search = searchParams.get("search")?.trim();
+  if (search && searchColumns.length > 0) {
+    if (searchColumns.length === 1) {
+      query = query.ilike(searchColumns[0], `%${search}%`);
+    } else {
+      const orConditions = searchColumns.map((col) => `${col}.ilike.%${search}%`).join(",");
+      query = query.or(orConditions);
+    }
+  }
+
+  query = applyDateRange(query, searchParams);
+
+  if (applyCustomFilters) {
+    query = applyCustomFilters(query, searchParams);
+  }
+
+  if (isAll) {
+    const activeSort = sortRules.length > 0 ? sortRules : defaultSort ? [defaultSort] : [];
+    query = applySorting(query, activeSort);
+  } else {
+    query = applySortingAndPagination(query, sortRules, pagination);
+  }
+
+  const { data, count, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (isAll) {
+    return {
+      data: (data ?? []) as TData[],
+      totalCount: data?.length ?? 0,
+      page: 1,
+      pageSize: data?.length ?? 0,
+      totalPages: 1,
+    };
+  }
+
+  return formatPaginatedResponse<TData>(data as TData[] | null, count, pagination);
+}
+
+/**
+ * Executes a standardized paginated entity query for Next.js route handlers, returning a NextResponse envelope.
+ */
+export async function executePaginatedEntityQuery<TCol extends string, TData = unknown>(
+  options: PaginatedEntityQueryOptions<TCol>,
+): Promise<NextResponse> {
+  try {
+    const { searchParams } = new URL(options.request.url);
+    const result = await buildPaginatedEntityResult<TCol, TData>({
+      ...options,
+      searchParams,
+    });
+    return NextResponse.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+  }
 }

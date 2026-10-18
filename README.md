@@ -169,25 +169,18 @@ The `/settings` route provides facility configuration controls powered by the un
   - **Client-Side Zod Validation**: Form validates against `updateFactorySchema` before dispatching updates.
   - **Dirty State Tracking**: Save Changes and Reset buttons detect client form changes with disabled controls when pristine, `<Spinner>` indicators during requests, and inline timestamp tracking.
 
-## Users & Customers Administration
+## Users Administration
 
-Administrative users (`/users`) and agricultural customers (`/customers`) are powered by the unified `/api/users` endpoint and single-source `UsersDataTable` architecture (`roleScope="staff" | "customer"`):
+Administrative and operational users (`/users`) are managed via `/api/users` and `UsersDataTable`:
 
 - **Backend Endpoints**: `GET`, `POST`, `PATCH`, `DELETE /api/users`, `GET`, `PATCH /api/users/me`
   - **`GET /api/users/me`**: Fetches the active factory administrative account (`admin1`, Factory 1) with complete role, factory, and creation metadata for user profile inspection.
   - **`PATCH /api/users/me`**: Updates the logged-in user's profile (`name`, `username`, and optional `password`). Validates username uniqueness and password length via Zod, re-hashes credentials with Argon2id, and synchronizes profile state across the sidebar and user avatar.
-  - **`GET /api/users`**: Multi-column sorting (`id`, `username`, `name`, `role`, `created_at`, `updated_at`), search (across `name` and `username`), role filter, date range filter, and server-side pagination with exact total counts. Defaults to factory staff accounts (`role NOT IN ('customer')`) unless a specific role filter like `?role=customer` is requested. Excludes `password_hash` from the response. Hardware devices authenticate via `devices.api_key_hash` rather than user accounts.
-  - **`POST /api/users`**: Strict Zod validation (`username`, `name`, `role`, `password`), enforces username uniqueness across active accounts (`deleted_at IS NULL`), hashes passwords with Argon2id, and provisions the user for Factory ID 1. Supports creating staff as well as customer accounts.
-  - **`PATCH /api/users`**: Validates input, verifies username uniqueness if updated, optionally resets and re-hashes passwords with Argon2id when provided, and updates user profile and role with strict role safety (customer accounts cannot be upgraded to staff roles, and staff accounts cannot become customer accounts).
-  - **`DELETE /api/users`**: Supports single (`id`) and bulk (`ids`) deletion. Performs constant O(1) batched pre-flight integrity checks partitioned by role:
-    - **Staff Users**: verified against `entries.created_by` (or `manual_entries.created_by`) and `tickets.user_id` (or `manual_tickets.user_id`).
-    - **Customer Users**: verified against `entries.customer_id` (or `manual_entries.customer_id`, `automatic_entries.customer_id`).
-      Blocks deletion with HTTP 409 Conflict if linked historical records exist. Soft-deletes (`deleted_at: NOW()`) when safe.
+  - **`GET /api/users`**: Multi-column sorting (`id`, `username`, `name`, `role`, `created_at`, `updated_at`), search (across `name` and `username`), role filter, date range filter, and server-side pagination with exact total counts. Excludes `password_hash` from the response. Hardware devices authenticate via `devices.api_key_hash` rather than user accounts.
+  - **`POST /api/users`**: Strict Zod validation (`username`, `name`, `role`, `password`), enforces username uniqueness across active accounts (`deleted_at IS NULL`), hashes passwords with Argon2id, and provisions the user for Factory ID 1.
+  - **`PATCH /api/users`**: Validates input, verifies username uniqueness if updated, optionally resets and re-hashes passwords with Argon2id when provided, and updates user profile and role.
+  - **`DELETE /api/users`**: Supports single (`id`) and bulk (`ids`) deletion. Performs constant O(1) batched pre-flight integrity checks verified against `manual_entries.created_by` and `manual_tickets.user_id`. Blocks deletion with HTTP 409 Conflict if linked historical records exist. Soft-deletes (`deleted_at: NOW()`) when safe.
   - **Scoped Datatable Refresh**: Includes `<DataTableRefreshButton>` in the toolbar action group for fast, single-click table refreshing.
-  - **Optional & Co-Dependent Customer Credentials**: Customers (`role = 'customer'`) can be registered with or without portal login credentials:
-    - **Direct Portal Access Switch**: Defaults cleanly to an "Enable Customer Portal Access" switch, displaying username and password fields only when enabled.
-    - **Flexible Co-Dependent Validation**: If a portal username is set, a password is mandatory; if a password is set, a username is mandatory; if neither is provided, only the customer's full name is required for delivery ticket tracking. Staff accounts retain strictly mandatory credentials.
-    - **Database Integrity**: Backed by `chk_staff_credentials` check constraint (`role = 'customer' OR (username IS NOT NULL AND password_hash IS NOT NULL)`) and partial unique index `idx_users_username_active` on non-null usernames.
   - **Modular Architecture & Service Extraction**: Decomposed large files into single-responsibility modules:
     - `app/api/users/service.ts`: Centralizes database queries, Argon2id hashing, and constant O(1) batched conflict checks, keeping `app/api/users/route.ts` as a sleek HTTP routing controller.
     - `app/settings/factory-form.tsx`: Encapsulates the 2-column configuration grid and a clean 2-column metadata strip (Created On, Last Modified).
@@ -277,11 +270,10 @@ pnpm run seed:test:clean
 
 Running `pnpm run seed:test` or `pnpm run seed:test:clean` provisions high-volume fixtures specifically tailored for testing TanStack Table pagination, column sorting, and filtering:
 
-- **Zero N+1 Batch Architecture**: All database seeding routines strictly enforce constant O(1) batched lookups (`.in(...)`) and bulk insertions (`.insert([...])`) across factories, users, centers, commodities, customers, entries, weighments, and tickets.
+- **Zero N+1 Batch Architecture**: All database seeding routines strictly enforce constant O(1) batched lookups (`.in(...)`) and bulk insertions (`.insert([...])`) across factories, users, centers, customers, entries, weighments, and tickets.
 - **Factories**: 2 (`Default Factory`, `Apex Agro Logistics`)
-- **Users**: Staff, hardware, and customer accounts in users table
+- **Users**: Staff accounts in `users` table (`admin`, `manager`, `operator`)
 - **Centers**: 50 (35 in Factory 1, 15 in Factory 2) with staggered `created_at` dates (ideal for testing 10, 20, 30, 40, and 50 page sizes)
-- **Commodities**: 20 bulk agricultural commodities
 - **Customers**: 50 customer profiles (`customers` table)
 - **Automatic & Manual Entries**: 170 entries (85 automatic entries + 85 manual entries; 60 paired cycles and 50 standalone entries)
 - **Automatic & Manual Weighments**: 60 linked inbound/outbound cycles (30 automatic + 30 manual)

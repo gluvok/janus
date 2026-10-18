@@ -165,6 +165,12 @@ export function UsersDataTable() {
 
         {/* Action Controls Group (Right) */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          {/* Add User Button */}
+          <Button size="sm" onClick={handleAddUser} className="gap-1.5 text-xs h-8">
+            <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" />
+            <span>Add User</span>
+          </Button>
+
           <DataTableRefreshButton onClick={refresh} loading={loading} />
           <DatePickerWithRange
             date={dateRange}
@@ -176,12 +182,6 @@ export function UsersDataTable() {
           />
 
           <DataTableViewOptions table={table} />
-
-          {/* Add User Button */}
-          <Button size="sm" onClick={handleAddUser} className="gap-1.5 text-xs h-8">
-            <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" />
-            <span>Add User</span>
-          </Button>
         </div>
       </div>
 

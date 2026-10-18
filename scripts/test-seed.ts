@@ -1,8 +1,8 @@
 /**
  * @file scripts/test-seed.ts
  * @description High-volume database seed script for development, pagination, and testing.
- * Seeds rich test datasets across factories, users (all 5 roles), centers,
- * commodities, customers, entries (paired & standalone), weighments, and support tickets
+ * Seeds rich test datasets across factories, users (staff roles), centers,
+ * customers, entries (paired & standalone), weighments, and support tickets
  * matching schema.sql with staggered timestamps for authentic pagination & sorting.
  */
 
@@ -23,7 +23,7 @@ const TABLES_IN_CLEAR_ORDER = [
   "manual_entries",
   "devices",
   "sessions",
-  "commodities",
+  "customers",
   "centers",
   "users",
   "factories",
@@ -88,7 +88,7 @@ async function main() {
   }
 
   // 1. FACTORIES (2 Factories)
-  console.log("\n🏭 [1/8] Seeding Factories...");
+  console.log("\n🏭 [1/7] Seeding Factories...");
   const factoryConfigs = [{ name: "Default Factory" }, { name: "Apex Agro Logistics" }];
   const factoryMap = new Map<string, number>();
 
@@ -122,7 +122,7 @@ async function main() {
   const secondaryFactoryId = factoryMap.get("Apex Agro Logistics")!;
 
   // 2. USERS (Staff & Core profiles)
-  console.log("\n👥 [2/8] Seeding Users (Staff & Client profiles)...");
+  console.log("\n👥 [2/7] Seeding Users (Staff profiles)...");
   console.log("  🔒 Pre-hashing role passwords once with Argon2id...");
   const [adminHash, managerHash, operatorHash] = await Promise.all([
     argon2.hash("admin123"),
@@ -247,10 +247,10 @@ async function main() {
       if (u.username) userMap.set(u.username, u.id);
     }
   }
-  console.log(`  ✓ Seeded ${userMap.size} users across all 5 roles.`);
+  console.log(`  ✓ Seeded ${userMap.size} users across staff roles.`);
 
   // 3. CENTERS (50 Centers: 35 for Factory 1, 15 for Factory 2)
-  console.log("\n🏢 [3/8] Seeding 50 Centers (enabling rich multi-page pagination)...");
+  console.log("\n🏢 [3/7] Seeding 50 Centers (enabling rich multi-page pagination)...");
   const factory1CenterNames = [
     "Main Weighbridge",
     "North Automatic Scale",
@@ -405,59 +405,8 @@ async function main() {
     console.log(`  ✓ Provisioned ${deviceMap.size} 1:1 hardware devices in 'devices' table.`);
   }
 
-  // 4. COMMODITIES (20 Agricultural Commodities)
-  console.log("\n🌾 [4/8] Seeding 20 Commodities...");
-  const commodityNames = [
-    "Wheat",
-    "Corn",
-    "Soybeans",
-    "Sugarcane",
-    "Cotton",
-    "Rice",
-    "Barley",
-    "Sorghum",
-    "Oats",
-    "Sunflower Seed",
-    "Canola",
-    "Mustard Seed",
-    "Groundnut",
-    "Coffee Beans",
-    "Tea Leaves",
-    "Chickpeas",
-    "Red Lentils",
-    "Pigeon Peas",
-    "Jowar",
-    "Bajra",
-  ];
-
-  const commodityMap = new Map<string, number>();
-
-  const { data: existingCommodities, error: commFetchErr } = await supabase
-    .from("commodities")
-    .select("id, name")
-    .in("name", commodityNames);
-
-  if (commFetchErr) throw commFetchErr;
-  for (const c of existingCommodities || []) {
-    commodityMap.set(c.name, c.id);
-  }
-
-  const missingCommodities = commodityNames.filter((name) => !commodityMap.has(name));
-  if (missingCommodities.length > 0) {
-    const { data: createdCommodities, error: commCreateErr } = await supabase
-      .from("commodities")
-      .insert(missingCommodities.map((name) => ({ name })))
-      .select("id, name");
-
-    if (commCreateErr || !createdCommodities) throw commCreateErr;
-    for (const c of createdCommodities) {
-      commodityMap.set(c.name, c.id);
-    }
-  }
-  console.log(`  ✓ Seeded ${commodityMap.size} commodities.`);
-
-  // 5. CUSTOMERS (50 Customer Profiles)
-  console.log("\n🧑‍🌾 [5/8] Seeding 50 Customers...");
+  // 4. CUSTOMERS (50 Customer Profiles)
+  console.log("\n🧑‍🌾 [4/7] Seeding 50 Customers...");
   const customerRawConfigs: Array<{
     name: string;
     username: string | null;
@@ -815,7 +764,7 @@ async function main() {
   // 6. PAIRED ENTRIES & WEIGHMENTS (60 Pairs = 120 Entries & 60 Weighments)
   // 40 pairs (80 entries) concentrated specifically on 'Main Weighbridge' for pagination testing
   console.log(
-    "\n🚛 [6/8] Seeding 60 Paired Inbound/Outbound Entries and Linked Weighments (40 pairs for Main Weighbridge)...",
+    "\n🚛 [5/7] Seeding 60 Paired Inbound/Outbound Entries and Linked Weighments (40 pairs for Main Weighbridge)...",
   );
   const mainWeighbridgeId = centerMap.get("Main Weighbridge")!;
   const pairedVehicles: Array<{
@@ -1065,7 +1014,7 @@ async function main() {
   );
 
   // 7. STANDALONE UNPAIRED ENTRIES (50 Entries: 25 Automatic, 25 Manual)
-  console.log("\n📋 [7/8] Seeding 50 Standalone Entries (25 Automatic, 25 Manual)...");
+  console.log("\n📋 [6/7] Seeding 50 Standalone Entries (25 Automatic, 25 Manual)...");
 
   const autoStandaloneToInsert: AutomaticEntryInsert[] = [];
   const manualStandaloneToInsert: ManualEntryInsert[] = [];
@@ -1178,7 +1127,7 @@ async function main() {
   );
 
   // 8. TICKETS (40 Support Tickets: 20 Automatic, 20 Manual)
-  console.log("\n🎫 [8/8] Seeding 40 Support Tickets (20 Automatic, 20 Manual)...");
+  console.log("\n🎫 [7/7] Seeding 40 Support Tickets (20 Automatic, 20 Manual)...");
   interface AutomaticTicketInsert {
     concern: string;
     reply: string | null;
@@ -1395,16 +1344,13 @@ async function main() {
   console.log("=================================================");
   console.log("📊 Summary of Seeded Data Volumes:");
   console.log(`  • Factories:            ${factoryMap.size}`);
-  console.log(
-    `  • Users:                ${userMap.size} (Admin, Manager, Operator, Base, Customer)`,
-  );
+  console.log(`  • Users:                ${userMap.size} (Admin, Manager, Operator)`);
   console.log(
     `  • Centers:              ${centerMap.size} (Ideal for multi-page pagination testing)`,
   );
   console.log(
     `  • Devices:              ${deviceMap.size} (1:1 with Centers, API key authenticated)`,
   );
-  console.log(`  • Commodities:          ${commodityMap.size}`);
   console.log(`  • Customers:            ${customerMap.size}`);
   console.log(
     `  • Automatic Entries:    ${createdAutoIn.length + createdAutoOut.length + createdAutoStandalone.length} (${createdAutoIn.length + createdAutoOut.length} paired, ${createdAutoStandalone.length} standalone)`,
@@ -1424,12 +1370,10 @@ async function main() {
   console.log("  • Admin:     admin1 / admin123");
   console.log("  • Manager:   manager1 / manager123");
   console.log("  • Operator:  operator1, operator3, operator4, operator5 / operator123");
-  console.log("  • Customer:  customer1, customer2, customer3, customer4, customer5 / user123");
   console.log("  [Factory 2: Apex Agro Logistics]");
   console.log("  • Admin:     admin2 / admin123");
   console.log("  • Manager:   manager2 / manager123");
   console.log("  • Operator:  operator2, operator6 / operator123");
-  console.log("  • Customer:  customer6, customer7, customer8, customer9, customer10 / user123");
   console.log("=================================================");
 }
 

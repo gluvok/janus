@@ -36,7 +36,6 @@ DROP TABLE IF EXISTS devices CASCADE;
 DROP TABLE IF EXISTS sessions CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
 DROP TABLE IF EXISTS centers CASCADE;
-DROP TABLE IF EXISTS commodities CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS factories CASCADE;
 
@@ -59,7 +58,6 @@ DROP SEQUENCE IF EXISTS devices_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS sessions_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS customers_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS centers_id_seq CASCADE;
-DROP SEQUENCE IF EXISTS commodities_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS users_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS factories_id_seq CASCADE;
 
@@ -166,18 +164,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions (token) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at) WHERE deleted_at IS NULL;
-
-CREATE TABLE IF NOT EXISTS commodities (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_commodities_name_active
-ON commodities (name)
-WHERE deleted_at IS NULL;
 
 -- ------------------------------------------------------------------------------
 -- MANUAL ENTRIES (Operator-Created)
@@ -483,8 +469,8 @@ CREATE TRIGGER trg_centers_updated_at
 BEFORE UPDATE ON centers
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
-CREATE TRIGGER trg_commodities_updated_at
-BEFORE UPDATE ON commodities
+CREATE TRIGGER trg_customers_updated_at
+BEFORE UPDATE ON customers
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 CREATE TRIGGER trg_sessions_updated_at
@@ -523,7 +509,7 @@ ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS devices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS centers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS commodities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS manual_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS automatic_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS manual_weighments ENABLE ROW LEVEL SECURITY;
@@ -536,7 +522,7 @@ CREATE POLICY "Allow access users" ON users FOR ALL USING (true);
 CREATE POLICY "Allow access devices" ON devices FOR ALL USING (true);
 CREATE POLICY "Allow access sessions" ON sessions FOR ALL USING (true);
 CREATE POLICY "Allow access centers" ON centers FOR ALL USING (true);
-CREATE POLICY "Allow access commodities" ON commodities FOR ALL USING (true);
+CREATE POLICY "Allow access customers" ON customers FOR ALL USING (true);
 CREATE POLICY "Allow access manual_entries" ON manual_entries FOR ALL USING (true);
 CREATE POLICY "Allow access automatic_entries" ON automatic_entries FOR ALL USING (true);
 CREATE POLICY "Allow access manual_weighments" ON manual_weighments FOR ALL USING (true);
@@ -580,7 +566,7 @@ DECLARE
         'manual_entries',
         'devices',
         'sessions',
-        'commodities',
+        'customers',
         'centers',
         'users',
         'factories'

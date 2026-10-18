@@ -40,3 +40,53 @@ ALTER TABLE users ALTER COLUMN password_hash SET NOT NULL;
 -- 5. Re-create role_enum without 'customer'
 -- Note: In existing Postgres instances, role_enum value cannot be removed directly via ALTER TYPE,
 -- but clean rebuilds will use the updated role_enum in schema.sql.
+
+-- 6. Enable RLS and policies for customers table
+ALTER TABLE IF EXISTS customers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow access customers" ON customers;
+CREATE POLICY "Allow access customers" ON customers FOR ALL USING (true);
+
+DROP TRIGGER IF EXISTS trg_customers_updated_at ON customers;
+CREATE TRIGGER trg_customers_updated_at
+BEFORE UPDATE ON customers
+FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+
+-- 7. Remove legacy commodities table
+DROP TABLE IF EXISTS commodities CASCADE;
+
+-- 8. Update reset_all_sequences to include customers and omit commodities
+CREATE OR REPLACE FUNCTION reset_all_sequences()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    t text;
+    tbls text[] := ARRAY[
+        'automatic_tickets',
+        'manual_tickets',
+        'automatic_weighments',
+        'manual_weighments',
+        'automatic_entries',
+        'manual_entries',
+        'devices',
+        'sessions',
+        'customers',
+        'centers',
+        'users',
+        'factories'
+    ];
+    seq_name text;
+BEGIN
+    FOREACH t IN ARRAY tbls LOOP
+        seq_name := pg_get_serial_sequence(t, 'id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, 1, false);
+        ELSE
+            EXECUTE format('ALTER SEQUENCE IF EXISTS %I_id_seq RESTART WITH 1', t);
+        END IF;
+    END LOOP;
+END;
+$$;
+
+

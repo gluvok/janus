@@ -154,7 +154,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
             )}
           >
             <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-xs">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-5">
                 <span className="text-muted-foreground">Assigned Role</span>
                 {displayUser ? (
                   <RoleBadge role={displayUser.role} />
@@ -162,7 +162,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
                   <span className="text-muted-foreground font-mono">—</span>
                 )}
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-5">
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <HugeiconsIcon icon={Calendar01Icon} className="size-3" />
                   <span>Member Since</span>
@@ -171,7 +171,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
                   {displayUser ? formatDateTime(displayUser.created_at) : "—"}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-5">
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <HugeiconsIcon icon={Clock01Icon} className="size-3" />
                   <span>Last Updated</span>
@@ -186,57 +186,53 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
               <FormRequiredNotice />
               <FormErrorBanner error={formError} />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field data-invalid={Boolean(errors.name)}>
-                  <FieldLabel htmlFor="account-name">
-                    <HugeiconsIcon icon={UserIcon} className="size-3.5 text-muted-foreground" />
-                    <span>Full Name</span>
-                    <span className="text-destructive font-semibold" aria-hidden="true">
-                      *
-                    </span>
-                  </FieldLabel>
-                  <Input
-                    id="account-name"
-                    value={name}
-                    onChange={(e) =>
-                      setValue("name", e.target.value, { shouldValidate: true, shouldDirty: true })
-                    }
-                    placeholder="e.g. Alex Morgan"
-                    aria-invalid={Boolean(errors.name)}
-                    className="h-8 text-xs"
-                  />
-                  {errors.name && <FieldError errors={[{ message: errors.name.message }]} />}
-                  <FieldDescription>Your display name.</FieldDescription>
-                </Field>
+              <Field data-invalid={Boolean(errors.name)}>
+                <FieldLabel htmlFor="account-name">
+                  <HugeiconsIcon icon={UserIcon} className="size-3.5 text-muted-foreground" />
+                  <span>Full Name</span>
+                  <span className="text-destructive font-semibold" aria-hidden="true">
+                    *
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="account-name"
+                  value={name}
+                  onChange={(e) =>
+                    setValue("name", e.target.value, { shouldValidate: true, shouldDirty: true })
+                  }
+                  placeholder="e.g. Alex Morgan"
+                  aria-invalid={Boolean(errors.name)}
+                  className="h-8 text-xs"
+                />
+                {errors.name && <FieldError errors={[{ message: errors.name.message }]} />}
+                <FieldDescription>Your display name.</FieldDescription>
+              </Field>
 
-                <Field data-invalid={Boolean(errors.username)}>
-                  <FieldLabel htmlFor="account-username">
-                    <HugeiconsIcon icon={TextFontIcon} className="size-3.5 text-muted-foreground" />
-                    <span>Username</span>
-                    <span className="text-destructive font-semibold" aria-hidden="true">
-                      *
-                    </span>
-                  </FieldLabel>
-                  <Input
-                    id="account-username"
-                    value={username}
-                    onChange={(e) =>
-                      setValue("username", e.target.value.toLowerCase(), {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      })
-                    }
-                    placeholder="e.g. admin1"
-                    aria-invalid={Boolean(errors.username)}
-                    className="h-8 text-xs font-mono"
-                    autoComplete="off"
-                  />
-                  {errors.username && (
-                    <FieldError errors={[{ message: errors.username.message }]} />
-                  )}
-                  <FieldDescription>Lowercase handle.</FieldDescription>
-                </Field>
-              </div>
+              <Field data-invalid={Boolean(errors.username)}>
+                <FieldLabel htmlFor="account-username">
+                  <HugeiconsIcon icon={TextFontIcon} className="size-3.5 text-muted-foreground" />
+                  <span>Username</span>
+                  <span className="text-destructive font-semibold" aria-hidden="true">
+                    *
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="account-username"
+                  value={username}
+                  onChange={(e) =>
+                    setValue("username", e.target.value.toLowerCase(), {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="e.g. admin1"
+                  aria-invalid={Boolean(errors.username)}
+                  className="h-8 text-xs font-mono"
+                  autoComplete="off"
+                />
+                {errors.username && <FieldError errors={[{ message: errors.username.message }]} />}
+                <FieldDescription>Lowercase handle.</FieldDescription>
+              </Field>
 
               <Field data-invalid={Boolean(errors.password)}>
                 <FieldLabel htmlFor="account-password">

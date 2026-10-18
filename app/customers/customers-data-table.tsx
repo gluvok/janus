@@ -137,18 +137,6 @@ export function CustomersDataTable() {
 
         {/* Action Controls Group (Right) */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          <DataTableRefreshButton onClick={refresh} loading={loading} />
-          <DatePickerWithRange
-            date={dateRange}
-            onDateChange={(range) => {
-              setDateRange(range);
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-            }}
-            className="flex-1 sm:flex-initial"
-          />
-
-          <DataTableViewOptions table={table} />
-
           <Button
             size="sm"
             onClick={() => {
@@ -160,6 +148,18 @@ export function CustomersDataTable() {
             <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" />
             <span>Add Customer</span>
           </Button>
+
+          <DataTableRefreshButton onClick={refresh} loading={loading} />
+          <DatePickerWithRange
+            date={dateRange}
+            onDateChange={(range) => {
+              setDateRange(range);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+            className="flex-1 sm:flex-initial"
+          />
+
+          <DataTableViewOptions table={table} />
         </div>
       </div>
 

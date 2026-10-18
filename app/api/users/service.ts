@@ -2,14 +2,7 @@ import { z } from "zod";
 import argon2 from "argon2";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
-import {
-  parsePagination,
-  parseSorting,
-  applyDateRange,
-  applySorting,
-  applySortingAndPagination,
-  formatPaginatedResponse,
-} from "@/lib/api-query";
+import { buildPaginatedEntityResult } from "@/lib/api-query";
 import {
   userRoleEnum,
   type User,
@@ -100,57 +93,29 @@ export class ServiceError extends Error {
  * Fetches a paginated, sorted, and filtered list of staff users.
  */
 export async function fetchUsersList(searchParams: URLSearchParams) {
-  const isAll = searchParams.get("all") === "true";
-  const pagination = parsePagination(searchParams);
-  const sortRules = parseSorting(searchParams, ALLOWED_SORT_COLUMNS, {
-    col: "id",
-    ascending: false,
-  });
-
-  let q = supabase
-    .from("users")
-    .select(USER_SELECT_PROJECTION, {
-      count: "exact",
-    })
-    .is("deleted_at", null);
-
-  const search = searchParams.get("search")?.trim();
-  if (search) {
-    q = q.or(`name.ilike.%${search}%,username.ilike.%${search}%`);
+  try {
+    return await buildPaginatedEntityResult<(typeof ALLOWED_SORT_COLUMNS)[number], User>({
+      searchParams,
+      table: "users",
+      select: USER_SELECT_PROJECTION,
+      allowedSortColumns: ALLOWED_SORT_COLUMNS,
+      defaultSort: { col: "id", ascending: false },
+      searchColumns: ["name", "username"],
+      applyCustomFilters: (query, sp) => {
+        const rawRole = sp.get("role")?.trim();
+        if (rawRole && rawRole !== "all") {
+          const parsed = rolesFilterSchema.safeParse(rawRole);
+          if (parsed.success && parsed.data.length > 0) {
+            return query.in("role", parsed.data);
+          }
+        }
+        return query;
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to fetch users";
+    throw new ServiceError(msg, StatusCodes.INTERNAL_SERVER_ERROR);
   }
-
-  const rawRole = searchParams.get("role")?.trim();
-  if (rawRole && rawRole !== "all") {
-    const parsed = rolesFilterSchema.safeParse(rawRole);
-    if (parsed.success && parsed.data.length > 0) {
-      q = q.in("role", parsed.data);
-    }
-  }
-
-  q = applyDateRange(q, searchParams);
-
-  if (isAll) {
-    q = applySorting(q, sortRules.length > 0 ? sortRules : [{ col: "name", ascending: true }]);
-  } else {
-    q = applySortingAndPagination(q, sortRules, pagination);
-  }
-
-  const result = await q;
-  if (result.error) {
-    throw new ServiceError(result.error.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
-
-  if (isAll) {
-    return {
-      data: (result.data as User[]) ?? [],
-      totalCount: result.data?.length ?? 0,
-      page: 1,
-      pageSize: result.data?.length ?? 0,
-      totalPages: 1,
-    };
-  }
-
-  return formatPaginatedResponse<User>(result.data as User[] | null, result.count, pagination);
 }
 
 /**

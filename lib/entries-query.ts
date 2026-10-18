@@ -4,8 +4,19 @@
  * Deduplicates search weight parsing, filter extraction, in-memory relational sorting, and pagination slicing.
  */
 
+import { NextResponse } from "next/server";
+import { StatusCodes } from "http-status-codes";
+import { supabase } from "@/lib/supabase";
 import { z } from "zod";
-import type { SortRule, PaginationParams } from "@/lib/api-query";
+import {
+  parsePagination,
+  parseSorting,
+  applyDateRange,
+  applySortingAndPagination,
+  formatPaginatedResponse,
+  type SortRule,
+  type PaginationParams,
+} from "@/lib/api-query";
 
 export interface SortableEntry {
   id: number;
@@ -135,4 +146,139 @@ export function sortEntriesRelational<T extends SortableEntry>(
 export function paginateInMemory<T>(items: T[], pagination: PaginationParams): T[] {
   const startIndex = (pagination.page - 1) * pagination.pageSize;
   return items.slice(startIndex, startIndex + pagination.pageSize);
+}
+
+const AUTOMATIC_SORT_COLUMNS = [
+  "id",
+  "vehicle_number",
+  "detected_vehicle_number",
+  "weight",
+  "center",
+  "customer",
+  "created_at",
+  "updated_at",
+] as const;
+
+const MANUAL_SORT_COLUMNS = [
+  "id",
+  "vehicle_number",
+  "weight",
+  "center",
+  "customer",
+  "created_by",
+  "created_at",
+  "updated_at",
+] as const;
+
+const AUTOMATIC_SELECT_PROJECTION = `
+  id,
+  device_id,
+  center_id,
+  customer_id,
+  detected_vehicle_number,
+  vehicle_number,
+  weight,
+  images,
+  created_at,
+  updated_at,
+  center:centers(id, name),
+  customer:customers(id, name)
+`;
+
+const MANUAL_SELECT_PROJECTION = `
+  id,
+  center_id,
+  customer_id,
+  created_by,
+  vehicle_number,
+  weight,
+  images,
+  created_at,
+  updated_at,
+  center:centers(id, name),
+  customer:customers(id, name),
+  created_by_user:users!manual_entries_created_by_fkey(id, name, role)
+`;
+
+/**
+ * Executes entries query for /api/entries/automatic and /api/entries/manual,
+ * handling search, common filters, date ranges, and relational sorting.
+ */
+export async function executeEntriesGetQuery(
+  request: Request,
+  mode: "automatic" | "manual",
+): Promise<NextResponse> {
+  try {
+    const { searchParams } = new URL(request.url);
+    const pagination = parsePagination(searchParams);
+
+    const isAutomatic = mode === "automatic";
+    const allowedColumns = isAutomatic ? AUTOMATIC_SORT_COLUMNS : MANUAL_SORT_COLUMNS;
+    const sortRules = parseSorting(searchParams, allowedColumns, {
+      col: "id",
+      ascending: false,
+    });
+
+    const tableName = isAutomatic ? "automatic_entries" : "manual_entries";
+    const projection = isAutomatic ? AUTOMATIC_SELECT_PROJECTION : MANUAL_SELECT_PROJECTION;
+
+    let query: any = (supabase as any)
+      .from(tableName)
+      .select(projection, { count: "exact" })
+      .is("deleted_at", null);
+
+    const search = searchParams.get("search")?.trim();
+    if (search) {
+      const numericVal = parseNumericWeight(search);
+      if (numericVal !== null) {
+        query = query.or(`vehicle_number.ilike.%${search}%,weight.eq.${numericVal}`);
+      } else {
+        query = query.or(`vehicle_number.ilike.%${search}%`);
+      }
+    }
+
+    query = applyCommonEntriesFilters(query, searchParams);
+
+    if (!isAutomatic) {
+      const createdBy = searchParams.get("created_by")?.trim();
+      if (createdBy && createdBy !== "all") {
+        const parsed = commaSeparatedIdsSchema.safeParse(createdBy);
+        if (parsed.success && parsed.data.length > 0) {
+          query = query.in("created_by", parsed.data);
+        }
+      }
+    }
+
+    query = applyDateRange(query, searchParams);
+
+    const relationalCols = isAutomatic
+      ? ["center", "customer"]
+      : ["center", "customer", "created_by"];
+    const hasRelationalSort = sortRules.some((r) => relationalCols.includes(r.col));
+
+    if (hasRelationalSort) {
+      const { data, count, error } = await query;
+      if (error) throw error;
+
+      const sorted = sortEntriesRelational((data ?? []) as unknown as SortableEntry[], sortRules);
+      const sliced = paginateInMemory(sorted, pagination);
+
+      return NextResponse.json(formatPaginatedResponse(sliced, count, pagination), {
+        status: StatusCodes.OK,
+      });
+    }
+
+    query = applySortingAndPagination(query, sortRules, pagination);
+    const { data, count, error } = await query;
+    if (error) throw error;
+
+    return NextResponse.json(
+      formatPaginatedResponse((data ?? []) as unknown as SortableEntry[], count, pagination),
+      { status: StatusCodes.OK },
+    );
+  } catch (error) {
+    console.error(`GET /api/entries/${mode} error:`, error);
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+  }
 }
