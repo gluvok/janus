@@ -7,7 +7,6 @@ import {
   DataTableFacetedFilter,
   type FacetedFilterOption,
   DataTableCriteriaBar,
-  DataTableDateRangeChip,
   DataTableContent,
   DataTablePagination,
   DataTableRefreshButton,
@@ -164,9 +163,7 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
     selectedRows,
     selectedCount,
     hasActiveSorts,
-    hasActiveFilters,
     resetAllCriteria,
-    resetAllFilters,
     resetSorting,
     setFilter,
     refresh,
@@ -266,9 +263,8 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
         </div>
       </div>
 
-      {/* Criteria Bar: Dynamic active filter and sort chips */}
+      {/* Criteria Bar: Drag-and-drop sort priority chips */}
       <DataTableCriteriaBar
-        hasActiveFilters={hasActiveFilters}
         hasActiveSorts={hasActiveSorts}
         sorting={sorting}
         onSortingChange={(updater) => {
@@ -281,12 +277,9 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
         }}
         columnLabels={COLUMN_LABELS}
         columnIcons={COLUMN_ICONS}
-        onResetFilters={resetAllFilters}
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
-      >
-        <DataTableDateRangeChip dateRange={dateRange} onRemove={() => setDateRange(undefined)} />
-      </DataTableCriteriaBar>
+      />
 
       {/* Main Datatable Surface */}
       <DataTableContent

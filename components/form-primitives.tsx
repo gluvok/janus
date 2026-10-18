@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { FormDirtyIndicator } from "@/components/form-dirty-indicator";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, Cancel01Icon, FloppyDiskIcon } from "@hugeicons/core-free-icons";
 
 export function FormRequiredNotice() {
   return (
@@ -72,15 +72,22 @@ export function DialogActionFooter({
           type="submit"
           size="sm"
           disabled={!isValid || isSubmitting || !isDirty}
-          className="h-8 text-xs"
+          className="h-8 w-32 text-xs"
         >
           {isSubmitting ? (
             <>
-              <Spinner className="size-3 mr-1.5" />
-              Saving...
+              <Spinner className="size-3.5 mr-1.5" />
+              <span>Saving...</span>
             </>
           ) : (
-            submitLabel
+            <>
+              <HugeiconsIcon
+                icon={FloppyDiskIcon}
+                className="size-3.5 mr-1.5 text-primary-foreground"
+                data-icon="inline-start"
+              />
+              <span>{submitLabel}</span>
+            </>
           )}
         </Button>
       </div>

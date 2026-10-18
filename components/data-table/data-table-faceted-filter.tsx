@@ -95,7 +95,7 @@ export function DataTableFacetedFilter({
       >
         <ComboboxChips
           ref={anchor}
-          className="min-h-8 w-full sm:w-auto border-input bg-input/20 px-2.5 text-2xs font-normal dark:bg-input/30 cursor-text"
+          className="relative min-h-8 w-full sm:w-auto border-input bg-input/20 px-2.5 pr-7 text-2xs font-normal dark:bg-input/30 cursor-text"
         >
           {triggerIcon && (
             <HugeiconsIcon
@@ -141,7 +141,7 @@ export function DataTableFacetedFilter({
               selectedOptions.length > 0 && !isActive && "w-0 min-w-0 p-0",
             )}
           />
-          <ComboboxTrigger className="ml-1.5 shrink-0 cursor-pointer p-0.5 text-muted-foreground hover:text-foreground transition-colors" />
+          <ComboboxTrigger className="absolute right-1.5 top-1/2 -translate-y-1/2 shrink-0 cursor-pointer p-0.5 text-muted-foreground hover:text-foreground transition-colors" />
         </ComboboxChips>
         <ComboboxContent
           anchor={anchor}

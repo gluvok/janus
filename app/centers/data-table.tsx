@@ -3,7 +3,6 @@
 import {
   DataTableContent,
   DataTableCriteriaBar,
-  DataTableDateRangeChip,
   DataTableHydrationCard,
   DataTablePagination,
   DataTableSearchInput,
@@ -47,9 +46,7 @@ export function CentersDataTable() {
     removeSort,
     setPagination,
     hasActiveSorts,
-    hasActiveFilters,
     resetAllCriteria,
-    resetAllFilters,
     resetSorting,
     refresh,
   } = useDataTable<Center>({
@@ -92,9 +89,8 @@ export function CentersDataTable() {
         </div>
       </div>
 
-      {/* Active Criteria Bar (Badges + Drag-and-Drop Sort Priority Chips) */}
+      {/* Active Criteria Bar (Drag-and-Drop Sort Priority Chips) */}
       <DataTableCriteriaBar
-        hasActiveFilters={hasActiveFilters}
         hasActiveSorts={hasActiveSorts}
         sorting={sorting}
         onSortingChange={(updater) => {
@@ -107,18 +103,9 @@ export function CentersDataTable() {
         }}
         columnLabels={COLUMN_LABELS}
         columnIcons={COLUMN_ICONS}
-        onResetFilters={resetAllFilters}
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
-      >
-        <DataTableDateRangeChip
-          dateRange={dateRange}
-          onRemove={() => {
-            setDateRange(undefined);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        />
-      </DataTableCriteriaBar>
+      />
 
       {/* Reusable Data Table Content */}
       <DataTableContent

@@ -22,33 +22,27 @@ import {
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, FilterIcon, Sorting05Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Sorting05Icon } from "@hugeicons/core-free-icons";
 import { SortableSortChip, SortChipOverlay } from "./sortable-sort-chip";
 
 export interface DataTableCriteriaBarProps {
-  hasActiveFilters?: boolean;
   hasActiveSorts?: boolean;
-  children?: React.ReactNode;
   sorting?: SortingState;
   onSortingChange?: (updater: Updater<SortingState>) => void;
   onRemoveSort?: (columnId: string) => void;
   columnLabels?: Record<string, string>;
   columnIcons?: Record<string, unknown>;
-  onResetFilters?: () => void;
   onResetSorts?: () => void;
   onResetAll?: () => void;
 }
 
 export function DataTableCriteriaBar({
-  hasActiveFilters = false,
   hasActiveSorts = false,
-  children,
   sorting = [],
   onSortingChange,
   onRemoveSort,
   columnLabels = {},
   columnIcons = {},
-  onResetFilters,
   onResetSorts,
   onResetAll,
 }: DataTableCriteriaBarProps) {
@@ -106,34 +100,11 @@ export function DataTableCriteriaBar({
     return sorting.findIndex((s) => s.id === activeSortId);
   }, [activeSortId, sorting]);
 
-  const showBar = hasActiveFilters || hasActiveSorts;
+  const showBar = hasActiveSorts;
   if (!showBar) return null;
 
   return (
     <div className="flex flex-col gap-1 min-w-0">
-      {/* Active Filters Line - Boxless seamless row */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-1.5 py-0.5">
-          <div className="flex items-center gap-1 text-2xs font-medium text-muted-foreground shrink-0">
-            <HugeiconsIcon icon={FilterIcon} className="size-3 text-muted-foreground" />
-            <span>Filters:</span>
-          </div>
-          {children}
-          {(onResetFilters || onResetAll) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onResetFilters ?? onResetAll}
-              className="shrink-0 ml-auto h-5 gap-1 px-1.5 text-2xs text-muted-foreground hover:text-foreground"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} className="size-2.5" data-icon="inline-start" />
-              <span>Clear filters</span>
-            </Button>
-          )}
-        </div>
-      )}
-
       {/* Active Sorts Line - Boxless seamless row */}
       {hasActiveSorts && (
         <DndContext

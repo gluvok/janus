@@ -30,7 +30,6 @@ export interface UseDataTableOptions<TData extends RowData> {
   extraParams?: Record<string, unknown>;
   fetchData?: (params: Record<string, unknown>) => Promise<{ data: TData[]; totalCount: number }>;
   meta?: TableMeta<DataTableFeatures, TData>;
-  defaultSortColumn?: string;
   enabled?: boolean;
   initialData?: { data: TData[]; totalCount: number };
 }
@@ -42,7 +41,6 @@ export function useDataTable<TData extends RowData>({
   extraParams,
   fetchData,
   meta,
-  defaultSortColumn = "id",
   enabled = true,
   initialData,
 }: UseDataTableOptions<TData>) {
@@ -235,9 +233,7 @@ export function useDataTable<TData extends RowData>({
     },
   });
 
-  const isDefaultSort =
-    sorting.length === 1 && sorting[0].id === defaultSortColumn && sorting[0].desc === true;
-  const hasActiveSorts = !isDefaultSort && sorting.length > 0;
+  const hasActiveSorts = sorting.length > 0;
   const hasActiveFilters = Boolean(
     dateRange?.from ||
     Object.entries(tableState.filters).some(([k, v]) => {

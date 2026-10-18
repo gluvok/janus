@@ -31,7 +31,7 @@ export const DEFAULT_TABLE_ITEM_STATE: TableItemState = {
   search: "",
   filters: {},
   dateRange: undefined,
-  sorting: [],
+  sorting: [{ id: "id", desc: true }],
   pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
   columnVisibility: {},
 };

@@ -305,9 +305,7 @@ export function EntriesDataTable() {
     setSorting,
     removeSort,
     hasActiveSorts,
-    hasActiveFilters,
     resetAllCriteria,
-    resetAllFilters,
     resetSorting,
     setFilter,
     refresh,
@@ -377,20 +375,16 @@ export function EntriesDataTable() {
         onFilterChange={(key, val) => setFilter(key, val)}
       />
 
-      {/* Active Criteria Bar (Badges + Drag-and-Drop Sort Priority Chips) */}
+      {/* Active Criteria Bar (Drag-and-Drop Sort Priority Chips) */}
       <EntriesCriteriaBar
-        hasActiveFilters={hasActiveFilters}
         hasActiveSorts={hasActiveSorts}
         sorting={sorting}
         onSortingChange={(updater) => setSorting(updater)}
         onRemoveSort={(columnId) => removeSort(columnId)}
         columnLabels={COLUMN_LABELS}
         columnIcons={COLUMN_ICONS}
-        onResetFilters={resetAllFilters}
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
-        dateRange={dateRange}
-        onDateRangeChange={(range) => setDateRange(range)}
       />
 
       {/* Reusable Data Table Content */}
