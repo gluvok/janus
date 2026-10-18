@@ -7,13 +7,15 @@ import type {
 } from "@tanstack/react-table";
 import {
   type TableItemState,
+  type GlobalMode,
+  type EntryMode,
   DEFAULT_TABLE_ITEM_STATE,
   TABLES_COOKIE_NAME,
   parseTablesCookie,
   writeTablesCookie,
 } from "@/lib/table-cookie";
 
-export type { TableItemState };
+export type { TableItemState, GlobalMode, EntryMode };
 export { DEFAULT_TABLE_ITEM_STATE };
 
 function resolveUpdater<T>(updaterOrValue: Updater<T>, previousValue: T): T {
@@ -24,9 +26,14 @@ function resolveUpdater<T>(updaterOrValue: Updater<T>, previousValue: T): T {
 
 interface DataTableStoreState {
   tables: Record<string, TableItemState>;
+  globalMode: GlobalMode;
   _hasHydrated: boolean;
   setHasHydrated: (hydrated: boolean) => void;
-  initFromCookies: (initialTables: Record<string, TableItemState>) => void;
+  setGlobalMode: (mode: GlobalMode) => void;
+  initFromCookies: (initial: {
+    tables: Record<string, TableItemState>;
+    initialGlobalMode: GlobalMode;
+  }) => void;
 
   getTableState: (tableId: string) => TableItemState;
   setTableSearch: (tableId: string, search: string) => void;
@@ -46,28 +53,44 @@ interface DataTableStoreState {
   resetTableFilters: (tableId: string) => void;
 }
 
-function getInitialClientTables(): Record<string, TableItemState> {
-  if (typeof document === "undefined") return {};
+function getInitialClientData(): {
+  tables: Record<string, TableItemState>;
+  globalMode: GlobalMode;
+} {
+  if (typeof document === "undefined") {
+    return { tables: {}, globalMode: "automatic" };
+  }
   const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${TABLES_COOKIE_NAME}=([^;]*)`));
-  if (!match?.[1]) return {};
+  if (!match?.[1]) return { tables: {}, globalMode: "automatic" };
   return parseTablesCookie(match[1]);
 }
 
-const initialClientTables = getInitialClientTables();
+const initialClientData = getInitialClientData();
 
 export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
-  tables: initialClientTables,
-  _hasHydrated: true,
+  tables: initialClientData.tables,
+  globalMode: initialClientData.globalMode,
+  _hasHydrated: false,
   setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
 
-  initFromCookies: (initialTables) =>
-    set((state) => ({
-      tables: {
-        ...initialTables,
+  setGlobalMode: (mode) =>
+    set((state) => {
+      writeTablesCookie(state.tables, mode);
+      return { globalMode: mode };
+    }),
+
+  initFromCookies: ({ tables, initialGlobalMode }) =>
+    set((state) => {
+      const mergedTables = {
+        ...tables,
         ...state.tables,
-      },
-      _hasHydrated: true,
-    })),
+      };
+      return {
+        tables: mergedTables,
+        globalMode: initialGlobalMode,
+        _hasHydrated: true,
+      };
+    }),
 
   getTableState: (tableId) => get().tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE,
 
@@ -82,7 +105,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           pagination: { ...prev.pagination, pageIndex: 0 },
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -103,7 +126,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           pagination: { ...prev.pagination, pageIndex: 0 },
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -118,7 +141,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           pagination: { ...prev.pagination, pageIndex: 0 },
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -132,7 +155,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           sorting: resolveUpdater(updaterOrValue, prev.sorting),
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -147,7 +170,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           sorting: updated.length > 0 ? updated : [{ id: "id", desc: true }],
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -161,7 +184,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           sorting: [{ id: "id", desc: true }],
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -175,7 +198,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           pagination: resolveUpdater(updaterOrValue, prev.pagination),
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -189,7 +212,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           columnVisibility: resolveUpdater(updaterOrValue, prev.columnVisibility),
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 
@@ -206,7 +229,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
           pagination: { ...prev.pagination, pageIndex: 0 },
         },
       };
-      writeTablesCookie(nextTables);
+      writeTablesCookie(nextTables, state.globalMode);
       return { tables: nextTables };
     }),
 }));
@@ -214,3 +237,7 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
 export function useTableHydrated() {
   return useDataTableStore((state) => state._hasHydrated);
 }
+export function useGlobalMode() {
+  return useDataTableStore((state) => state.globalMode);
+}
+export const useActiveEntryMode = useGlobalMode;

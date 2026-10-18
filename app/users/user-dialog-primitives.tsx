@@ -5,15 +5,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Switch } from "@/components/ui/switch";
-import { Spinner } from "@/components/ui/spinner";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   Combobox,
@@ -27,10 +24,7 @@ import {
 } from "@/components/kibo-ui/combobox";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  AlertCircleIcon,
   Briefcase01Icon,
-  Cancel01Icon,
-  CheckmarkCircle02Icon,
   CrownIcon,
   HeadsetIcon,
   Key01Icon,
@@ -39,8 +33,15 @@ import {
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import { ChevronsUpDownIcon } from "lucide-react";
-import { FormDirtyIndicator } from "@/components/form-dirty-indicator";
+import {
+  DialogActionFooter,
+  DialogIconBadge,
+  FormErrorBanner,
+  FormRequiredNotice,
+} from "@/components/form-primitives";
 import { type StaffRole } from "./types";
+
+export { DialogActionFooter, DialogIconBadge, FormErrorBanner, FormRequiredNotice };
 
 export const ROLE_OPTIONS = [
   { value: "admin", label: "Admin", icon: CrownIcon },
@@ -61,10 +62,10 @@ interface UserDialogShellProps {
   headerIcon: typeof UserIcon;
   formError: string | null;
   isDirty: boolean;
-  isValid?: boolean;
+  isValid: boolean;
   isSubmitting: boolean;
   onSubmit: () => void;
-  submitLabel?: string;
+  submitLabel: string;
   children: React.ReactNode;
 }
 
@@ -76,10 +77,10 @@ export function UserDialogShell({
   headerIcon,
   formError,
   isDirty,
-  isValid = true,
+  isValid,
   isSubmitting,
   onSubmit,
-  submitLabel = "Save Changes",
+  submitLabel,
   children,
 }: UserDialogShellProps) {
   return (
@@ -87,9 +88,7 @@ export function UserDialogShell({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <HugeiconsIcon icon={headerIcon} className="size-4" />
-            </div>
+            <DialogIconBadge icon={headerIcon} />
             <DialogTitle>{title}</DialogTitle>
           </div>
           <DialogDescription>{description}</DialogDescription>
@@ -104,60 +103,18 @@ export function UserDialogShell({
           }}
           className="flex flex-col gap-4 py-2"
         >
-          {formError && (
-            <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive">
-              <HugeiconsIcon
-                icon={AlertCircleIcon}
-                className="size-4 shrink-0"
-                data-icon="inline-start"
-              />
-              <span>{formError}</span>
-            </div>
-          )}
-
-          <p className="text-2xs text-muted-foreground">
-            <span className="text-destructive font-semibold">*</span> indicates required field
-          </p>
+          <FormErrorBanner error={formError} />
+          <FormRequiredNotice />
 
           {children}
 
-          <DialogFooter className="flex flex-row items-center justify-between sm:justify-between w-full gap-2 pt-2">
-            <FormDirtyIndicator isDirty={isDirty} className="mr-auto" />
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                <HugeiconsIcon
-                  icon={Cancel01Icon}
-                  className="size-3.5 text-muted-foreground"
-                  data-icon="inline-start"
-                />
-                <span>Cancel</span>
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting || !isDirty || !isValid}
-                className="min-w-28"
-              >
-                {isSubmitting ? (
-                  <Spinner className="size-3.5" data-icon="inline-start" />
-                ) : (
-                  <HugeiconsIcon
-                    icon={CheckmarkCircle02Icon}
-                    className="size-3.5"
-                    data-icon="inline-start"
-                  />
-                )}
-                <span>{submitLabel}</span>
-              </Button>
-            </div>
-          </DialogFooter>
+          <DialogActionFooter
+            isDirty={isDirty}
+            isValid={isValid}
+            isSubmitting={isSubmitting}
+            onCancel={() => onOpenChange(false)}
+            submitLabel={submitLabel}
+          />
         </form>
       </DialogContent>
     </Dialog>

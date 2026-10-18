@@ -23,7 +23,7 @@ import {
 import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
-import type { TableItemState } from "@/lib/table-cookie";
+import { type TableItemState, getDualModeTableId } from "@/lib/table-cookie";
 import {
   EntryPhotosDialog,
   EntriesToolbar,
@@ -35,8 +35,6 @@ import { getColumns } from "./columns";
 import { type Entry, type EntryMode } from "./types";
 import { type Center } from "@/app/centers/types";
 import { type User } from "@/app/users/types";
-
-const TABLE_ID = "entries";
 
 const COLUMN_LABELS: Record<string, string> = {
   id: "ID",
@@ -151,6 +149,7 @@ function validateAndSanitizeFilters(
 
 function buildEntriesQueryParams(
   tableState: TableItemState,
+  mode: EntryMode,
   pageOverride?: number,
   filtersOverride?: Record<string, string>,
 ): Record<string, unknown> {
@@ -162,7 +161,7 @@ function buildEntriesQueryParams(
   const filters = filtersOverride ?? tableState.filters;
 
   return {
-    mode: filters.mode === "manual" ? "manual" : "automatic",
+    mode,
     page: pageOverride ?? pagination.pageIndex + 1,
     pageSize: pagination.pageSize,
     ...(sorting.length > 0 && {
@@ -221,10 +220,11 @@ export function EntriesDataTable() {
     setIsInitialLoading(true);
     setInitialError(null);
     try {
-      const currentTableState = useDataTableStore.getState().getTableState(TABLE_ID);
-      const isManual = currentTableState.filters.mode === "manual";
-      const initialQueryParams = buildEntriesQueryParams(currentTableState);
-      const initialEndpoint = isManual ? "/api/entries/manual" : "/api/entries/automatic";
+      const mode = useDataTableStore.getState().globalMode;
+      const tableId = getDualModeTableId("entries", mode);
+      const currentTableState = useDataTableStore.getState().getTableState(tableId);
+      const initialQueryParams = buildEntriesQueryParams(currentTableState, mode);
+      const initialEndpoint = mode === "manual" ? "/api/entries/manual" : "/api/entries/automatic";
 
       const [optionsResult, entriesResult] = await Promise.all([
         fetchFilterOptions(),
@@ -241,13 +241,14 @@ export function EntriesDataTable() {
         centers,
         customers,
         creators,
-        (key) => useDataTableStore.getState().setTableFilter(TABLE_ID, key, "all"),
+        (key) => useDataTableStore.getState().setTableFilter(tableId, key, "all"),
       );
 
       let finalEntries = entriesResult.data;
       if (needsFallback) {
         const sanitizedQueryParams = buildEntriesQueryParams(
           currentTableState,
+          mode,
           1,
           sanitizedFilters,
         );
@@ -275,9 +276,8 @@ export function EntriesDataTable() {
     loadInitialData();
   }, [loadInitialData]);
 
-  const currentStoreState = useDataTableStore();
-  const rawTableState = currentStoreState.tables[TABLE_ID];
-  const mode = (rawTableState?.filters?.mode === "manual" ? "manual" : "automatic") as EntryMode;
+  const mode = useDataTableStore((state) => state.globalMode);
+  const tableId = getDualModeTableId("entries", mode);
 
   const columns = useMemo(() => getColumns(mode), [mode]);
   const extraParams = useMemo(() => ({ mode }), [mode]);
@@ -293,7 +293,6 @@ export function EntriesDataTable() {
     sorting,
     setSorting,
     removeSort,
-    setPagination,
     hasActiveSorts,
     hasActiveFilters,
     resetAllCriteria,
@@ -303,7 +302,7 @@ export function EntriesDataTable() {
     refresh,
     tableState,
   } = useDataTable<Entry>({
-    tableId: TABLE_ID,
+    tableId,
     columns,
     extraParams,
     fetchData: fetchEntries,
@@ -311,14 +310,6 @@ export function EntriesDataTable() {
     enabled: !isInitialLoading && !!initialData,
     initialData,
   });
-
-  const handleModeChange = useCallback(
-    (newMode: EntryMode) => {
-      setFilter("mode", newMode);
-      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-    },
-    [setFilter, setPagination],
-  );
 
   const filterConfigs = useMemo<EntriesFilterConfig[]>(() => {
     const configs: EntriesFilterConfig[] = [
@@ -361,13 +352,13 @@ export function EntriesDataTable() {
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
-      {/* Primary Toolbar - 2-Tier Layout with Automatic/Manual RadioGroup & Scoped Refresh */}
+      {/* Primary Toolbar - 2-Tier Layout with Scoped Refresh */}
       <EntriesToolbar
         table={table}
         search={search}
         onSearchChange={setSearch}
-        mode={mode}
-        onModeChange={handleModeChange}
+        onRefresh={refresh}
+        loading={loading}
         dateRange={dateRange}
         onDateRangeChange={(range) => setDateRange(range)}
         filterConfigs={filterConfigs}

@@ -3,7 +3,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +11,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataTableColumnHeader, type DataTableFeatures } from "@/components/data-table";
+import {
+  DataTableColumnHeader,
+  createSelectColumn,
+  type DataTableFeatures,
+} from "@/components/data-table";
 import { toast } from "@/components/ui/toast";
 import { formatDateTime } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -35,32 +38,7 @@ const columnHelper = createColumnHelper<DataTableFeatures, Entry>();
 
 export function getColumns(mode: EntryMode) {
   const allColumns = [
-    columnHelper.display({
-      id: "select",
-      header: ({ table }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-            className="size-4"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            className="size-4"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    }),
+    createSelectColumn(columnHelper),
     columnHelper.accessor("id", {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="ID" icon={HashtagIcon} />

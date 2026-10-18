@@ -2,6 +2,8 @@
 
 export { DataTableColumnHeader } from "./data-table-column-header";
 
+export { createSelectColumn } from "./data-table-columns";
+
 export { DataTableContent, type DataTableContentProps } from "./data-table-content";
 
 export { DataTableCriteriaBar, type DataTableCriteriaBarProps } from "./data-table-criteria-bar";

@@ -10,7 +10,8 @@ import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Toaster } from "@/components/ui/toast";
 import { parseTablesCookie, TABLES_COOKIE_NAME } from "@/lib/table-cookie";
 import { DataTableStoreInitializer } from "@/components/data-table";
-import { HeaderRefreshButton } from "@/components/header-refresh-button";
+import { HeaderModeToggle } from "@/components/header-mode-toggle";
+import { BootingScreen } from "@/components/booting-screen";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -36,7 +37,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
   const tablesStateRaw = cookieStore.get(TABLES_COOKIE_NAME)?.value;
-  const initialTables = parseTablesCookie(tablesStateRaw);
+  const { tables: initialTables, globalMode: initialGlobalMode } =
+    parseTablesCookie(tablesStateRaw);
 
   return (
     <html
@@ -51,7 +53,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       )}
     >
       <body>
-        <DataTableStoreInitializer initialTables={initialTables} />
+        <BootingScreen />
+        <DataTableStoreInitializer
+          initialTables={initialTables}
+          initialGlobalMode={initialGlobalMode}
+        />
         <SidebarProvider defaultOpen={defaultOpen} className="h-full">
           <AppSidebar />
           <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">
@@ -62,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <AppBreadcrumb />
               </div>
               <div className="flex items-center gap-2">
-                <HeaderRefreshButton />
+                <HeaderModeToggle initialGlobalMode={initialGlobalMode} />
               </div>
             </header>
             <div className="flex flex-1 flex-col gap-3 p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">

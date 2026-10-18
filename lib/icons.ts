@@ -11,6 +11,7 @@ import {
   UserGroupIcon,
   UserIcon,
   WeightScale01Icon,
+  Search01Icon,
 } from "@hugeicons/core-free-icons";
 
 export const appIcons = {
@@ -26,6 +27,7 @@ export const appIcons = {
   support: CustomerSupportIcon,
   services: Briefcase01Icon,
   allFilter: Layers01Icon,
+  search: Search01Icon,
 } as const;
 
 export type AppIconKey = keyof typeof appIcons;

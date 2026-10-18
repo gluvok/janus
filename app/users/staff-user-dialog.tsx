@@ -122,6 +122,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
       isValid={isValid}
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit(onSubmit)}
+      submitLabel={isEdit ? "Save Changes" : "Create User"}
     >
       {/* Row 1: Full Name and System Role side-by-side */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import axios from "axios";
 import {
   Sidebar,
@@ -70,9 +71,13 @@ export function AppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" render={<Link href="/" />}>
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
-                  M
-                </div>
+                <Image
+                  src="/logo.png"
+                  alt="Mesto Logo"
+                  width={32}
+                  height={32}
+                  className="size-8 object-contain rounded-md shrink-0"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Mesto</span>
                   <span className="truncate text-xs text-muted-foreground">Automations</span>

@@ -1,34 +1,45 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { RefreshIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 export interface DataTableRefreshButtonProps {
-  onRefresh: () => void;
+  onClick?: () => void;
   loading?: boolean;
 }
 
-export function DataTableRefreshButton({
-  onRefresh,
-  loading = false,
-}: DataTableRefreshButtonProps) {
+export function DataTableRefreshButton({ onClick, loading }: DataTableRefreshButtonProps) {
+  const [internalSpinning, setInternalSpinning] = useState<boolean>(false);
+
+  const isSpinning = loading ?? internalSpinning;
+
+  const handleClick = () => {
+    if (loading === undefined) {
+      setInternalSpinning(true);
+      setTimeout(() => setInternalSpinning(false), 600);
+    }
+    onClick?.();
+  };
+
   return (
     <Button
       variant="outline"
       size="sm"
-      onClick={onRefresh}
-      disabled={loading}
-      className="h-8 gap-1.5 px-2.5 text-xs shrink-0"
-      title="Refresh table data"
+      onClick={handleClick}
+      disabled={isSpinning}
+      className="h-8 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+      title="Refresh data"
+      aria-label="Refresh data"
     >
       <HugeiconsIcon
         icon={RefreshIcon}
-        className={cn("size-3.5", loading && "animate-spin")}
+        className={cn("size-3.5", isSpinning && "animate-spin")}
         data-icon="inline-start"
       />
-      <span className="hidden sm:inline">Refresh</span>
+      <span>Refresh</span>
     </Button>
   );
 }

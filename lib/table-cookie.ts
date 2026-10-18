@@ -3,6 +3,19 @@ import type { ColumnVisibilityState, SortingState, PaginationState } from "@tans
 export const TABLES_COOKIE_NAME = "gluvok_tables_state";
 export const TABLES_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
+export type GlobalMode = "automatic" | "manual";
+export type EntryMode = GlobalMode;
+
+/**
+ * Derives the partitioned tableId for any dual-mode entity.
+ * e.g., getDualModeTableId("entries", "manual") => "entries_manual"
+ * e.g., getDualModeTableId("weighments", "automatic") => "weighments_automatic"
+ * e.g., getDualModeTableId("tickets", "manual") => "tickets_manual"
+ */
+export function getDualModeTableId(baseTableName: string, mode: GlobalMode): string {
+  return `${baseTableName}_${mode}`;
+}
+
 export interface TableItemState {
   search: string;
   filters: Record<string, string>;
@@ -29,6 +42,12 @@ export type PrunedTableState = Partial<{
   pagination: Partial<PaginationState>;
   columnVisibility: ColumnVisibilityState;
 }>;
+
+export interface SerializedCookiePayload {
+  globalMode?: GlobalMode;
+  mode?: GlobalMode;
+  tables: Record<string, PrunedTableState>;
+}
 
 /**
  * Prunes default/empty values to minimize cookie payload size.
@@ -80,29 +99,54 @@ export function pruneTableState(
 }
 
 /**
- * Serializes pruned table states into a compact JSON string.
+ * Serializes pruned table states and active global mode into a compact JSON string.
  */
-export function serializeTablesCookie(tables: Record<string, TableItemState>): string {
+export function serializeTablesCookie(
+  tables: Record<string, TableItemState>,
+  globalMode: GlobalMode = "automatic",
+): string {
   const pruned = pruneTableState(tables);
-  return JSON.stringify(pruned);
+  const payload: SerializedCookiePayload = {
+    globalMode,
+    tables: pruned,
+  };
+  return JSON.stringify(payload);
+}
+
+export interface ParsedTablesCookieResult {
+  tables: Record<string, TableItemState>;
+  globalMode: GlobalMode;
 }
 
 /**
  * Safely parses cookie value (from server cookies() or document.cookie)
- * into a complete Record<string, TableItemState>.
+ * into a complete Record<string, TableItemState> and active global mode.
  */
-export function parseTablesCookie(rawCookie?: string | null): Record<string, TableItemState> {
-  if (!rawCookie) return {};
+export function parseTablesCookie(rawCookie?: string | null): ParsedTablesCookieResult {
+  const defaultResult: ParsedTablesCookieResult = {
+    tables: {},
+    globalMode: "automatic",
+  };
+
+  if (!rawCookie) return defaultResult;
 
   try {
     const decoded = rawCookie.includes("%") ? decodeURIComponent(rawCookie) : rawCookie;
-    const parsed = JSON.parse(decoded) as Record<string, PrunedTableState>;
-    if (!parsed || typeof parsed !== "object") return {};
+    const parsed = JSON.parse(decoded);
+    if (!parsed || typeof parsed !== "object") return defaultResult;
 
-    const result: Record<string, TableItemState> = {};
-    for (const [tableId, pruned] of Object.entries(parsed)) {
+    const rawTables =
+      "tables" in parsed && typeof parsed.tables === "object" && parsed.tables !== null
+        ? (parsed.tables as Record<string, PrunedTableState>)
+        : (parsed as Record<string, PrunedTableState>);
+
+    const rawGlobalMode = parsed.globalMode ?? parsed.mode;
+    const globalMode: GlobalMode = rawGlobalMode === "manual" ? "manual" : "automatic";
+
+    const resultTables: Record<string, TableItemState> = {};
+    for (const [tableId, pruned] of Object.entries(rawTables)) {
       if (!pruned || typeof pruned !== "object") continue;
-      result[tableId] = {
+      resultTables[tableId] = {
         ...DEFAULT_TABLE_ITEM_STATE,
         ...(pruned.search ? { search: pruned.search } : {}),
         ...(pruned.filters ? { filters: pruned.filters } : {}),
@@ -115,18 +159,25 @@ export function parseTablesCookie(rawCookie?: string | null): Record<string, Tab
         },
       };
     }
-    return result;
+
+    return {
+      tables: resultTables,
+      globalMode,
+    };
   } catch {
-    return {};
+    return defaultResult;
   }
 }
 
 /**
  * Writes the serialized table state to document.cookie in the browser.
  */
-export function writeTablesCookie(tables: Record<string, TableItemState>): void {
+export function writeTablesCookie(
+  tables: Record<string, TableItemState>,
+  globalMode: GlobalMode = "automatic",
+): void {
   if (typeof document === "undefined") return;
 
-  const serialized = serializeTablesCookie(tables);
+  const serialized = serializeTablesCookie(tables, globalMode);
   document.cookie = `${TABLES_COOKIE_NAME}=${encodeURIComponent(serialized)}; path=/; max-age=${TABLES_COOKIE_MAX_AGE}; SameSite=Lax`;
 }

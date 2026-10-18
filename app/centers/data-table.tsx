@@ -7,6 +7,7 @@ import {
   DataTableHydrationCard,
   DataTablePagination,
   DataTableSearchInput,
+  DataTableRefreshButton,
   DataTableViewOptions,
   DatePickerWithRange,
   useDataTable,
@@ -77,6 +78,7 @@ export function CentersDataTable() {
 
         {/* Action Controls Group (Right) */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          <DataTableRefreshButton onClick={refresh} loading={loading} />
           <DatePickerWithRange
             date={dateRange}
             onDateChange={(range) => {

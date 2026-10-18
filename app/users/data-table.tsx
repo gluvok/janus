@@ -11,6 +11,7 @@ import {
   DataTableDateRangeChip,
   DataTableContent,
   DataTablePagination,
+  DataTableRefreshButton,
   DataTableViewOptions,
   DatePickerWithRange,
   DataTableHydrationCard,
@@ -229,15 +230,6 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
 
         {/* Action Controls Group (Right) */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          {/* Creation Date Range Picker */}
-          <DatePickerWithRange
-            date={dateRange}
-            onDateChange={(range) => {
-              setDateRange(range);
-            }}
-            className="flex-1 sm:flex-initial"
-          />
-
           {/* Batch Delete Button (shown when rows are selected) */}
           {selectedCount > 0 && (
             <Button
@@ -256,6 +248,18 @@ export function UsersDataTable({ roleScope }: UsersDataTableProps) {
             <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" data-icon="inline-start" />
             <span>{config.addButtonLabel}</span>
           </Button>
+
+          {/* Refresh Button */}
+          <DataTableRefreshButton onClick={refresh} loading={loading} />
+
+          {/* Creation Date Range Picker */}
+          <DatePickerWithRange
+            date={dateRange}
+            onDateChange={(range) => {
+              setDateRange(range);
+            }}
+            className="flex-1 sm:flex-initial"
+          />
 
           {/* Column Visibility Toggle */}
           <DataTableViewOptions table={table} />

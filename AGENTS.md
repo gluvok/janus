@@ -237,6 +237,14 @@ For any JavaScript / TypeScript / Node modifications:
 - **Clean Call Sites**: Callers MUST import directly from the module root (e.g. `@/components/data-table`) rather than scattering multi-line deep imports (e.g. `@/components/data-table/data-table-content`, `@/components/data-table/use-data-table`).
 - **Unified Surface**: Keeps imports cohesive, clean, and prevents circular dependencies or duplicate definitions across consuming pages and components.
 
+## 17. Strict Zero Default Fallback Props in Component Signatures
+
+**Never assign speculative default fallback values to component props in parameter destructuring.**
+
+- **No Masking Caller Intent**: In custom and feature components, NEVER assign arbitrary default values in prop destructuring (e.g. `isValid = true`, `submitLabel = "Save Changes"`, `title = "Default"`, `showIcon = true`).
+- **Explicit Call Sites**: Every prop that controls behavioral flow, validation, action labels, or callback triggers must be declared strictly mandatory (`isValid: boolean`, `submitLabel: string`) in the TypeScript interface and explicitly passed by each consuming component.
+- **Minimum Prop Surface**: If a value is constant or never varied across callers, hardcode it directly in the component rather than adding a configurable prop with a default fallback.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

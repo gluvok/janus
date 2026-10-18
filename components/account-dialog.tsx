@@ -9,25 +9,25 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
-import { FormDirtyIndicator } from "@/components/form-dirty-indicator";
+import {
+  DialogActionFooter,
+  DialogIconBadge,
+  FormErrorBanner,
+  FormRequiredNotice,
+} from "@/components/form-primitives";
 import { RoleBadge } from "@/components/role-badge";
 import { toast } from "@/components/ui/toast";
 import { cn, formatDateTime, getErrorMessage } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  AlertCircleIcon,
   Calendar01Icon,
-  Cancel01Icon,
-  CheckmarkCircle02Icon,
   Clock01Icon,
   Key01Icon,
   TextFontIcon,
@@ -134,9 +134,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <HugeiconsIcon icon={UserCircleIcon} className="size-4" />
-            </div>
+            <DialogIconBadge icon={UserCircleIcon} />
             <DialogTitle>Account Settings</DialogTitle>
           </div>
           <DialogDescription>Personal profile and account credentials.</DialogDescription>
@@ -179,15 +177,8 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-              <p className="text-2xs text-muted-foreground">
-                <span className="text-destructive font-semibold">*</span> indicates required field
-              </p>
-              {formError && (
-                <div className="flex items-center gap-2 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive">
-                  <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
+              <FormRequiredNotice />
+              <FormErrorBanner error={formError} />
 
               <Field data-invalid={Boolean(errors.name)}>
                 <FieldLabel htmlFor="account-name">
@@ -260,43 +251,13 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
                 <FieldDescription>Leave empty to keep your existing password.</FieldDescription>
               </Field>
 
-              <DialogFooter className="flex flex-row items-center justify-between sm:justify-between w-full gap-2 pt-2">
-                <FormDirtyIndicator isDirty={isDirty} className="mr-auto" />
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onOpenChange(false)}
-                    disabled={isSubmitting}
-                  >
-                    <HugeiconsIcon
-                      icon={Cancel01Icon}
-                      className="size-3.5 text-muted-foreground"
-                      data-icon="inline-start"
-                    />
-                    <span>Cancel</span>
-                  </Button>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={isSubmitting || !isDirty || !isValid}
-                    className="min-w-28"
-                  >
-                    {isSubmitting ? (
-                      <Spinner className="size-3.5" data-icon="inline-start" />
-                    ) : (
-                      <HugeiconsIcon
-                        icon={CheckmarkCircle02Icon}
-                        className="size-3.5"
-                        data-icon="inline-start"
-                      />
-                    )}
-                    <span>Save Changes</span>
-                  </Button>
-                </div>
-              </DialogFooter>
+              <DialogActionFooter
+                isDirty={isDirty}
+                isValid={isValid}
+                isSubmitting={isSubmitting}
+                onCancel={() => onOpenChange(false)}
+                submitLabel="Save Changes"
+              />
             </form>
           </div>
         </div>
