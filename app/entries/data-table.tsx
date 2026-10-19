@@ -19,10 +19,11 @@ import {
   PhotosDialog,
   EntriesToolbar,
   EntriesErrorState,
+  AutomaticEntryEditDialog,
   type EntriesFilterConfig,
 } from "@/components/entries";
 import { getColumns } from "./columns";
-import { type Entry, type EntryMode } from "./types";
+import { isManualEntry, type Entry, type EntryMode, type AutomaticEntry } from "./types";
 import { type Center } from "@/app/centers/types";
 import { type Customer } from "@/app/customers/types";
 import { type User } from "@/app/users/types";
@@ -151,6 +152,62 @@ function buildEntriesQueryParams(
   };
 }
 
+const ENTRY_MODE_ENDPOINTS: Record<EntryMode, string> = {
+  automatic: "/api/entries/automatic",
+  manual: "/api/entries/manual",
+};
+
+interface FilterOptionsBundle {
+  centerOptions: FacetedFilterOption[];
+  customerOptions: FacetedFilterOption[];
+  creatorOptions: FacetedFilterOption[];
+}
+
+const MODE_FILTER_BUILDERS: Record<
+  EntryMode,
+  (opts: FilterOptionsBundle) => EntriesFilterConfig[]
+> = {
+  automatic: ({ centerOptions, customerOptions }) => [
+    {
+      key: "center_id",
+      title: "Center",
+      options: centerOptions,
+      variant: "stone",
+      categoryIcon: appIcons.centers,
+    },
+    {
+      key: "customer_id",
+      title: "Customer",
+      options: customerOptions,
+      variant: "emerald",
+      categoryIcon: appIcons.customers,
+    },
+  ],
+  manual: ({ centerOptions, customerOptions, creatorOptions }) => [
+    {
+      key: "center_id",
+      title: "Center",
+      options: centerOptions,
+      variant: "stone",
+      categoryIcon: appIcons.centers,
+    },
+    {
+      key: "customer_id",
+      title: "Customer",
+      options: customerOptions,
+      variant: "emerald",
+      categoryIcon: appIcons.customers,
+    },
+    {
+      key: "creator",
+      title: "Creator",
+      options: creatorOptions,
+      variant: "primary",
+      categoryIcon: UserIcon,
+    },
+  ],
+};
+
 export function EntriesDataTable() {
   const [centerOptions, setCenterOptions] = useState<FacetedFilterOption[]>([
     { label: "All Centers", value: "all", icon: appIcons.centers },
@@ -170,22 +227,32 @@ export function EntriesDataTable() {
   const activeLoadIdRef = useRef<number>(0);
   const [selectedEntryForPhotos, setSelectedEntryForPhotos] = useState<Entry | null>(null);
   const [photosDialogOpen, setPhotosDialogOpen] = useState<boolean>(false);
+  const [editingEntry, setEditingEntry] = useState<AutomaticEntry | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
 
   const handleViewPhotos = useCallback((entry: Entry) => {
     setSelectedEntryForPhotos(entry);
     setPhotosDialogOpen(true);
   }, []);
 
+  const handleEditEntry = useCallback((entry: Entry) => {
+    if (!isManualEntry(entry)) {
+      setEditingEntry(entry);
+      setEditDialogOpen(true);
+    }
+  }, []);
+
   const tableMeta = useMemo(
     () => ({
       onViewPhotos: handleViewPhotos,
+      onEditEntry: handleEditEntry,
     }),
-    [handleViewPhotos],
+    [handleViewPhotos, handleEditEntry],
   );
 
   const fetchEntries = useCallback(async (queryParams: Record<string, unknown>) => {
-    const isManual = queryParams.mode === "manual";
-    const endpoint = isManual ? "/api/entries/manual" : "/api/entries/automatic";
+    const modeKey = (queryParams.mode as EntryMode) ?? "automatic";
+    const endpoint = ENTRY_MODE_ENDPOINTS[modeKey];
     const res = await axios.get<{ data: Entry[]; totalCount: number }>(endpoint, {
       params: queryParams,
     });
@@ -201,7 +268,7 @@ export function EntriesDataTable() {
       const tableId = getDualModeTableId("entries", mode);
       const currentTableState = useDataTableStore.getState().getTableState(tableId);
       const initialQueryParams = buildEntriesQueryParams(currentTableState, mode);
-      const initialEndpoint = mode === "manual" ? "/api/entries/manual" : "/api/entries/automatic";
+      const initialEndpoint = ENTRY_MODE_ENDPOINTS[mode];
 
       const [optionsResult, entriesResult] = await Promise.all([
         fetchFilterOptions(),
@@ -286,36 +353,10 @@ export function EntriesDataTable() {
     initialData,
   });
 
-  const filterConfigs = useMemo<EntriesFilterConfig[]>(() => {
-    const configs: EntriesFilterConfig[] = [
-      {
-        key: "center_id",
-        title: "Center",
-        options: centerOptions,
-        variant: "stone",
-        categoryIcon: appIcons.centers,
-      },
-      {
-        key: "customer_id",
-        title: "Customer",
-        options: customerOptions,
-        variant: "emerald",
-        categoryIcon: appIcons.customers,
-      },
-    ];
-
-    if (mode === "manual") {
-      configs.push({
-        key: "creator",
-        title: "Creator",
-        options: creatorOptions,
-        variant: "primary",
-        categoryIcon: UserIcon,
-      });
-    }
-
-    return configs;
-  }, [centerOptions, customerOptions, creatorOptions, mode]);
+  const filterConfigs = useMemo<EntriesFilterConfig[]>(
+    () => MODE_FILTER_BUILDERS[mode]({ centerOptions, customerOptions, creatorOptions }),
+    [mode, centerOptions, customerOptions, creatorOptions],
+  );
 
   if (isInitialLoading || !initialData) {
     return <DataTableHydrationCard />;
@@ -367,6 +408,14 @@ export function EntriesDataTable() {
           images={selectedEntryForPhotos.images ?? []}
         />
       )}
+
+      {/* Edit Automatic Entry Dialog */}
+      <AutomaticEntryEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        entry={editingEntry}
+        onSuccess={refresh}
+      />
     </div>
   );
 }

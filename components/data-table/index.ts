@@ -8,6 +8,7 @@ export {
   createCreatedAtColumn,
   createUpdatedAtColumn,
   createNameColumn,
+  createActionsColumn,
   DEFAULT_COLUMN_METADATA,
   type ColumnMetaConfig,
 } from "./data-table-columns";

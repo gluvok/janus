@@ -2,15 +2,14 @@
 
 import { createColumnHelper } from "@tanstack/react-table";
 import {
-  DataTableRowActions,
   createCreatedAtColumn,
   createIdColumn,
   createNameColumn,
   createSelectColumn,
   createUpdatedAtColumn,
+  createActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
-import { UserGroupIcon } from "@hugeicons/core-free-icons";
 import { type Customer } from "./types";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Customer>();
@@ -25,28 +24,19 @@ export function getCustomerColumns({
   return columnHelper.columns([
     createSelectColumn(columnHelper),
     createIdColumn(columnHelper),
-    createNameColumn(columnHelper, { icon: UserGroupIcon }),
+    createNameColumn(columnHelper),
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),
-    columnHelper.display({
-      id: "actions",
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => {
-        const customer = row.original;
-        return (
-          <DataTableRowActions
-            copyText={customer.name}
-            copyLabel="Copy Customer Name"
-            onEdit={() => onEdit(customer)}
-            editLabel="Edit Customer"
-            onDelete={() => onDelete(customer)}
-            deleteLabel="Delete Customer"
-          />
-        );
-      },
-      meta: {
-        title: "Actions",
-      },
+    createActionsColumn(columnHelper, ({ row }) => {
+      const customer = row.original;
+      return {
+        copyText: customer.name,
+        copyLabel: "Copy Customer Name",
+        onEdit: () => onEdit(customer),
+        editLabel: "Edit Customer",
+        onDelete: () => onDelete(customer),
+        deleteLabel: "Delete Customer",
+      };
     }),
   ]);
 }

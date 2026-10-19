@@ -1,14 +1,13 @@
 "use client";
 
 import type { SortingState, Updater } from "@tanstack/react-table";
-import { DataTableCriteriaBar, type ColumnMetaConfig } from "@/components/data-table";
+import { DataTableCriteriaBar } from "@/components/data-table";
 
 export interface EntriesCriteriaBarProps {
   hasActiveSorts: boolean;
   sorting: SortingState;
   onSortingChange: (updater: Updater<SortingState>) => void;
   onRemoveSort: (columnId: string) => void;
-  columnsConfig?: Record<string, ColumnMetaConfig>;
   onResetSorts?: () => void;
   onResetAll?: () => void;
 }
@@ -18,7 +17,6 @@ export function EntriesCriteriaBar({
   sorting,
   onSortingChange,
   onRemoveSort,
-  columnsConfig,
   onResetSorts,
   onResetAll,
 }: EntriesCriteriaBarProps) {
@@ -28,7 +26,6 @@ export function EntriesCriteriaBar({
       sorting={sorting}
       onSortingChange={onSortingChange}
       onRemoveSort={onRemoveSort}
-      columnsConfig={columnsConfig}
       onResetSorts={onResetSorts}
       onResetAll={onResetAll}
     />

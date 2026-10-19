@@ -3,16 +3,16 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import {
   DataTableColumnHeader,
-  DataTableRowActions,
   createCreatedAtColumn,
   createIdColumn,
   createNameColumn,
   createSelectColumn,
   createUpdatedAtColumn,
+  createActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { RoleBadge } from "@/components/role-badge";
-import { SecurityCheckIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AtIcon, SecurityCheckIcon } from "@hugeicons/core-free-icons";
 import { type User } from "./types";
 
 export interface UsersTableMeta {
@@ -31,7 +31,7 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
     createIdColumn(columnHelper),
     columnHelper.accessor("username", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Username" icon={UserIcon} />
+        <DataTableColumnHeader column={column} title="Username" icon={AtIcon} />
       ),
       cell: ({ row }) => (
         <span className="font-mono text-xs font-medium text-foreground">
@@ -40,7 +40,7 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
       ),
       meta: {
         title: "Username",
-        icon: UserIcon,
+        icon: AtIcon,
       },
     }),
     createNameColumn(columnHelper, { title: "Full Name" }),
@@ -60,26 +60,18 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
       : []),
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),
-    columnHelper.display({
-      id: "actions",
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row, table }) => {
-        const user = row.original;
-        const meta = table.options.meta as UsersTableMeta | undefined;
+    createActionsColumn(columnHelper, ({ row, table }) => {
+      const user = row.original;
+      const meta = table.options.meta as UsersTableMeta | undefined;
 
-        return (
-          <DataTableRowActions
-            copyText={user.username}
-            copyLabel="Copy Username"
-            onEdit={() => meta?.onEditUser?.(user)}
-            editLabel={`Edit ${entityLabel}`}
-            onDelete={() => meta?.onDeleteUser?.(user)}
-            deleteLabel={`Delete ${entityLabel}`}
-          />
-        );
-      },
-      enableSorting: false,
-      enableHiding: false,
+      return {
+        copyText: user.username,
+        copyLabel: "Copy Username",
+        onEdit: () => meta?.onEditUser?.(user),
+        editLabel: `Edit ${entityLabel}`,
+        onDelete: () => meta?.onDeleteUser?.(user),
+        deleteLabel: `Delete ${entityLabel}`,
+      };
     }),
   ];
 

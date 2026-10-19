@@ -1,28 +1,40 @@
 "use client";
 
-import type { ColumnDef, ColumnHelper, RowData } from "@tanstack/react-table";
+import type { ColumnDef, ColumnHelper, Row, RowData, Table } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "./data-table-column-header";
+import { DataTableRowActions, type DataTableRowActionsProps } from "./data-table-row-actions";
 import { formatDateTime } from "@/lib/utils";
 import {
+  AtIcon,
   Building01Icon,
+  Building02Icon,
+  Building03Icon,
   Calendar01Icon,
+  Camera01Icon,
   Clock01Icon,
+  ClockArrowDownIcon,
+  ClockArrowUpIcon,
+  ContainerTruck01Icon,
   HashtagIcon,
   Image01Icon,
   Layers01Icon,
+  PackageOpenIcon,
+  ScaleIcon,
   SecurityCheckIcon,
   TextFontIcon,
   TruckIcon,
+  UserArrowLeftRightIcon,
+  UserCheck01Icon,
+  UserEdit01Icon,
   UserGroupIcon,
-  UserIcon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import type { DataTableFeatures } from "./data-table-features";
 
 export interface ColumnMetaConfig {
   label: string;
-  icon?: unknown;
+  icon: unknown;
 }
 
 export const DEFAULT_COLUMN_METADATA: Record<string, ColumnMetaConfig> = {
@@ -34,21 +46,21 @@ export const DEFAULT_COLUMN_METADATA: Record<string, ColumnMetaConfig> = {
   weight: { label: "Weight", icon: WeightScale01Icon },
   center: { label: "Center", icon: Building01Icon },
   customer: { label: "Customer", icon: UserGroupIcon },
-  creator: { label: "Created By", icon: UserIcon },
+  creator: { label: "Created By", icon: UserEdit01Icon },
+  images: { label: "Photos", icon: Camera01Icon },
   photos: { label: "Photos", icon: Image01Icon },
-  images: { label: "Photos", icon: Image01Icon },
-  username: { label: "Username", icon: UserIcon },
+  username: { label: "Username", icon: AtIcon },
   role: { label: "Role", icon: SecurityCheckIcon },
   type: { label: "Type", icon: Layers01Icon },
-  net_weight: { label: "Net Weight", icon: WeightScale01Icon },
-  gross_weight: { label: "Gross", icon: WeightScale01Icon },
-  tare_weight: { label: "Tare", icon: WeightScale01Icon },
-  in_center: { label: "In Center", icon: Building01Icon },
-  out_center: { label: "Out Center", icon: Building01Icon },
-  in_customer: { label: "In Customer", icon: UserGroupIcon },
-  out_customer: { label: "Out Customer", icon: UserGroupIcon },
-  in_time: { label: "In Time", icon: Clock01Icon },
-  out_time: { label: "Out Time", icon: Clock01Icon },
+  net_weight: { label: "Net Weight", icon: ScaleIcon },
+  gross_weight: { label: "Gross", icon: ContainerTruck01Icon },
+  tare_weight: { label: "Tare", icon: PackageOpenIcon },
+  in_center: { label: "In Center", icon: Building02Icon },
+  out_center: { label: "Out Center", icon: Building03Icon },
+  in_customer: { label: "In Customer", icon: UserCheck01Icon },
+  out_customer: { label: "Out Customer", icon: UserArrowLeftRightIcon },
+  in_time: { label: "In Time", icon: ClockArrowDownIcon },
+  out_time: { label: "Out Time", icon: ClockArrowUpIcon },
 };
 
 export function createSelectColumn<TData extends RowData>(
@@ -161,5 +173,25 @@ export function createNameColumn<TData extends { name: string }>(
       title,
       icon,
     },
+  });
+}
+
+export function createActionsColumn<TData extends RowData>(
+  columnHelper: ColumnHelper<DataTableFeatures, TData>,
+  getActionProps: (props: {
+    row: Row<DataTableFeatures, TData>;
+    table: Table<DataTableFeatures, TData>;
+  }) => DataTableRowActionsProps | null,
+) {
+  return columnHelper.display({
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row, table }) => {
+      const actionProps = getActionProps({ row, table });
+      if (!actionProps) return null;
+      return <DataTableRowActions {...actionProps} />;
+    },
+    enableSorting: false,
+    enableHiding: false,
   });
 }

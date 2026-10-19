@@ -5,22 +5,27 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DataTableColumnHeader,
-  DataTableRowActions,
   createCreatedAtColumn,
   createIdColumn,
   createSelectColumn,
+  createActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { formatDateTime } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Building01Icon,
-  Clock01Icon,
+  Building02Icon,
+  Building03Icon,
+  ClockArrowDownIcon,
+  ClockArrowUpIcon,
+  ContainerTruck01Icon,
   Image01Icon,
   Layers01Icon,
+  PackageOpenIcon,
+  ScaleIcon,
   TruckIcon,
-  UserGroupIcon,
-  WeightScale01Icon,
+  UserArrowLeftRightIcon,
+  UserCheck01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { Weighment } from "./types";
@@ -61,7 +66,7 @@ export function getWeighmentColumns() {
     }),
     columnHelper.accessor("net_weight", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Net Weight" icon={WeightScale01Icon} />
+        <DataTableColumnHeader column={column} title="Net Weight" icon={ScaleIcon} />
       ),
       cell: ({ row }) => {
         const net = Number(row.getValue("net_weight"));
@@ -74,12 +79,12 @@ export function getWeighmentColumns() {
       },
       meta: {
         title: "Net Weight",
-        icon: WeightScale01Icon,
+        icon: ScaleIcon,
       },
     }),
     columnHelper.accessor("gross_weight", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Gross" icon={WeightScale01Icon} />
+        <DataTableColumnHeader column={column} title="Gross" icon={ContainerTruck01Icon} />
       ),
       cell: ({ row }) => {
         const gross = Number(row.getValue("gross_weight"));
@@ -92,12 +97,12 @@ export function getWeighmentColumns() {
       },
       meta: {
         title: "Gross",
-        icon: WeightScale01Icon,
+        icon: ContainerTruck01Icon,
       },
     }),
     columnHelper.accessor("tare_weight", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Tare" icon={WeightScale01Icon} />
+        <DataTableColumnHeader column={column} title="Tare" icon={PackageOpenIcon} />
       ),
       cell: ({ row }) => {
         const tare = Number(row.getValue("tare_weight"));
@@ -110,13 +115,13 @@ export function getWeighmentColumns() {
       },
       meta: {
         title: "Tare",
-        icon: WeightScale01Icon,
+        icon: PackageOpenIcon,
       },
     }),
     columnHelper.accessor((row) => row.in_entry.center.name, {
       id: "in_center",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="In Center" icon={Building01Icon} />
+        <DataTableColumnHeader column={column} title="In Center" icon={Building02Icon} />
       ),
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-xs font-normal">
@@ -125,14 +130,14 @@ export function getWeighmentColumns() {
       ),
       meta: {
         title: "In Center",
-        icon: Building01Icon,
+        icon: Building02Icon,
       },
       enableSorting: true,
     }),
     columnHelper.accessor((row) => row.out_entry.center.name, {
       id: "out_center",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Out Center" icon={Building01Icon} />
+        <DataTableColumnHeader column={column} title="Out Center" icon={Building03Icon} />
       ),
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-xs font-normal">
@@ -141,14 +146,14 @@ export function getWeighmentColumns() {
       ),
       meta: {
         title: "Out Center",
-        icon: Building01Icon,
+        icon: Building03Icon,
       },
       enableSorting: true,
     }),
     columnHelper.accessor((row) => row.in_entry.customer?.name ?? "", {
       id: "in_customer",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="In Customer" icon={UserGroupIcon} />
+        <DataTableColumnHeader column={column} title="In Customer" icon={UserCheck01Icon} />
       ),
       cell: ({ row }) => {
         const name = row.original.in_entry.customer?.name;
@@ -159,14 +164,14 @@ export function getWeighmentColumns() {
       },
       meta: {
         title: "In Customer",
-        icon: UserGroupIcon,
+        icon: UserCheck01Icon,
       },
       enableSorting: true,
     }),
     columnHelper.accessor((row) => row.out_entry.customer?.name ?? "", {
       id: "out_customer",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Out Customer" icon={UserGroupIcon} />
+        <DataTableColumnHeader column={column} title="Out Customer" icon={UserArrowLeftRightIcon} />
       ),
       cell: ({ row }) => {
         const name = row.original.out_entry.customer?.name;
@@ -177,14 +182,14 @@ export function getWeighmentColumns() {
       },
       meta: {
         title: "Out Customer",
-        icon: UserGroupIcon,
+        icon: UserArrowLeftRightIcon,
       },
       enableSorting: true,
     }),
     columnHelper.accessor((row) => row.in_entry.created_at, {
       id: "in_time",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="In Time" icon={Clock01Icon} />
+        <DataTableColumnHeader column={column} title="In Time" icon={ClockArrowDownIcon} />
       ),
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -193,14 +198,14 @@ export function getWeighmentColumns() {
       ),
       meta: {
         title: "In Time",
-        icon: Clock01Icon,
+        icon: ClockArrowDownIcon,
       },
       enableSorting: true,
     }),
     columnHelper.accessor((row) => row.out_entry.created_at, {
       id: "out_time",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Out Time" icon={Clock01Icon} />
+        <DataTableColumnHeader column={column} title="Out Time" icon={ClockArrowUpIcon} />
       ),
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -209,7 +214,7 @@ export function getWeighmentColumns() {
       ),
       meta: {
         title: "Out Time",
-        icon: Clock01Icon,
+        icon: ClockArrowUpIcon,
       },
       enableSorting: true,
     }),
@@ -256,15 +261,10 @@ export function getWeighmentColumns() {
       enableSorting: false,
     }),
     createCreatedAtColumn(columnHelper),
-    columnHelper.display({
-      id: "actions",
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <DataTableRowActions copyText={row.original.vehicle_number} copyLabel="Copy Vehicle No." />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    }),
+    createActionsColumn(columnHelper, ({ row }) => ({
+      copyText: row.original.vehicle_number,
+      copyLabel: "Copy Vehicle No.",
+    })),
   ];
 
   return columnHelper.columns(allColumns);

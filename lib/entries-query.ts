@@ -61,30 +61,29 @@ export const commaSeparatedIdsSchema = z
   })
   .pipe(z.array(z.number().int().positive()));
 
+export interface IdFilterDef {
+  paramKeys: readonly string[];
+  column: string;
+}
+
 /**
- * Applies common center_id and customer_id filters from URL search params to an entries query
+ * Applies multiple comma-separated ID filters from URL search params to an entries query
  * using strict Zod schema validation.
  */
-export function applyCommonEntriesFilters<
+export function applyIdFilters<
   TQuery extends {
     in(col: string, vals: number[]): TQuery;
   },
->(query: TQuery, searchParams: URLSearchParams): TQuery {
+>(query: TQuery, searchParams: URLSearchParams, filters: readonly IdFilterDef[]): TQuery {
   let updated = query;
 
-  const rawCenterId = searchParams.get("center_id")?.trim();
-  if (rawCenterId && rawCenterId !== "all") {
-    const parsed = commaSeparatedIdsSchema.safeParse(rawCenterId);
-    if (parsed.success && parsed.data.length > 0) {
-      updated = updated.in("center_id", parsed.data);
-    }
-  }
-
-  const rawCustomerId = searchParams.get("customer_id")?.trim();
-  if (rawCustomerId && rawCustomerId !== "all") {
-    const parsed = commaSeparatedIdsSchema.safeParse(rawCustomerId);
-    if (parsed.success && parsed.data.length > 0) {
-      updated = updated.in("customer_id", parsed.data);
+  for (const { paramKeys, column } of filters) {
+    const rawVal = paramKeys.map((k) => searchParams.get(k)?.trim()).find(Boolean);
+    if (rawVal && rawVal !== "all") {
+      const parsed = commaSeparatedIdsSchema.safeParse(rawVal);
+      if (parsed.success && parsed.data.length > 0) {
+        updated = updated.in(column, parsed.data);
+      }
     }
   }
 
@@ -114,8 +113,13 @@ export function sortEntriesRelational<T extends SortableEntry>(
   return [...entries].sort((a, b) => {
     for (const rule of sortRules) {
       const getter = RELATIONAL_VALUE_GETTERS[rule.col];
-      const valA = getter ? getter(a) : String((a as Record<string, unknown>)[rule.col] ?? "");
-      const valB = getter ? getter(b) : String((b as Record<string, unknown>)[rule.col] ?? "");
+      const getVal = (item: SortableEntry) =>
+        getter
+          ? getter(item)
+          : String((item as unknown as Record<string, unknown>)[rule.col] ?? "");
+
+      const valA = getVal(a);
+      const valB = getVal(b);
 
       const comparison =
         typeof valA === "number" && typeof valB === "number"
@@ -176,18 +180,28 @@ const MANUAL_SELECT_PROJECTION = [
   "creator:users(id, name, role)",
 ].join(",\n  ");
 
+const COMMON_ID_FILTERS: readonly IdFilterDef[] = [
+  { paramKeys: ["center_id"], column: "center_id" },
+  { paramKeys: ["customer_id"], column: "customer_id" },
+];
+
 const ENTRY_CONFIGS = {
   automatic: {
     tableName: "automatic_entries" as const,
     projection: AUTOMATIC_SELECT_PROJECTION,
     allowedSortColumns: AUTOMATIC_SORT_COLUMNS,
     relationalSortCols: new Set(["center", "customer"]),
+    idFilters: COMMON_ID_FILTERS,
   },
   manual: {
     tableName: "manual_entries" as const,
     projection: MANUAL_SELECT_PROJECTION,
     allowedSortColumns: MANUAL_SORT_COLUMNS,
     relationalSortCols: new Set(["center", "customer", "creator"]),
+    idFilters: [
+      ...COMMON_ID_FILTERS,
+      { paramKeys: ["creator", "creator_id"], column: "creator_id" },
+    ],
   },
 } as const;
 
@@ -224,19 +238,7 @@ export async function executeEntriesGetQuery(
       }
     }
 
-    query = applyCommonEntriesFilters(query, searchParams);
-
-    if (mode === "manual") {
-      const creatorParam =
-        searchParams.get("creator")?.trim() ?? searchParams.get("creator_id")?.trim();
-      if (creatorParam && creatorParam !== "all") {
-        const parsed = commaSeparatedIdsSchema.safeParse(creatorParam);
-        if (parsed.success && parsed.data.length > 0) {
-          query = query.in("creator_id", parsed.data);
-        }
-      }
-    }
-
+    query = applyIdFilters(query, searchParams, config.idFilters);
     query = applyDateRange(query, searchParams);
 
     const hasRelationalSort = sortRules.some((r) => config.relationalSortCols.has(r.col));

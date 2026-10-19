@@ -1,8 +1,8 @@
 export { PhotosDialog, type PhotosDialogProps } from "@/components/photos-dialog";
+export { EntriesToolbar, type EntriesFilterConfig, type EntriesToolbarProps } from "./toolbar";
+export { EntriesCriteriaBar, type EntriesCriteriaBarProps } from "./criteria-bar";
+export { EntriesErrorState, type EntriesErrorStateProps } from "./error-state";
 export {
-  EntriesToolbar,
-  type EntriesFilterConfig,
-  type EntriesToolbarProps,
-} from "./entries-toolbar";
-export { EntriesCriteriaBar, type EntriesCriteriaBarProps } from "./entries-criteria-bar";
-export { EntriesErrorState, type EntriesErrorStateProps } from "./entries-error-state";
+  AutomaticEntryEditDialog,
+  type AutomaticEntryEditDialogProps,
+} from "./automatic-edit-dialog";

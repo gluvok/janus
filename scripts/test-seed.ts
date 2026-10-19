@@ -1174,7 +1174,7 @@ async function main() {
       status: "pending" as TicketStatus,
     },
     {
-      concern: "Entry submitted with incorrect commodity destination center.",
+      concern: "Entry submitted with incorrect destination center.",
       reply: "Re-routed shipment to Silo Unit 2.",
       status: "approved" as TicketStatus,
     },
@@ -1224,7 +1224,7 @@ async function main() {
       status: "pending" as TicketStatus,
     },
     {
-      concern: "Customer disputed commodity deduction grade.",
+      concern: "Customer disputed weight deduction grade.",
       reply: "Quality control lab sample re-tested; confirmed grade B.",
       status: "rejected" as TicketStatus,
     },

@@ -1,29 +1,87 @@
 "use client";
 
-import { createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DataTableColumnHeader,
-  DataTableRowActions,
   createCreatedAtColumn,
   createIdColumn,
   createSelectColumn,
   createUpdatedAtColumn,
+  createActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building01Icon,
-  Image01Icon,
+  Camera01Icon,
   TruckIcon,
+  UserEdit01Icon,
   UserGroupIcon,
-  UserIcon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { type Entry, type EntryMode, isManualEntry } from "./types";
 
+interface EntriesTableMeta {
+  onViewPhotos?: (entry: Entry) => void;
+  onEditEntry?: (entry: Entry) => void;
+}
+
 const columnHelper = createColumnHelper<DataTableFeatures, Entry>();
+
+const MODE_SPECIFIC_COLUMNS: Record<EntryMode, () => ColumnDef<DataTableFeatures, Entry, any>[]> = {
+  automatic: () => [],
+  manual: () => [
+    columnHelper.accessor((row) => (isManualEntry(row) ? row.creator_id : undefined), {
+      id: "creator",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Creator" icon={UserEdit01Icon} />
+      ),
+      cell: ({ row }) => {
+        const creator = isManualEntry(row.original) ? row.original.creator : null;
+        const creatorId = isManualEntry(row.original) ? row.original.creator_id : null;
+        if (!creator) {
+          return <span className="text-2xs text-muted-foreground">User #{creatorId}</span>;
+        }
+        return <span className="text-xs text-muted-foreground">{creator.name}</span>;
+      },
+      meta: {
+        title: "Creator",
+        icon: UserEdit01Icon,
+      },
+      enableSorting: true,
+    }),
+  ],
+};
+
+const MODE_ROW_ACTION_RESOLVERS: Record<
+  EntryMode,
+  (
+    entry: Entry,
+    meta?: EntriesTableMeta,
+  ) => {
+    copyText: string;
+    copyLabel: string;
+    onEdit?: () => void;
+  }
+> = {
+  automatic: (entry, meta) => {
+    const canEdit =
+      !isManualEntry(entry) &&
+      (entry.vehicle_number === entry.detected_vehicle_number || entry.customer_id === null);
+
+    return {
+      copyText: entry.vehicle_number,
+      copyLabel: "Copy Vehicle No.",
+      onEdit: canEdit && meta?.onEditEntry ? () => meta.onEditEntry!(entry) : undefined,
+    };
+  },
+  manual: (entry) => ({
+    copyText: entry.vehicle_number,
+    copyLabel: "Copy Vehicle No.",
+  }),
+};
 
 export function getColumns(mode: EntryMode) {
   const allColumns = [
@@ -61,29 +119,7 @@ export function getColumns(mode: EntryMode) {
         icon: WeightScale01Icon,
       },
     }),
-    ...(mode === "manual"
-      ? [
-          columnHelper.accessor((row) => (isManualEntry(row) ? row.creator_id : undefined), {
-            id: "creator",
-            header: ({ column }) => (
-              <DataTableColumnHeader column={column} title="Creator" icon={UserIcon} />
-            ),
-            cell: ({ row }) => {
-              const creator = isManualEntry(row.original) ? row.original.creator : null;
-              const creatorId = isManualEntry(row.original) ? row.original.creator_id : null;
-              if (!creator) {
-                return <span className="text-2xs text-muted-foreground">User #{creatorId}</span>;
-              }
-              return <span className="text-xs text-muted-foreground">{creator.name}</span>;
-            },
-            meta: {
-              title: "Creator",
-              icon: UserIcon,
-            },
-            enableSorting: true,
-          }),
-        ]
-      : []),
+    ...MODE_SPECIFIC_COLUMNS[mode](),
     columnHelper.accessor("center_id", {
       id: "center",
       header: ({ column }) => (
@@ -129,45 +165,39 @@ export function getColumns(mode: EntryMode) {
     columnHelper.display({
       id: "images",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Photos" icon={Image01Icon} />
+        <DataTableColumnHeader column={column} title="Photos" icon={Camera01Icon} />
       ),
       cell: ({ row, table }) => {
         const count = row.original.images?.length ?? 0;
         if (count === 0) {
           return <span className="text-2xs text-muted-foreground">0</span>;
         }
-        const onViewPhotos = (table.options.meta as { onViewPhotos?: (entry: Entry) => void })
-          ?.onViewPhotos;
+        const meta = table.options.meta as EntriesTableMeta | undefined;
         return (
           <Button
             type="button"
             variant="outline"
             size="xs"
-            onClick={() => onViewPhotos?.(row.original)}
+            onClick={() => meta?.onViewPhotos?.(row.original)}
             className="h-5 gap-1 rounded-full px-2 py-0 text-2xs text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors cursor-pointer"
             title={`View ${count} photo${count > 1 ? "s" : ""}`}
           >
-            <HugeiconsIcon icon={Image01Icon} className="size-3" />
+            <HugeiconsIcon icon={Camera01Icon} className="size-3" />
             <span>{count}</span>
           </Button>
         );
       },
       meta: {
         title: "Photos",
-        icon: Image01Icon,
+        icon: Camera01Icon,
       },
       enableSorting: false,
     }),
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),
-    columnHelper.display({
-      id: "actions",
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <DataTableRowActions copyText={row.original.vehicle_number} copyLabel="Copy Vehicle No." />
-      ),
-      enableSorting: false,
-      enableHiding: false,
+    createActionsColumn(columnHelper, ({ row, table }) => {
+      const meta = table.options.meta as EntriesTableMeta | undefined;
+      return MODE_ROW_ACTION_RESOLVERS[mode](row.original, meta);
     }),
   ];
 

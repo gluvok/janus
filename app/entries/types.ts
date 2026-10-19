@@ -34,7 +34,7 @@ export interface BaseEntry {
 
 export interface AutomaticEntry extends BaseEntry {
   device_id: number;
-  detected_vehicle_number: string | null;
+  detected_vehicle_number: string;
   device?: EntryDevice | null;
 }
 

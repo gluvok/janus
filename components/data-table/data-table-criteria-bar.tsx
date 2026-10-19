@@ -24,14 +24,13 @@ import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Sorting05Icon } from "@hugeicons/core-free-icons";
 import { SortableSortChip, SortChipOverlay } from "./sortable-sort-chip";
-import { DEFAULT_COLUMN_METADATA, type ColumnMetaConfig } from "./data-table-columns";
+import { DEFAULT_COLUMN_METADATA } from "./data-table-columns";
 
 export interface DataTableCriteriaBarProps {
   hasActiveSorts?: boolean;
   sorting?: SortingState;
   onSortingChange?: (updater: Updater<SortingState>) => void;
   onRemoveSort?: (columnId: string) => void;
-  columnsConfig?: Record<string, ColumnMetaConfig>;
   onResetSorts?: () => void;
   onResetAll?: () => void;
 }
@@ -41,7 +40,6 @@ export function DataTableCriteriaBar({
   sorting = [],
   onSortingChange,
   onRemoveSort,
-  columnsConfig,
   onResetSorts,
   onResetAll,
 }: DataTableCriteriaBarProps) {
@@ -123,16 +121,14 @@ export function DataTableCriteriaBar({
               strategy={horizontalListSortingStrategy}
             >
               {sorting.map((sortRule, index) => {
-                const meta = columnsConfig?.[sortRule.id] ?? DEFAULT_COLUMN_METADATA[sortRule.id];
-                const colTitle = meta?.label ?? sortRule.id;
-                const colIcon = meta?.icon;
+                const meta = DEFAULT_COLUMN_METADATA[sortRule.id];
                 return (
                   <SortableSortChip
                     key={sortRule.id}
                     sortRule={sortRule}
                     index={index}
-                    colTitle={colTitle}
-                    colIcon={colIcon}
+                    colTitle={meta.label}
+                    colIcon={meta.icon}
                     isDraggable={sorting.length > 1}
                     onRemove={(columnId) => {
                       onRemoveSort?.(columnId);
@@ -160,18 +156,8 @@ export function DataTableCriteriaBar({
                 <SortChipOverlay
                   sortRule={activeSortRule}
                   index={activeSortIndex}
-                  colTitle={
-                    (
-                      columnsConfig?.[activeSortRule.id] ??
-                      DEFAULT_COLUMN_METADATA[activeSortRule.id]
-                    )?.label ?? activeSortRule.id
-                  }
-                  colIcon={
-                    (
-                      columnsConfig?.[activeSortRule.id] ??
-                      DEFAULT_COLUMN_METADATA[activeSortRule.id]
-                    )?.icon
-                  }
+                  colTitle={DEFAULT_COLUMN_METADATA[activeSortRule.id].label}
+                  colIcon={DEFAULT_COLUMN_METADATA[activeSortRule.id].icon}
                 />
               ) : null}
             </DragOverlay>

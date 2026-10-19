@@ -41,5 +41,13 @@ FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 ALTER TABLE IF EXISTS tickets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow access tickets" ON tickets FOR ALL USING (true) WITH CHECK (true);
 
+-- ==============================================================================
+-- MIGRATION: Set detected_vehicle_number default and NOT NULL constraint
+-- ==============================================================================
+ALTER TABLE IF EXISTS automatic_entries ALTER COLUMN detected_vehicle_number SET DEFAULT 'NO_PLATE_DETECTED';
+UPDATE automatic_entries SET detected_vehicle_number = 'NO_PLATE_DETECTED' WHERE detected_vehicle_number IS NULL;
+ALTER TABLE IF EXISTS automatic_entries ALTER COLUMN detected_vehicle_number SET NOT NULL;
+
 -- Reload schema cache
 NOTIFY pgrst, 'reload schema';
+

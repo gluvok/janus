@@ -13,6 +13,8 @@ import {
 import {
   ArrowDownRight01Icon,
   ArrowUpRight01Icon,
+  Building02Icon,
+  Building03Icon,
   CircleMinusIcon,
   Layers01Icon,
 } from "@hugeicons/core-free-icons";
@@ -147,10 +149,10 @@ function buildWeighmentsQueryParams(
 
 export function WeighmentsDataTable() {
   const [inCenterOptions, setInCenterOptions] = useState<FacetedFilterOption[]>([
-    { label: "All In Centers", value: "all", icon: appIcons.centers },
+    { label: "All In Centers", value: "all", icon: Building02Icon },
   ]);
   const [outCenterOptions, setOutCenterOptions] = useState<FacetedFilterOption[]>([
-    { label: "All Out Centers", value: "all", icon: appIcons.centers },
+    { label: "All Out Centers", value: "all", icon: Building03Icon },
   ]);
   const [inCustomerOptions, setInCustomerOptions] = useState<FacetedFilterOption[]>([
     { label: "All In Customers", value: "all", icon: appIcons.customers },
