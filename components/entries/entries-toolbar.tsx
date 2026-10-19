@@ -11,6 +11,7 @@ import {
   DatePickerWithRange,
   type DataTableFeatures,
   DataTableCriteriaBar,
+  type ColumnMetaConfig,
 } from "@/components/data-table";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -38,10 +39,9 @@ export interface EntriesToolbarProps<TData extends RowData> {
   sorting: SortingState;
   onSortingChange: (updater: Updater<SortingState>) => void;
   onRemoveSort: (columnId: string) => void;
-  columnLabels: Record<string, string>;
-  columnIcons: Record<string, unknown>;
-  onResetSorts: () => void;
-  onResetAll: () => void;
+  columnsConfig?: Record<string, ColumnMetaConfig>;
+  onResetSorts?: () => void;
+  onResetAll?: () => void;
 }
 
 export function EntriesToolbar<TData extends RowData>({
@@ -60,8 +60,7 @@ export function EntriesToolbar<TData extends RowData>({
   sorting,
   onSortingChange,
   onRemoveSort,
-  columnLabels,
-  columnIcons,
+  columnsConfig,
   onResetSorts,
   onResetAll,
 }: EntriesToolbarProps<TData>) {
@@ -106,8 +105,7 @@ export function EntriesToolbar<TData extends RowData>({
           sorting={sorting}
           onSortingChange={onSortingChange}
           onRemoveSort={onRemoveSort}
-          columnLabels={columnLabels}
-          columnIcons={columnIcons}
+          columnsConfig={columnsConfig}
           onResetSorts={onResetSorts}
           onResetAll={onResetAll}
         />

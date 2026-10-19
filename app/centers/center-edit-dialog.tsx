@@ -98,6 +98,7 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormErrorBanner error={serverError} />
+          <FormRequiredNotice />
 
           <div className="space-y-1.5">
             <Label htmlFor="center-name" className="text-xs font-medium">
@@ -112,8 +113,6 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
             />
             {errors.name?.message && <FieldError>{errors.name.message}</FieldError>}
           </div>
-
-          <FormRequiredNotice />
 
           <DialogActionFooter
             onCancel={() => onOpenChange(false)}

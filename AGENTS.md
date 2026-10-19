@@ -2,7 +2,7 @@
 
 ## Skill Loading
 
-Before editing files for a substantial task:
+Before editing files for any task:
 
 - Run `pnpm dlx @tanstack/intent@latest list` from the workspace root to see available local skills.
 - If a listed skill matches the task, run `pnpm dlx @tanstack/intent@latest load <package>#<skill>` before changing files.
@@ -157,6 +157,7 @@ For any JavaScript / TypeScript / Node modifications:
   - Standard entity list endpoints MUST consume `executePaginatedEntityQuery` from `lib/api-query.ts`. Entity route handlers must strictly be declarative configurations specifying `tableName`, `allowedSortColumns`, `searchColumns`, and optional custom filter callbacks.
   - Endpoints with custom downstream business logic or service layers MUST consume `buildPaginatedEntityResult` from `lib/api-query.ts` or specialized domain runners (e.g. `executeEntriesGetQuery` in `lib/entries-query.ts`).
   - Zero inline route duplication of Supabase query chaining, pagination math, sort regexes, cookie extractions, or repetitive JSON formatting envelopes.
+- **Centralized Column Metadata & Common Column Generators (`components/data-table/data-table-columns.tsx`)**: NEVER declare redundant local `COLUMN_LABELS` or `COLUMN_ICONS` dictionaries or recreate identical `id`, `name`, `created_at`, or `updated_at` column definitions across data tables. Always use `DEFAULT_COLUMN_METADATA` and the reusable column generators (`createIdColumn`, `createNameColumn`, `createCreatedAtColumn`, `createUpdatedAtColumn`, `createSelectColumn`).
 - **Centralized Date Formatting (`lib/utils.ts`)**: NEVER instantiate `new Intl.DateTimeFormat(...)` ad-hoc across tables, cards, or components. Always import and use `formatDateTime(isoString)` from `@/lib/utils`.
 - **Deduplicate Form Initial Values**: In forms utilizing `useForm` and `useEffect({ reset(...) })`, extract a single `getInitialValues(entity)` helper function rather than duplicating default value objects.
 - **Payload Construction & Unified Toasts**: Avoid duplicating entire payload structures or toast invocations across `isEdit` branches; use object spreads (`...(isEdit && user ? { id: user.id } : {})`) and parameterized strings for toasts.

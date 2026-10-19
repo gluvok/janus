@@ -2,7 +2,15 @@
 
 export { DataTableColumnHeader } from "./data-table-column-header";
 
-export { createSelectColumn } from "./data-table-columns";
+export {
+  createSelectColumn,
+  createIdColumn,
+  createCreatedAtColumn,
+  createUpdatedAtColumn,
+  createNameColumn,
+  DEFAULT_COLUMN_METADATA,
+  type ColumnMetaConfig,
+} from "./data-table-columns";
 
 export { DataTableContent, type DataTableContentProps } from "./data-table-content";
 

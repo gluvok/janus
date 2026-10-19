@@ -2,14 +2,13 @@
 
 import { Input } from "@/components/ui/input";
 import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxTrigger,
-} from "@/components/ui/combobox";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -55,12 +54,6 @@ export function FactoryForm({
   onReceiptImagesPerRowChange,
   receiptImagesError,
 }: FactoryFormProps) {
-  const selectedOption =
-    RECEIPT_IMAGE_OPTIONS.find((opt) => opt.value === String(receiptImagesPerRow)) ??
-    RECEIPT_IMAGE_OPTIONS[2];
-  const selectedLabel = selectedOption.label;
-  const SelectedIcon = selectedOption.icon;
-
   return (
     <div className="flex flex-col gap-6">
       {/* 2-Column Responsive Form Grid */}
@@ -99,54 +92,33 @@ export function FactoryForm({
               </span>
             </span>
           </FieldLabel>
-          <Combobox
+          <Select
             items={RECEIPT_IMAGE_OPTIONS}
-            value={selectedOption}
+            value={String(receiptImagesPerRow)}
             onValueChange={(val) => {
-              if (val) onReceiptImagesPerRowChange(Number(val.value));
+              if (val) onReceiptImagesPerRowChange(Number(val));
             }}
-            itemToStringLabel={(opt) => (opt ? opt.label : "")}
-            itemToStringValue={(opt) => (opt ? opt.value : "")}
-            isItemEqualToValue={(a, b) => a?.value === b?.value}
           >
-            <ComboboxTrigger
+            <SelectTrigger
               id="receipt-images"
-              className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-input/20 px-2.5 text-xs font-normal hover:bg-accent/50 dark:bg-input/30 cursor-pointer"
+              className="h-8 w-full text-xs font-normal cursor-pointer"
             >
-              <span className="flex items-center gap-1.5 truncate">
-                <HugeiconsIcon
-                  icon={SelectedIcon}
-                  className="size-3.5 shrink-0 text-muted-foreground"
-                />
-                <span className="truncate">{selectedLabel}</span>
-              </span>
-            </ComboboxTrigger>
-            <ComboboxContent className="w-max min-w-(--anchor-width) max-w-xs sm:max-w-sm">
-              <ComboboxInput
-                showTrigger={false}
-                placeholder="Search options..."
-                className="h-8 text-xs"
-              />
-              <ComboboxEmpty className="py-2 text-center text-xs text-muted-foreground">
-                No option found.
-              </ComboboxEmpty>
-              <ComboboxList>
-                {(opt) => (
-                  <ComboboxItem
-                    key={opt.value}
-                    value={opt}
-                    className="text-xs whitespace-nowrap cursor-pointer pr-6"
-                  >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start" className="min-w-44">
+              <SelectGroup>
+                {RECEIPT_IMAGE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs cursor-pointer">
                     <HugeiconsIcon
                       icon={opt.icon}
                       className="mr-1.5 size-3.5 shrink-0 text-muted-foreground"
                     />
                     <span>{opt.label}</span>
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           {receiptImagesError && <FieldError errors={[{ message: receiptImagesError }]} />}
           <FieldDescription>Photos per ticket row.</FieldDescription>
         </Field>

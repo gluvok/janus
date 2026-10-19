@@ -6,16 +6,15 @@ import { Button } from "@/components/ui/button";
 import {
   DataTableColumnHeader,
   DataTableRowActions,
+  createCreatedAtColumn,
+  createIdColumn,
   createSelectColumn,
+  createUpdatedAtColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
-import { formatDateTime } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building01Icon,
-  Calendar01Icon,
-  Clock01Icon,
-  HashtagIcon,
   Image01Icon,
   TruckIcon,
   UserGroupIcon,
@@ -29,16 +28,7 @@ const columnHelper = createColumnHelper<DataTableFeatures, Entry>();
 export function getColumns(mode: EntryMode) {
   const allColumns = [
     createSelectColumn(columnHelper),
-    columnHelper.accessor("id", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="ID" icon={HashtagIcon} />
-      ),
-      cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("id")}</span>,
-      meta: {
-        title: "ID",
-        icon: HashtagIcon,
-      },
-    }),
+    createIdColumn(columnHelper),
     columnHelper.accessor("vehicle_number", {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Vehicle No." icon={TruckIcon} />
@@ -168,35 +158,8 @@ export function getColumns(mode: EntryMode) {
       },
       enableSorting: false,
     }),
-    columnHelper.accessor("created_at", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created At" icon={Calendar01Icon} />
-      ),
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">
-          {formatDateTime(row.getValue("created_at"))}
-        </span>
-      ),
-      meta: {
-        title: "Created At",
-        icon: Calendar01Icon,
-      },
-    }),
-    columnHelper.accessor("updated_at", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Updated At" icon={Clock01Icon} />
-      ),
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">
-          {formatDateTime(row.getValue("updated_at"))}
-        </span>
-      ),
-      meta: {
-        title: "Updated At",
-        icon: Clock01Icon,
-      },
-      enableSorting: true,
-    }),
+    createCreatedAtColumn(columnHelper),
+    createUpdatedAtColumn(columnHelper),
     columnHelper.display({
       id: "actions",
       header: () => <span className="sr-only">Actions</span>,

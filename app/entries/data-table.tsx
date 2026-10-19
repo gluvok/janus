@@ -10,17 +10,7 @@ import {
   useDataTable,
   type FacetedFilterOption,
 } from "@/components/data-table";
-import {
-  Building01Icon,
-  Calendar01Icon,
-  Clock01Icon,
-  HashtagIcon,
-  Image01Icon,
-  TruckIcon,
-  UserGroupIcon,
-  UserIcon,
-  WeightScale01Icon,
-} from "@hugeicons/core-free-icons";
+import { UserIcon } from "@hugeicons/core-free-icons";
 import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
@@ -36,30 +26,6 @@ import { type Entry, type EntryMode } from "./types";
 import { type Center } from "@/app/centers/types";
 import { type Customer } from "@/app/customers/types";
 import { type User } from "@/app/users/types";
-
-const COLUMN_LABELS: Record<string, string> = {
-  id: "ID",
-  vehicle_number: "Vehicle No.",
-  weight: "Weight",
-  center: "Center",
-  customer: "Customer",
-  creator: "Creator",
-  images: "Photos",
-  created_at: "Created At",
-  updated_at: "Updated At",
-};
-
-const COLUMN_ICONS: Record<string, unknown> = {
-  id: HashtagIcon,
-  vehicle_number: TruckIcon,
-  weight: WeightScale01Icon,
-  center: Building01Icon,
-  customer: UserGroupIcon,
-  creator: UserIcon,
-  images: Image01Icon,
-  created_at: Calendar01Icon,
-  updated_at: Clock01Icon,
-};
 
 function formatCenterOptions(centers: Center[]): FacetedFilterOption[] {
   return [
@@ -377,8 +343,6 @@ export function EntriesDataTable() {
         sorting={sorting}
         onSortingChange={(updater) => setSorting(updater)}
         onRemoveSort={(columnId) => removeSort(columnId)}
-        columnLabels={COLUMN_LABELS}
-        columnIcons={COLUMN_ICONS}
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
       />

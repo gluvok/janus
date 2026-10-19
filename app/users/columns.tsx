@@ -4,19 +4,15 @@ import { createColumnHelper } from "@tanstack/react-table";
 import {
   DataTableColumnHeader,
   DataTableRowActions,
+  createCreatedAtColumn,
+  createIdColumn,
+  createNameColumn,
   createSelectColumn,
+  createUpdatedAtColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { RoleBadge } from "@/components/role-badge";
-import { formatDateTime } from "@/lib/utils";
-import {
-  Calendar01Icon,
-  Clock01Icon,
-  HashtagIcon,
-  SecurityCheckIcon,
-  TextFontIcon,
-  UserIcon,
-} from "@hugeicons/core-free-icons";
+import { SecurityCheckIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { type User } from "./types";
 
 export interface UsersTableMeta {
@@ -32,16 +28,7 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
 
   const allColumns = [
     createSelectColumn(columnHelper),
-    columnHelper.accessor("id", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="ID" icon={HashtagIcon} />
-      ),
-      cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("id")}</span>,
-      meta: {
-        title: "ID",
-        icon: HashtagIcon,
-      },
-    }),
+    createIdColumn(columnHelper),
     columnHelper.accessor("username", {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Username" icon={UserIcon} />
@@ -56,16 +43,7 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
         icon: UserIcon,
       },
     }),
-    columnHelper.accessor("name", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Full Name" icon={TextFontIcon} />
-      ),
-      cell: ({ row }) => <span className="text-xs font-medium">{row.getValue("name")}</span>,
-      meta: {
-        title: "Full Name",
-        icon: TextFontIcon,
-      },
-    }),
+    createNameColumn(columnHelper, { title: "Full Name" }),
     ...(showRole
       ? [
           columnHelper.accessor("role", {
@@ -80,34 +58,8 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
           }),
         ]
       : []),
-    columnHelper.accessor("created_at", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created At" icon={Calendar01Icon} />
-      ),
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">
-          {formatDateTime(row.getValue("created_at"))}
-        </span>
-      ),
-      meta: {
-        title: "Created At",
-        icon: Calendar01Icon,
-      },
-    }),
-    columnHelper.accessor("updated_at", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Updated At" icon={Clock01Icon} />
-      ),
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">
-          {formatDateTime(row.getValue("updated_at"))}
-        </span>
-      ),
-      meta: {
-        title: "Updated At",
-        icon: Clock01Icon,
-      },
-    }),
+    createCreatedAtColumn(columnHelper),
+    createUpdatedAtColumn(columnHelper),
     columnHelper.display({
       id: "actions",
       header: () => <span className="sr-only">Actions</span>,

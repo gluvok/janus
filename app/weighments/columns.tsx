@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import {
   DataTableColumnHeader,
   DataTableRowActions,
+  createCreatedAtColumn,
+  createIdColumn,
   createSelectColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
@@ -13,11 +15,9 @@ import { formatDateTime } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building01Icon,
-  Calendar01Icon,
   Clock01Icon,
-  Exchange01Icon,
-  HashtagIcon,
   Image01Icon,
+  Layers01Icon,
   TruckIcon,
   UserGroupIcon,
   WeightScale01Icon,
@@ -34,16 +34,7 @@ export interface WeighmentsTableMeta {
 export function getWeighmentColumns() {
   const allColumns = [
     createSelectColumn(columnHelper),
-    columnHelper.accessor("id", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="ID" icon={HashtagIcon} />
-      ),
-      cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("id")}</span>,
-      meta: {
-        title: "ID",
-        icon: HashtagIcon,
-      },
-    }),
+    createIdColumn(columnHelper),
     columnHelper.accessor("vehicle_number", {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Vehicle No." icon={TruckIcon} />
@@ -60,12 +51,12 @@ export function getWeighmentColumns() {
     }),
     columnHelper.accessor("type", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Type" icon={Exchange01Icon} />
+        <DataTableColumnHeader column={column} title="Type" icon={Layers01Icon} />
       ),
       cell: ({ row }) => <WeighmentTypeBadge type={row.getValue("type")} />,
       meta: {
         title: "Type",
-        icon: Exchange01Icon,
+        icon: Layers01Icon,
       },
     }),
     columnHelper.accessor("net_weight", {
@@ -264,20 +255,7 @@ export function getWeighmentColumns() {
       },
       enableSorting: false,
     }),
-    columnHelper.accessor("created_at", {
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created At" icon={Calendar01Icon} />
-      ),
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {formatDateTime(row.getValue("created_at"))}
-        </span>
-      ),
-      meta: {
-        title: "Created At",
-        icon: Calendar01Icon,
-      },
-    }),
+    createCreatedAtColumn(columnHelper),
     columnHelper.display({
       id: "actions",
       header: () => <span className="sr-only">Actions</span>,

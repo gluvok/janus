@@ -24,34 +24,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  AlertCircleIcon,
-  Calendar01Icon,
-  Clock01Icon,
-  HashtagIcon,
-  PlusSignIcon,
-  UserGroupIcon,
-} from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { getCustomerColumns } from "./columns";
 import { CustomerFormDialog } from "./form-dialog";
 import { type Customer } from "./types";
 import { getErrorMessage } from "@/lib/utils";
 
 const TABLE_ID = "customers";
-
-const COLUMN_LABELS: Record<string, string> = {
-  id: "ID",
-  name: "Name",
-  created_at: "Created At",
-  updated_at: "Updated At",
-};
-
-const COLUMN_ICONS: Record<string, unknown> = {
-  id: HashtagIcon,
-  name: UserGroupIcon,
-  created_at: Calendar01Icon,
-  updated_at: Clock01Icon,
-};
 
 export function CustomersDataTable() {
   const [formDialogOpen, setFormDialogOpen] = React.useState(false);
@@ -180,8 +159,6 @@ export function CustomersDataTable() {
         }}
         onResetAll={resetAllCriteria}
         onResetSorts={resetSorting}
-        columnLabels={COLUMN_LABELS}
-        columnIcons={COLUMN_ICONS}
       />
 
       {/* Table Content Surface */}

@@ -12,26 +12,11 @@ import {
   DatePickerWithRange,
   useDataTable,
 } from "@/components/data-table";
-import { Calendar01Icon, Clock01Icon, HashtagIcon, TextFontIcon } from "@hugeicons/core-free-icons";
 import { columns } from "./columns";
 import { CenterEditDialog } from "./center-edit-dialog";
 import { type Center } from "./types";
 
 const TABLE_ID = "centers";
-
-const COLUMN_LABELS: Record<string, string> = {
-  id: "ID",
-  name: "Name",
-  created_at: "Created At",
-  updated_at: "Updated At",
-};
-
-const COLUMN_ICONS: Record<string, unknown> = {
-  id: HashtagIcon,
-  name: TextFontIcon,
-  created_at: Calendar01Icon,
-  updated_at: Clock01Icon,
-};
 
 export function CentersDataTable() {
   const [editingCenter, setEditingCenter] = useState<Center | null>(null);
@@ -108,8 +93,6 @@ export function CentersDataTable() {
           removeSort(columnId);
           setPagination((prev) => ({ ...prev, pageIndex: 0 }));
         }}
-        columnLabels={COLUMN_LABELS}
-        columnIcons={COLUMN_ICONS}
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
       />

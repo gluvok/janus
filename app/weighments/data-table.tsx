@@ -11,18 +11,10 @@ import {
   type FacetedFilterOption,
 } from "@/components/data-table";
 import {
-  Building01Icon,
-  Calendar01Icon,
-  Clock01Icon,
-  Exchange01Icon,
-  HashtagIcon,
-  Image01Icon,
-  Login01Icon,
-  Logout01Icon,
-  MinusSignIcon,
-  TruckIcon,
-  UserGroupIcon,
-  WeightScale01Icon,
+  ArrowDownRight01Icon,
+  ArrowUpRight01Icon,
+  CircleMinusIcon,
+  Layers01Icon,
 } from "@hugeicons/core-free-icons";
 import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
@@ -35,45 +27,11 @@ import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
 import type { Customer } from "@/app/customers/types";
 
-const COLUMN_LABELS: Record<string, string> = {
-  id: "ID",
-  vehicle_number: "Vehicle No.",
-  type: "Type",
-  net_weight: "Net Weight",
-  gross_weight: "Gross",
-  tare_weight: "Tare",
-  in_center: "In Center",
-  out_center: "Out Center",
-  in_customer: "In Customer",
-  out_customer: "Out Customer",
-  in_time: "In Time",
-  out_time: "Out Time",
-  photos: "Photos",
-  created_at: "Created At",
-};
-
-const COLUMN_ICONS: Record<string, unknown> = {
-  id: HashtagIcon,
-  vehicle_number: TruckIcon,
-  type: Exchange01Icon,
-  net_weight: WeightScale01Icon,
-  gross_weight: WeightScale01Icon,
-  tare_weight: WeightScale01Icon,
-  in_center: Building01Icon,
-  out_center: Building01Icon,
-  in_customer: UserGroupIcon,
-  out_customer: UserGroupIcon,
-  in_time: Clock01Icon,
-  out_time: Clock01Icon,
-  photos: Image01Icon,
-  created_at: Calendar01Icon,
-};
-
 const TYPE_OPTIONS: FacetedFilterOption[] = [
-  { label: "All Types", value: "all", icon: Exchange01Icon },
-  { label: "IN", value: "in", icon: Login01Icon },
-  { label: "OUT", value: "out", icon: Logout01Icon },
-  { label: "N/A", value: "na", icon: MinusSignIcon },
+  { label: "All Types", value: "all", icon: Layers01Icon },
+  { label: "IN", value: "in", icon: ArrowDownRight01Icon },
+  { label: "OUT", value: "out", icon: ArrowUpRight01Icon },
+  { label: "N/A", value: "na", icon: CircleMinusIcon },
 ];
 
 function formatCenterOptions(centers: Center[], title: string): FacetedFilterOption[] {
@@ -347,7 +305,7 @@ export function WeighmentsDataTable() {
         title: "Type",
         options: TYPE_OPTIONS,
         variant: "orange",
-        categoryIcon: Exchange01Icon,
+        categoryIcon: Layers01Icon,
       },
       {
         key: "in_center_id",
@@ -407,8 +365,6 @@ export function WeighmentsDataTable() {
         sorting={sorting}
         onSortingChange={(updater) => setSorting(updater)}
         onRemoveSort={(columnId) => removeSort(columnId)}
-        columnLabels={COLUMN_LABELS}
-        columnIcons={COLUMN_ICONS}
         onResetSorts={resetSorting}
         onResetAll={resetAllCriteria}
       />

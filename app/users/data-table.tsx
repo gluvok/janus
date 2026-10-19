@@ -18,14 +18,10 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Briefcase01Icon,
-  Calendar01Icon,
-  Clock01Icon,
   CrownIcon,
   Delete02Icon,
-  HashtagIcon,
   HeadsetIcon,
   SecurityCheckIcon,
-  TextFontIcon,
   UserAdd01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
@@ -41,24 +37,6 @@ const ROLE_OPTIONS: FacetedFilterOption[] = [
   { label: "Operator", value: "operator", icon: HeadsetIcon },
   { label: "Base", value: "base", icon: UserIcon },
 ];
-
-const COLUMN_LABELS: Record<string, string> = {
-  id: "ID",
-  username: "Username",
-  name: "Full Name",
-  role: "Role",
-  created_at: "Created At",
-  updated_at: "Updated At",
-};
-
-const COLUMN_ICONS: Record<string, unknown> = {
-  id: HashtagIcon,
-  username: UserIcon,
-  name: TextFontIcon,
-  role: SecurityCheckIcon,
-  created_at: Calendar01Icon,
-  updated_at: Clock01Icon,
-};
 
 export function UsersDataTable() {
   // Dialog states
@@ -198,8 +176,6 @@ export function UsersDataTable() {
           }}
           onResetAll={resetAllCriteria}
           onResetSorts={resetSorting}
-          columnLabels={COLUMN_LABELS}
-          columnIcons={COLUMN_ICONS}
         />
       </div>
 
