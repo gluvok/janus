@@ -26,7 +26,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, getDualModeTableId } from "@/lib/table-cookie";
 import {
-  EntryPhotosDialog,
+  PhotosDialog,
   EntriesToolbar,
   EntriesErrorState,
   type EntriesFilterConfig,
@@ -39,7 +39,7 @@ import { type User } from "@/app/users/types";
 
 const COLUMN_LABELS: Record<string, string> = {
   id: "ID",
-  vehicle_number: "Vehicle Number",
+  vehicle_number: "Vehicle No.",
   weight: "Weight",
   center: "Center",
   customer: "Customer",
@@ -391,10 +391,16 @@ export function EntriesDataTable() {
 
       {/* Interactive Photo Carousel Modal */}
       {selectedEntryForPhotos && (
-        <EntryPhotosDialog
+        <PhotosDialog
           open={photosDialogOpen}
           onOpenChange={setPhotosDialogOpen}
-          entry={selectedEntryForPhotos}
+          title={`Entry #${selectedEntryForPhotos.id} Photos`}
+          subtitle={
+            selectedEntryForPhotos.center
+              ? `${selectedEntryForPhotos.vehicle_number} • ${selectedEntryForPhotos.center.name}`
+              : selectedEntryForPhotos.vehicle_number
+          }
+          images={selectedEntryForPhotos.images ?? []}
         />
       )}
     </div>

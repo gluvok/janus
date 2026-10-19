@@ -1,32 +1,18 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   DataTableColumnHeader,
+  DataTableRowActions,
   createSelectColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { RoleBadge } from "@/components/role-badge";
 import { formatDateTime } from "@/lib/utils";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
   Clock01Icon,
-  Copy01Icon,
-  Delete02Icon,
-  Edit02Icon,
   HashtagIcon,
-  MoreHorizontalIcon,
   SecurityCheckIcon,
   TextFontIcon,
   UserIcon,
@@ -58,7 +44,7 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
     }),
     columnHelper.accessor("username", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Username" icon={TextFontIcon} />
+        <DataTableColumnHeader column={column} title="Username" icon={UserIcon} />
       ),
       cell: ({ row }) => (
         <span className="font-mono text-xs font-medium text-foreground">
@@ -67,17 +53,17 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
       ),
       meta: {
         title: "Username",
-        icon: TextFontIcon,
+        icon: UserIcon,
       },
     }),
     columnHelper.accessor("name", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Full Name" icon={UserIcon} />
+        <DataTableColumnHeader column={column} title="Full Name" icon={TextFontIcon} />
       ),
       cell: ({ row }) => <span className="text-xs font-medium">{row.getValue("name")}</span>,
       meta: {
         title: "Full Name",
-        icon: UserIcon,
+        icon: TextFontIcon,
       },
     }),
     ...(showRole
@@ -124,52 +110,20 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
     }),
     columnHelper.display({
       id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row, table }) => {
         const user = row.original;
         const meta = table.options.meta as UsersTableMeta | undefined;
 
         return (
-          <div className="flex items-center justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon-sm" className="size-7 p-0">
-                    <HugeiconsIcon icon={MoreHorizontalIcon} className="size-3.5" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(user.id))}>
-                    <HugeiconsIcon icon={Copy01Icon} />
-                    <span>Copy {entityLabel} ID</span>
-                  </DropdownMenuItem>
-                  {user.username && (
-                    <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.username!)}>
-                      <HugeiconsIcon icon={Copy01Icon} />
-                      <span>Copy Username</span>
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => meta?.onEditUser?.(user)}>
-                    <HugeiconsIcon icon={Edit02Icon} />
-                    <span>Edit {entityLabel}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => meta?.onDeleteUser?.(user)}
-                  >
-                    <HugeiconsIcon icon={Delete02Icon} />
-                    <span>Delete {entityLabel}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <DataTableRowActions
+            copyText={user.username}
+            copyLabel="Copy Username"
+            onEdit={() => meta?.onEditUser?.(user)}
+            editLabel={`Edit ${entityLabel}`}
+            onDelete={() => meta?.onDeleteUser?.(user)}
+            deleteLabel={`Delete ${entityLabel}`}
+          />
         );
       },
       enableSorting: false,

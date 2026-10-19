@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   DataTableContent,
   DataTableCriteriaBar,
@@ -13,6 +14,7 @@ import {
 } from "@/components/data-table";
 import { Calendar01Icon, Clock01Icon, HashtagIcon, TextFontIcon } from "@hugeicons/core-free-icons";
 import { columns } from "./columns";
+import { CenterEditDialog } from "./center-edit-dialog";
 import { type Center } from "./types";
 
 const TABLE_ID = "centers";
@@ -32,6 +34,8 @@ const COLUMN_ICONS: Record<string, unknown> = {
 };
 
 export function CentersDataTable() {
+  const [editingCenter, setEditingCenter] = useState<Center | null>(null);
+
   const {
     table,
     loading,
@@ -53,6 +57,9 @@ export function CentersDataTable() {
     tableId: TABLE_ID,
     columns,
     endpoint: "/api/centers",
+    meta: {
+      onEditCenter: setEditingCenter,
+    },
   });
 
   if (!hasHydrated) {
@@ -120,6 +127,14 @@ export function CentersDataTable() {
       <div className="shrink-0">
         <DataTablePagination table={table} loading={loading} error={error} />
       </div>
+
+      {/* Center Edit Dialog */}
+      <CenterEditDialog
+        open={!!editingCenter}
+        onOpenChange={(open) => !open && setEditingCenter(null)}
+        center={editingCenter}
+        onSuccess={refresh}
+      />
     </div>
   );
 }

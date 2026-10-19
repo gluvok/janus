@@ -1,31 +1,19 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   DataTableColumnHeader,
+  DataTableRowActions,
   createSelectColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { formatDateTime } from "@/lib/utils";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Calendar01Icon,
-  Clock01Icon,
-  Copy01Icon,
-  HashtagIcon,
-  MoreHorizontalIcon,
-  TextFontIcon,
-} from "@hugeicons/core-free-icons";
+import { Calendar01Icon, Clock01Icon, HashtagIcon, TextFontIcon } from "@hugeicons/core-free-icons";
 import { type Center } from "./types";
+
+export interface CentersTableMeta {
+  onEditCenter?: (center: Center) => void;
+}
 
 const columnHelper = createColumnHelper<DataTableFeatures, Center>();
 
@@ -79,35 +67,18 @@ export const columns = columnHelper.columns([
   }),
   columnHelper.display({
     id: "actions",
-    cell: ({ row }) => {
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row, table }) => {
       const center = row.original;
+      const meta = table.options.meta as CentersTableMeta | undefined;
 
       return (
-        <div className="flex items-center justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" size="icon-sm" className="size-7 p-0">
-                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-3.5" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(center.id))}>
-                  <HugeiconsIcon icon={Copy01Icon} />
-                  <span>Copy Center ID</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(center.name)}>
-                  <HugeiconsIcon icon={Copy01Icon} />
-                  <span>Copy Center Name</span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DataTableRowActions
+          copyText={center.name}
+          copyLabel="Copy Center Name"
+          onEdit={() => meta?.onEditCenter?.(center)}
+          editLabel="Edit Center"
+        />
       );
     },
     enableSorting: false,

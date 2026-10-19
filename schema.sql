@@ -23,8 +23,6 @@ DROP FUNCTION IF EXISTS public.trigger_invalidate_sessions_on_user_update() CASC
 
 DROP EXTENSION IF EXISTS pg_trgm CASCADE;
 
-DROP TABLE IF EXISTS automatic_tickets CASCADE;
-DROP TABLE IF EXISTS manual_tickets CASCADE;
 DROP TABLE IF EXISTS tickets CASCADE;
 DROP TABLE IF EXISTS automatic_weighments CASCADE;
 DROP TABLE IF EXISTS manual_weighments CASCADE;
@@ -45,8 +43,6 @@ DROP TYPE IF EXISTS field_requirement_mode CASCADE;
 DROP TYPE IF EXISTS unit_enum CASCADE;
 DROP TYPE IF EXISTS role_enum CASCADE;
 
-DROP SEQUENCE IF EXISTS automatic_tickets_id_seq CASCADE;
-DROP SEQUENCE IF EXISTS manual_tickets_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS tickets_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS automatic_weighments_id_seq CASCADE;
 DROP SEQUENCE IF EXISTS manual_weighments_id_seq CASCADE;
@@ -278,88 +274,34 @@ ON automatic_weighments (created_at DESC)
 WHERE deleted_at IS NULL;
 
 -- ------------------------------------------------------------------------------
--- MANUAL TICKETS
+-- TICKETS
 -- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS manual_tickets (
+CREATE TABLE IF NOT EXISTS tickets (
     id SERIAL PRIMARY KEY,
     concern TEXT NOT NULL,
     reply TEXT,
     status ticket_status NOT NULL DEFAULT 'pending',
-    entry_id INT REFERENCES manual_entries(id) ON DELETE CASCADE,
-    weighment_id INT REFERENCES manual_weighments(id) ON DELETE CASCADE,
+    entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE CASCADE,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
-    CONSTRAINT chk_manual_ticket_link_one_only CHECK (
-        (entry_id IS NOT NULL AND weighment_id IS NULL) OR
-        (entry_id IS NULL AND weighment_id IS NOT NULL)
-    )
+    deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_manual_tickets_user_status 
-ON manual_tickets (user_id, status, created_at DESC) 
+CREATE INDEX IF NOT EXISTS idx_tickets_user_status 
+ON tickets (user_id, status, created_at DESC) 
 WHERE deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_manual_tickets_entry 
-ON manual_tickets (entry_id) 
+CREATE INDEX IF NOT EXISTS idx_tickets_entry 
+ON tickets (entry_id) 
 WHERE deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_manual_tickets_weighment 
-ON manual_tickets (weighment_id) 
+CREATE INDEX IF NOT EXISTS idx_tickets_created_desc
+ON tickets (created_at DESC)
 WHERE deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_manual_tickets_created_desc
-ON manual_tickets (created_at DESC)
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_manual_tickets_search_trgm
-ON manual_tickets USING gin (concern gin_trgm_ops, reply gin_trgm_ops)
-WHERE deleted_at IS NULL;
-
--- ------------------------------------------------------------------------------
--- AUTOMATIC TICKETS
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS automatic_tickets (
-    id SERIAL PRIMARY KEY,
-    concern TEXT NOT NULL,
-    reply TEXT,
-    status ticket_status NOT NULL DEFAULT 'pending',
-    entry_id INT REFERENCES automatic_entries(id) ON DELETE CASCADE,
-    weighment_id INT REFERENCES automatic_weighments(id) ON DELETE CASCADE,
-    user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    device_id INT REFERENCES devices(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
-    CONSTRAINT chk_automatic_ticket_link_one_only CHECK (
-        (entry_id IS NOT NULL AND weighment_id IS NULL) OR
-        (entry_id IS NULL AND weighment_id IS NOT NULL)
-    )
-);
-
-CREATE INDEX IF NOT EXISTS idx_automatic_tickets_user_status 
-ON automatic_tickets (user_id, status, created_at DESC) 
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_automatic_tickets_device
-ON automatic_tickets (device_id) 
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_automatic_tickets_entry 
-ON automatic_tickets (entry_id) 
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_automatic_tickets_weighment 
-ON automatic_tickets (weighment_id) 
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_automatic_tickets_created_desc
-ON automatic_tickets (created_at DESC)
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_automatic_tickets_search_trgm
-ON automatic_tickets USING gin (concern gin_trgm_ops, reply gin_trgm_ops)
+CREATE INDEX IF NOT EXISTS idx_tickets_search_trgm
+ON tickets USING gin (concern gin_trgm_ops, reply gin_trgm_ops)
 WHERE deleted_at IS NULL;
 
 -- Common indexes
@@ -488,12 +430,8 @@ CREATE TRIGGER trg_automatic_weighments_updated_at
 BEFORE UPDATE ON automatic_weighments
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
-CREATE TRIGGER trg_manual_tickets_updated_at
-BEFORE UPDATE ON manual_tickets
-FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-
-CREATE TRIGGER trg_automatic_tickets_updated_at
-BEFORE UPDATE ON automatic_tickets
+CREATE TRIGGER trg_tickets_updated_at
+BEFORE UPDATE ON tickets
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 -- ==============================================================================
@@ -509,8 +447,7 @@ ALTER TABLE IF EXISTS manual_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS automatic_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS manual_weighments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS automatic_weighments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS manual_tickets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS automatic_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tickets ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow access factories" ON factories FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access users" ON users FOR ALL USING (true) WITH CHECK (true);
@@ -522,8 +459,7 @@ CREATE POLICY "Allow access manual_entries" ON manual_entries FOR ALL USING (tru
 CREATE POLICY "Allow access automatic_entries" ON automatic_entries FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access manual_weighments" ON manual_weighments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access automatic_weighments" ON automatic_weighments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access manual_tickets" ON manual_tickets FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access automatic_tickets" ON automatic_tickets FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access tickets" ON tickets FOR ALL USING (true) WITH CHECK (true);
 
 -- ==============================================================================
 -- SEQUENCE RESET FUNCTIONS
@@ -553,8 +489,7 @@ AS $$
 DECLARE
     t text;
     tbls text[] := ARRAY[
-        'automatic_tickets',
-        'manual_tickets',
+        'tickets',
         'automatic_weighments',
         'manual_weighments',
         'automatic_entries',

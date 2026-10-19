@@ -4,29 +4,19 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   DataTableColumnHeader,
+  DataTableRowActions,
   createSelectColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
-import { toast } from "@/components/ui/toast";
 import { formatDateTime } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building01Icon,
   Calendar01Icon,
   Clock01Icon,
-  Copy01Icon,
   HashtagIcon,
   Image01Icon,
-  MoreHorizontalIcon,
   TruckIcon,
   UserGroupIcon,
   UserIcon,
@@ -51,7 +41,7 @@ export function getColumns(mode: EntryMode) {
     }),
     columnHelper.accessor("vehicle_number", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Vehicle Number" icon={TruckIcon} />
+        <DataTableColumnHeader column={column} title="Vehicle No." icon={TruckIcon} />
       ),
       cell: ({ row }) => (
         <span className="font-mono text-xs font-semibold text-foreground">
@@ -59,13 +49,13 @@ export function getColumns(mode: EntryMode) {
         </span>
       ),
       meta: {
-        title: "Vehicle Number",
+        title: "Vehicle No.",
         icon: TruckIcon,
       },
     }),
     columnHelper.accessor("weight", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Weight (kg)" icon={WeightScale01Icon} />
+        <DataTableColumnHeader column={column} title="Weight" icon={WeightScale01Icon} />
       ),
       cell: ({ row }) => {
         const weight = Number(row.getValue("weight"));
@@ -209,66 +199,10 @@ export function getColumns(mode: EntryMode) {
     }),
     columnHelper.display({
       id: "actions",
-      cell: ({ row, table }) => {
-        const entry = row.original;
-        const onViewPhotos = (table.options.meta as { onViewPhotos?: (entry: Entry) => void })
-          ?.onViewPhotos;
-
-        const handleCopy = (text: string, label: string) => {
-          navigator.clipboard.writeText(text);
-          toast.add({
-            type: "success",
-            title: "Copied to Clipboard",
-            description: `${label} copied.`,
-          });
-        };
-
-        return (
-          <div className="flex items-center justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="size-7 p-0"
-                    aria-label={`Actions for entry ${entry.id}`}
-                    data-testid={`actions-entry-${entry.id}`}
-                  >
-                    <HugeiconsIcon icon={MoreHorizontalIcon} className="size-3.5" />
-                    <span className="sr-only">Open actions menu</span>
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>Entry #{entry.id}</DropdownMenuLabel>
-                  {entry.images && entry.images.length > 0 && (
-                    <DropdownMenuItem onClick={() => onViewPhotos?.(entry)}>
-                      <HugeiconsIcon icon={Image01Icon} />
-                      <span>View Photos ({entry.images.length})</span>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem
-                    onClick={() => handleCopy(entry.vehicle_number, "Vehicle Number")}
-                  >
-                    <HugeiconsIcon icon={Copy01Icon} />
-                    <span>Copy Vehicle Number</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleCopy(String(entry.weight), "Weight")}>
-                    <HugeiconsIcon icon={Copy01Icon} />
-                    <span>Copy Weight</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleCopy(String(entry.id), "Entry ID")}>
-                    <HugeiconsIcon icon={Copy01Icon} />
-                    <span>Copy Entry ID</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        );
-      },
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <DataTableRowActions copyText={row.original.vehicle_number} copyLabel="Copy Vehicle No." />
+      ),
       enableSorting: false,
       enableHiding: false,
     }),

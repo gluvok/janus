@@ -14,8 +14,7 @@ type WeighmentType = "in" | "out";
 type TicketStatus = "pending" | "approved" | "rejected";
 
 const TABLES_IN_CLEAR_ORDER = [
-  "automatic_tickets",
-  "manual_tickets",
+  "tickets",
   "automatic_weighments",
   "manual_weighments",
   "automatic_entries",
@@ -1122,25 +1121,13 @@ async function main() {
     `  ✓ Created ${createdAutoStandalone.length} automatic standalone entries and ${createdManualStandalone.length} manual standalone entries.`,
   );
 
-  // 8. TICKETS (40 Support Tickets: 20 Automatic, 20 Manual)
-  console.log("\n🎫 [7/7] Seeding 40 Support Tickets (20 Automatic, 20 Manual)...");
-  interface AutomaticTicketInsert {
+  // 7. TICKETS (20 Support Tickets linked to automatic entries)
+  console.log("\n🎫 [7/7] Seeding 20 Support Tickets...");
+  interface TicketInsert {
     concern: string;
     reply: string | null;
     status: TicketStatus;
-    entry_id: number | null;
-    weighment_id: number | null;
-    user_id: number;
-    device_id: number | null;
-    created_at: string;
-  }
-
-  interface ManualTicketInsert {
-    concern: string;
-    reply: string | null;
-    status: TicketStatus;
-    entry_id: number | null;
-    weighment_id: number | null;
+    entry_id: number;
     user_id: number;
     created_at: string;
   }
@@ -1248,92 +1235,32 @@ async function main() {
     },
   ];
 
-  const autoTicketsToInsert: AutomaticTicketInsert[] = [];
-  const manualTicketsToInsert: ManualTicketInsert[] = [];
+  const ticketsToInsert: TicketInsert[] = [];
+  const availableAutoEntries = [...createdAutoStandalone, ...createdAutoIn];
 
-  // 10 Automatic Tickets linked to automatic standalone entries
-  for (let i = 0; i < 10; i++) {
-    const entry = createdAutoStandalone[i];
+  for (let i = 0; i < 20; i++) {
+    const entry = availableAutoEntries[i % availableAutoEntries.length];
     const template = ticketConcerns[i % ticketConcerns.length];
-    autoTicketsToInsert.push({
+    ticketsToInsert.push({
       concern: template.concern,
       reply: template.reply,
       status: template.status,
       entry_id: entry.id,
-      weighment_id: null,
-      user_id: i % 2 === 0 ? operator1Id : manager1Id,
-      device_id: entry.device_id,
-      created_at: daysAgo(10 - Math.floor(i / 2), (i * 20) % 60),
-    });
-  }
-
-  // 10 Automatic Tickets linked to automatic weighments
-  for (let i = 0; i < 10; i++) {
-    const weighment = createdAutoWeighments[i];
-    const template = ticketConcerns[(i + 5) % ticketConcerns.length];
-    autoTicketsToInsert.push({
-      concern: `[Automatic Weighment #${weighment.id}] ${template.concern}`,
-      reply: template.reply,
-      status: template.status,
-      entry_id: null,
-      weighment_id: weighment.id,
-      user_id: i % 2 === 0 ? manager1Id : operator1Id,
-      device_id: null,
-      created_at: daysAgo(15 - Math.floor(i / 2), (i * 25) % 60),
-    });
-  }
-
-  const { data: createdAutoTickets, error: autoTicketErr } = await supabase
-    .from("automatic_tickets")
-    .insert(autoTicketsToInsert)
-    .select("id");
-
-  if (autoTicketErr || !createdAutoTickets) {
-    throw autoTicketErr || new Error("Failed to bulk insert automatic tickets");
-  }
-
-  // 10 Manual Tickets linked to manual standalone entries
-  for (let i = 0; i < 10; i++) {
-    const entry = createdManualStandalone[i];
-    const template = ticketConcerns[i % ticketConcerns.length];
-    manualTicketsToInsert.push({
-      concern: template.concern,
-      reply: template.reply,
-      status: template.status,
-      entry_id: entry.id,
-      weighment_id: null,
       user_id: i % 2 === 0 ? operator1Id : manager1Id,
       created_at: daysAgo(10 - Math.floor(i / 2), (i * 20) % 60),
     });
   }
 
-  // 10 Manual Tickets linked to manual weighments
-  for (let i = 0; i < 10; i++) {
-    const weighment = createdManualWeighments[i];
-    const template = ticketConcerns[(i + 5) % ticketConcerns.length];
-    manualTicketsToInsert.push({
-      concern: `[Manual Weighment #${weighment.id}] ${template.concern}`,
-      reply: template.reply,
-      status: template.status,
-      entry_id: null,
-      weighment_id: weighment.id,
-      user_id: i % 2 === 0 ? manager1Id : operator1Id,
-      created_at: daysAgo(15 - Math.floor(i / 2), (i * 25) % 60),
-    });
-  }
-
-  const { data: createdManualTickets, error: manualTicketErr } = await supabase
-    .from("manual_tickets")
-    .insert(manualTicketsToInsert)
+  const { data: createdTickets, error: ticketErr } = await supabase
+    .from("tickets")
+    .insert(ticketsToInsert)
     .select("id");
 
-  if (manualTicketErr || !createdManualTickets) {
-    throw manualTicketErr || new Error("Failed to bulk insert manual tickets");
+  if (ticketErr || !createdTickets) {
+    throw ticketErr || new Error("Failed to bulk insert tickets");
   }
 
-  console.log(
-    `  ✓ Seeded ${createdAutoTickets.length} automatic tickets and ${createdManualTickets.length} manual tickets.`,
-  );
+  console.log(`  ✓ Seeded ${createdTickets.length} support tickets.`);
 
   console.log("\n=================================================");
   console.log("🎉 Database Seeding Completed Successfully!");
@@ -1356,10 +1283,7 @@ async function main() {
   );
   console.log(`  • Automatic Weighments: ${createdAutoWeighments.length} (Linked paired cycles)`);
   console.log(`  • Manual Weighments:    ${createdManualWeighments.length} (Linked paired cycles)`);
-  console.log(`  • Automatic Tickets:    ${createdAutoTickets.length} (10 entries, 10 weighments)`);
-  console.log(
-    `  • Manual Tickets:       ${createdManualTickets.length} (10 entries, 10 weighments)`,
-  );
+  console.log(`  • Support Tickets:      ${createdTickets.length} (Linked to automatic entries)`);
   console.log("=================================================");
   console.log("📋 Test User Credentials Summary:");
   console.log("  [Factory 1: Default Factory]");

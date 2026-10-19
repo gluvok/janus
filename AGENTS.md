@@ -35,7 +35,7 @@ Before implementing:
 **Minimum code that solves the problem. Nothing speculative. Zero backward-compatibility shims.**
 
 - **Minimum Surface**: No features beyond what was asked. No abstractions for single-use code. No "flexibility" or "configurability" that wasn't requested.
-- **No Impossible Scenarios**: Never write defensive code, regexes, or fallback branches for impossible URL structures, non-existent database states, or fabricated conditions.
+- **No Impossible Scenarios & Zero Defensive DB Code**: Never write defensive code, regexes, fallback branches, nullish coalescing (`?? 0`, `?? ""`, `?? { id: 0 }`), optional chaining (`?.`), or fabricated fallback states for columns declared `NOT NULL` in `schema.sql` or records guaranteed by `NOT NULL REFERENCES` foreign keys. Model TypeScript interfaces to reflect exact database schema nullability.
 - **Conciseness**: If you write 200 lines and it could be 50, rewrite it.
 - **Clean-Break Architecture**: When redesigning or updating schemas, cookie structures, data shapes, or APIs, always target the latest clean design directly.
 - **Strict Prohibition of Legacy Cruft**: Strictly prohibit backward-compatibility fallbacks, migration loops, or legacy schema adapters. If old state exists or parsing fails, cleanly initialize fresh default state on parse failure.
@@ -111,6 +111,7 @@ For any JavaScript / TypeScript / Node modifications:
 **Read `schema.sql` before writing code. Track changes in `migration.sql`.**
 
 - **Inspect schema first**: Always read `schema.sql` before writing any code to understand the existing database tables, columns, relationships, types, and constraints. Never assume database structures.
+- **Strict Schema Constraint Adherence**: Columns declared `NOT NULL` in `schema.sql` must be modeled as strictly non-nullable in TypeScript interfaces. Strictly prohibit speculative fallback arithmetic or null-coalescing defaults on values that the database schema guarantees are always present.
 - **Update migrations on schema changes**: In case the schema is modified or new tables, columns, triggers, or policies are introduced, update `schema.sql` to reflect the target state and record the corresponding migration statements in `migration.sql`.
 
 ## 7. shadcn / UI Components, Design Scale & Theming

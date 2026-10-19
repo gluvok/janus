@@ -41,4 +41,6 @@ export { SortableSortChip } from "./sortable-sort-chip";
 
 export { useDataTable, type UseDataTableOptions } from "./use-data-table";
 
+export { DataTableRowActions, type DataTableRowActionsProps } from "./data-table-row-actions";
+
 export { useTableHydrated } from "@/stores/use-data-table-store";

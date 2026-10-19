@@ -1,4 +1,4 @@
-export { EntryPhotosDialog } from "./entry-photos-dialog";
+export { PhotosDialog, type PhotosDialogProps } from "@/components/photos-dialog";
 export {
   EntriesToolbar,
   type EntriesFilterConfig,

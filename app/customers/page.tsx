@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CustomersDataTable } from "./customers-data-table";
+import { CustomersDataTable } from "./data-table";
 
 export const metadata: Metadata = {
   title: "Customers | Mesto",

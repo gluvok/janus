@@ -15,20 +15,19 @@ import { Badge } from "@/components/ui/badge";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Image01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
-import type { Entry } from "@/app/entries/types";
 
-interface EntryPhotosDialogProps {
-  entry: Entry | null;
+export interface PhotosDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  title: string;
+  subtitle?: string;
+  images: string[];
 }
 
-export function EntryPhotosDialog({ entry, open, onOpenChange }: EntryPhotosDialogProps) {
+export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: PhotosDialogProps) {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
-
-  const images = entry?.images ?? [];
 
   React.useEffect(() => {
     if (!api) return;
@@ -46,15 +45,12 @@ export function EntryPhotosDialog({ entry, open, onOpenChange }: EntryPhotosDial
     };
   }, [api]);
 
-  // Reset slide index when opening a new entry
   React.useEffect(() => {
     if (open && api) {
       api.scrollTo(0, true);
       setCurrent(1);
     }
-  }, [open, api, entry?.id]);
-
-  if (!entry) return null;
+  }, [open, api, images]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,16 +61,8 @@ export function EntryPhotosDialog({ entry, open, onOpenChange }: EntryPhotosDial
               <HugeiconsIcon icon={Image01Icon} className="size-4" />
             </div>
             <div className="flex flex-col min-w-0">
-              <DialogTitle className="text-sm font-semibold truncate">
-                Entry #{entry.id} Photos
-              </DialogTitle>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="font-mono font-medium text-foreground">
-                  {entry.vehicle_number}
-                </span>
-                <span>•</span>
-                <span>{entry.center?.name ?? "Center"}</span>
-              </div>
+              <DialogTitle className="text-sm font-semibold truncate">{title}</DialogTitle>
+              {subtitle && <div className="text-xs text-muted-foreground truncate">{subtitle}</div>}
             </div>
           </div>
           {count > 0 && (
@@ -90,7 +78,7 @@ export function EntryPhotosDialog({ entry, open, onOpenChange }: EntryPhotosDial
         {images.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-12 text-center text-muted-foreground">
             <HugeiconsIcon icon={Image01Icon} className="size-8 text-muted-foreground/60" />
-            <p className="text-xs">No photos available for this entry.</p>
+            <p className="text-xs">No photos available.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -102,7 +90,7 @@ export function EntryPhotosDialog({ entry, open, onOpenChange }: EntryPhotosDial
                       <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
                         <img
                           src={src}
-                          alt={`Entry #${entry.id} photo ${idx + 1} of ${images.length}`}
+                          alt={`${title} photo ${idx + 1} of ${images.length}`}
                           className="h-full w-full object-contain"
                           loading="lazy"
                         />

@@ -26,6 +26,7 @@ export interface EntriesToolbarProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;
   search: string;
   onSearchChange: (value: string) => void;
+  searchPlaceholder?: string;
   onRefresh: () => void;
   loading?: boolean;
   dateRange: DateRange | undefined;
@@ -47,6 +48,7 @@ export function EntriesToolbar<TData extends RowData>({
   table,
   search,
   onSearchChange,
+  searchPlaceholder = "Search entries...",
   onRefresh,
   loading,
   dateRange,
@@ -69,7 +71,7 @@ export function EntriesToolbar<TData extends RowData>({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <DataTableSearchInput
-            placeholder="Search entries..."
+            placeholder={searchPlaceholder}
             value={search}
             onChange={onSearchChange}
           />

@@ -27,12 +27,13 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AlertCircleIcon,
   Calendar01Icon,
+  Clock01Icon,
   HashtagIcon,
   PlusSignIcon,
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { getCustomerColumns } from "./columns";
-import { CustomerFormDialog } from "./customer-form-dialog";
+import { CustomerFormDialog } from "./form-dialog";
 import { type Customer } from "./types";
 import { getErrorMessage } from "@/lib/utils";
 
@@ -42,12 +43,14 @@ const COLUMN_LABELS: Record<string, string> = {
   id: "ID",
   name: "Name",
   created_at: "Created At",
+  updated_at: "Updated At",
 };
 
 const COLUMN_ICONS: Record<string, unknown> = {
   id: HashtagIcon,
   name: UserGroupIcon,
   created_at: Calendar01Icon,
+  updated_at: Clock01Icon,
 };
 
 export function CustomersDataTable() {

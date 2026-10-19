@@ -53,8 +53,8 @@ const COLUMN_LABELS: Record<string, string> = {
 
 const COLUMN_ICONS: Record<string, unknown> = {
   id: HashtagIcon,
-  username: TextFontIcon,
-  name: UserIcon,
+  username: UserIcon,
+  name: TextFontIcon,
   role: SecurityCheckIcon,
   created_at: Calendar01Icon,
   updated_at: Clock01Icon,
@@ -145,22 +145,9 @@ export function UsersDataTable() {
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       {/* Primary Toolbar */}
       <div className="flex flex-col gap-2 shrink-0 sm:flex-row sm:items-center sm:justify-between">
-        {/* Filters Group (Left) */}
+        {/* Search Input (Left) */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full sm:w-auto">
-          {/* Search Input with Clear Button */}
           <DataTableSearchInput placeholder="Search users..." value={search} onChange={setSearch} />
-
-          {/* Faceted Role Filter */}
-          <DataTableFacetedFilter
-            title="Role"
-            icon={SecurityCheckIcon}
-            options={ROLE_OPTIONS}
-            value={roleFilter}
-            onValueChange={(val) => {
-              setFilter("role", val);
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-            }}
-          />
         </div>
 
         {/* Action Controls Group (Right) */}
@@ -185,23 +172,36 @@ export function UsersDataTable() {
         </div>
       </div>
 
-      {/* Active Criteria Bar (Drag-and-Drop Sort Priority Chips) */}
-      <DataTableCriteriaBar
-        hasActiveSorts={hasActiveSorts}
-        sorting={sorting}
-        onSortingChange={(updater) => {
-          setSorting(updater);
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-        }}
-        onRemoveSort={(columnId) => {
-          removeSort(columnId);
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-        }}
-        onResetAll={resetAllCriteria}
-        onResetSorts={resetSorting}
-        columnLabels={COLUMN_LABELS}
-        columnIcons={COLUMN_ICONS}
-      />
+      {/* Row 2: Faceted Filter + Active Criteria Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <DataTableFacetedFilter
+          title="Role"
+          icon={SecurityCheckIcon}
+          options={ROLE_OPTIONS}
+          value={roleFilter}
+          onValueChange={(val) => {
+            setFilter("role", val);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+        />
+
+        <DataTableCriteriaBar
+          hasActiveSorts={hasActiveSorts}
+          sorting={sorting}
+          onSortingChange={(updater) => {
+            setSorting(updater);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+          onRemoveSort={(columnId) => {
+            removeSort(columnId);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+          onResetAll={resetAllCriteria}
+          onResetSorts={resetSorting}
+          columnLabels={COLUMN_LABELS}
+          columnIcons={COLUMN_ICONS}
+        />
+      </div>
 
       {/* Floating Bulk Action Bar */}
       {selectedCount > 0 && (

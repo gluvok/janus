@@ -20,8 +20,8 @@ import {
   Image01Icon,
   ImagesIcon,
   Layout05Icon,
-  LayoutThreeColumnIcon,
-  LayoutTwoColumnIcon,
+  Layout3ColumnIcon,
+  Layout2ColumnIcon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { formatDateTime } from "@/lib/utils";
@@ -29,8 +29,8 @@ import { type Factory } from "./types";
 
 const RECEIPT_IMAGE_OPTIONS = [
   { value: "1", label: "1 per row", icon: Image01Icon },
-  { value: "2", label: "2 per row", icon: LayoutTwoColumnIcon },
-  { value: "3", label: "3 per row (Default)", icon: LayoutThreeColumnIcon },
+  { value: "2", label: "2 per row", icon: Layout2ColumnIcon },
+  { value: "3", label: "3 per row (Default)", icon: Layout3ColumnIcon },
   { value: "4", label: "4 per row", icon: Grid2x2Icon },
   { value: "5", label: "5 per row", icon: Layout05Icon },
   { value: "6", label: "6 per row", icon: Grid3x2Icon },
