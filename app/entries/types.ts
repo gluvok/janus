@@ -27,7 +27,6 @@ export interface BaseEntry {
   images: string[];
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   center?: EntryCenter | null;
   customer?: EntryCustomer | null;
 }

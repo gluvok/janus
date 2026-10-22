@@ -115,8 +115,8 @@ async function main() {
   console.log("\n🔍 Inspecting existing database state...");
 
   const [factoriesRes, adminsRes] = await Promise.all([
-    supabase.from("factories").select("id, name").is("deleted_at", null),
-    supabase.from("users").select("id, username").eq("role", "admin").is("deleted_at", null),
+    supabase.from("factories").select("id, name"),
+    supabase.from("users").select("id, username").eq("role", "admin"),
   ]);
 
   if (factoriesRes.error) throw factoriesRes.error;

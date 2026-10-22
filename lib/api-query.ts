@@ -57,7 +57,6 @@ export interface PaginatedEntityQueryOptions<TCol extends string> {
   allowedSortColumns: readonly TCol[];
   defaultSort?: SortRule<TCol>;
   searchColumns?: readonly string[];
-  filterDeleted?: boolean;
   applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
 }
 
@@ -71,7 +70,6 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   allowedSortColumns,
   defaultSort,
   searchColumns = [],
-  filterDeleted = true,
   applyCustomFilters,
 }: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
   searchParams: URLSearchParams;
@@ -81,10 +79,6 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   const sortRules = parseSorting(searchParams, allowedSortColumns, defaultSort);
 
   let query: any = supabase.from(table).select(select, { count: "exact" });
-
-  if (filterDeleted) {
-    query = query.is("deleted_at", null);
-  }
 
   const search = searchParams.get("search")?.trim();
   if (search && searchColumns.length > 0) {

@@ -15,7 +15,6 @@ export async function GET() {
       .from("factories")
       .select("id, name, receipt_images_per_row, created_at, updated_at")
       .eq("id", HARDCODED_FACTORY_ID)
-      .is("deleted_at", null)
       .single();
 
     if (error || !data) {
@@ -53,7 +52,6 @@ export async function PATCH(request: Request) {
       .from("factories")
       .update(updates)
       .eq("id", HARDCODED_FACTORY_ID)
-      .is("deleted_at", null)
       .select("id, name, receipt_images_per_row, created_at, updated_at")
       .single();
 

@@ -30,13 +30,12 @@ export async function PATCH(request: Request) {
 
     const { id, name } = validation.data;
 
-    // Check for duplicate name among active centers
+    // Check for duplicate name among centers
     const { data: existing } = await supabase
       .from("centers")
       .select("id")
       .eq("name", name)
       .neq("id", id)
-      .is("deleted_at", null)
       .maybeSingle();
 
     if (existing) {

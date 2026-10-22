@@ -117,8 +117,8 @@ export function UserDeleteDialog({ open, onOpenChange, users, onSuccess }: UserD
               </div>
             ) : (
               <span>
-                This will soft-delete the user record. Historical data will remain linked in
-                database audits.
+                Accounts cannot be deleted if referenced by existing manual entries or support
+                tickets.
               </span>
             )}
           </div>

@@ -189,8 +189,8 @@ export function CustomersDataTable() {
             </div>
             <DialogTitle>Delete Customer</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete customer &quot;{deletingCustomer?.name}&quot;? This
-              action will soft-delete the customer profile.
+              Are you sure you want to delete customer &quot;{deletingCustomer?.name}&quot;?
+              Customers with linked entry records cannot be deleted.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">

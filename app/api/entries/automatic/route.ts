@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
-import { executeEntriesGetQuery } from "@/lib/entries-query";
+import { executeEntriesGetQuery, executeEntriesDelete } from "@/lib/entries-query";
 import { updateAutomaticEntrySchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
   return executeEntriesGetQuery(request, "automatic");
+}
+
+export async function DELETE(request: Request) {
+  return executeEntriesDelete(request, "automatic_entries");
 }
 
 export async function PATCH(request: Request) {
@@ -27,7 +31,6 @@ export async function PATCH(request: Request) {
       .from("automatic_entries")
       .select("id, vehicle_number, detected_vehicle_number, customer_id")
       .eq("id", id)
-      .is("deleted_at", null)
       .maybeSingle();
 
     if (fetchError || !existing) {
@@ -61,7 +64,6 @@ export async function PATCH(request: Request) {
         .from("customers")
         .select("id")
         .eq("id", customer_id)
-        .is("deleted_at", null)
         .maybeSingle();
 
       if (!customerRecord) {

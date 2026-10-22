@@ -36,13 +36,12 @@ export async function POST(request: Request) {
     const { name, factory_id } = validation.data;
     const targetFactoryId = factory_id ?? 1;
 
-    // Check for duplicate active customer name in same factory
+    // Check for duplicate customer name in same factory
     const { data: existing } = await supabase
       .from("customers")
       .select("id")
       .eq("factory_id", targetFactoryId)
       .eq("name", name)
-      .is("deleted_at", null)
       .maybeSingle();
 
     if (existing) {
@@ -98,7 +97,6 @@ export async function PATCH(request: Request) {
       .select("id")
       .eq("name", name)
       .neq("id", id)
-      .is("deleted_at", null)
       .maybeSingle();
 
     if (existing) {
@@ -146,13 +144,16 @@ export async function DELETE(request: Request) {
 
     const { ids } = validation.data;
 
-    // Bulk soft delete
-    const { error } = await supabase
-      .from("customers")
-      .update({ deleted_at: new Date().toISOString() })
-      .in("id", ids);
+    // Hard delete with ON DELETE RESTRICT enforcement
+    const { error } = await supabase.from("customers").delete().in("id", ids);
 
     if (error) {
+      if (error.code === "23503") {
+        return NextResponse.json(
+          { error: "Cannot delete customer because linked entry records exist." },
+          { status: StatusCodes.CONFLICT },
+        );
+      }
       return NextResponse.json(
         { error: error.message },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },

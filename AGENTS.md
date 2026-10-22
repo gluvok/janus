@@ -39,6 +39,7 @@ Before implementing:
 - **Conciseness**: If you write 200 lines and it could be 50, rewrite it.
 - **Clean-Break Architecture**: When redesigning or updating schemas, cookie structures, data shapes, or APIs, always target the latest clean design directly.
 - **Strict Prohibition of Legacy Cruft**: Strictly prohibit backward-compatibility fallbacks, migration loops, or legacy schema adapters. If old state exists or parsing fails, cleanly initialize fresh default state on parse failure.
+- **Zero Soft-Delete Architecture**: Do not introduce `deleted_at` columns or soft-delete filtering. All deletions must be permanent hard deletes protected strictly by relational integrity (`ON DELETE RESTRICT`). Delete operations in API handlers and service layers must catch Postgres foreign key violation error code `23503` and return `StatusCodes.CONFLICT` (409) with descriptive error messages informing the user of existing dependent records.
 
 ## 3. Surgical Changes
 
@@ -112,6 +113,8 @@ For any JavaScript / TypeScript / Node modifications:
 
 - **Inspect schema first**: Always read `schema.sql` before writing any code to understand the existing database tables, columns, relationships, types, and constraints. Never assume database structures.
 - **Strict Schema Constraint Adherence**: Columns declared `NOT NULL` in `schema.sql` must be modeled as strictly non-nullable in TypeScript interfaces. Strictly prohibit speculative fallback arithmetic or null-coalescing defaults on values that the database schema guarantees are always present.
+- **Mandatory RLS, Triggers & Sequence Management**: Every table defined in `schema.sql` must explicitly have `ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;`, a permissive access policy (`CREATE POLICY "Allow access <table>" ON <table> FOR ALL USING (true);`), an `updated_at` trigger (`trg_<table>_updated_at`), and must be listed in `reset_all_sequences()`.
+- **Relational Integrity via `ON DELETE RESTRICT`**: Foreign keys referencing master records (factories, centers, customers, users, devices) must specify `ON DELETE RESTRICT` to preserve historical operational records.
 - **Update migrations on schema changes**: In case the schema is modified or new tables, columns, triggers, or policies are introduced, update `schema.sql` to reflect the target state and record the corresponding migration statements in `migration.sql`.
 
 ## 7. shadcn / UI Components, Design Scale & Theming

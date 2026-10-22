@@ -42,7 +42,7 @@ export const USER_SELECT_PROJECTION =
   "id, username, name, role, factory_id, created_at, updated_at" as const;
 
 async function assertUsernameAvailable(username: string, excludeId?: number): Promise<void> {
-  let query = supabase.from("users").select("id").eq("username", username).is("deleted_at", null);
+  let query = supabase.from("users").select("id").eq("username", username);
 
   if (excludeId !== undefined) {
     query = query.neq("id", excludeId);
@@ -55,27 +55,8 @@ async function assertUsernameAvailable(username: string, excludeId?: number): Pr
   }
 
   if (data) {
-    throw new ServiceError(
-      `Username "${username}" is already taken by an active account.`,
-      StatusCodes.CONFLICT,
-    );
+    throw new ServiceError(`Username "${username}" is already taken.`, StatusCodes.CONFLICT);
   }
-}
-
-function countOccurrences(
-  items: unknown[] | null | undefined,
-  key: string,
-): Record<number, number> {
-  const counts: Record<number, number> = {};
-  for (const item of items ?? []) {
-    if (item && typeof item === "object" && key in item) {
-      const val = (item as Record<string, unknown>)[key];
-      if (typeof val === "number") {
-        counts[val] = (counts[val] || 0) + 1;
-      }
-    }
-  }
-  return counts;
 }
 
 export class ServiceError extends Error {
@@ -158,7 +139,6 @@ export async function updateUserAccount(data: UpdateUserInput) {
     .from("users")
     .select("id, username, role")
     .eq("id", id)
-    .is("deleted_at", null)
     .maybeSingle();
 
   if (fetchErr) {
@@ -201,75 +181,31 @@ export async function updateUserAccount(data: UpdateUserInput) {
 }
 
 /**
- * Soft-deletes user accounts with batched relational pre-flight checks.
+ * Hard-deletes user accounts, with ON DELETE RESTRICT foreign key protection.
  */
 export async function deleteUserAccounts(targetIds: number[]) {
   const { data: targetUsers, error: fetchErr } = await supabase
     .from("users")
-    .select("id, username, role")
-    .in("id", targetIds)
-    .is("deleted_at", null);
+    .select("id, username")
+    .in("id", targetIds);
 
   if (fetchErr) {
     throw new ServiceError(fetchErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   if (!targetUsers || targetUsers.length === 0) {
-    throw new ServiceError(
-      "No active users found matching the specified ID(s).",
-      StatusCodes.NOT_FOUND,
-    );
+    throw new ServiceError("No users found matching the specified ID(s).", StatusCodes.NOT_FOUND);
   }
 
-  // Constant O(1) batched pre-flight queries
-  const [entriesCreatedRes, ticketsRes] = await Promise.all([
-    supabase
-      .from("manual_entries")
-      .select("creator_id")
-      .in("creator_id", targetIds)
-      .is("deleted_at", null),
-    supabase
-      .from("manual_tickets")
-      .select("user_id")
-      .in("user_id", targetIds)
-      .is("deleted_at", null),
-  ]);
-
-  const entriesCreatedCounts = countOccurrences(entriesCreatedRes.data, "creator_id");
-  const ticketsCounts = countOccurrences(ticketsRes.data, "user_id");
-
-  const blockedUsers: { id: number; username: string | null; reasons: string[] }[] = [];
-
-  for (const u of targetUsers) {
-    const reasons: string[] = [];
-    const createdCount = entriesCreatedCounts[u.id] || 0;
-    const tickCount = ticketsCounts[u.id] || 0;
-    if (createdCount > 0) reasons.push(`${createdCount} entry(s) created`);
-    if (tickCount > 0) reasons.push(`${tickCount} ticket(s)`);
-
-    if (reasons.length > 0) {
-      blockedUsers.push({ id: u.id, username: u.username, reasons });
-    }
-  }
-
-  if (blockedUsers.length > 0) {
-    const details = blockedUsers
-      .map((b) => `"${b.username || `ID ${b.id}`}" (ID: ${b.id}) has ${b.reasons.join(", ")}`)
-      .join("; ");
-    throw new ServiceError(
-      `Cannot delete account(s): ${details}. Historical operational records must be preserved.`,
-      StatusCodes.CONFLICT,
-      blockedUsers,
-    );
-  }
-
-  const now = new Date().toISOString();
-  const { error: deleteErr } = await supabase
-    .from("users")
-    .update({ deleted_at: now, updated_at: now })
-    .in("id", targetIds);
+  const { error: deleteErr } = await supabase.from("users").delete().in("id", targetIds);
 
   if (deleteErr) {
+    if (deleteErr.code === "23503") {
+      throw new ServiceError(
+        "Cannot delete user account(s) because linked operational records (entries or tickets) exist.",
+        StatusCodes.CONFLICT,
+      );
+    }
     throw new ServiceError(deleteErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 

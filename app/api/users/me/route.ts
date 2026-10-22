@@ -17,7 +17,6 @@ async function getCurrentUser() {
     .select(USER_SELECT_PROJECTION)
     .eq("role", "admin")
     .eq("factory_id", 1)
-    .is("deleted_at", null)
     .order("id", { ascending: true })
     .limit(1)
     .maybeSingle();

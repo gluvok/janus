@@ -364,11 +364,10 @@ async function main() {
     api_key_hash: deviceKeyHash,
   }));
 
-  // 1) Fetch existing devices that are not deleted
+  // 1) Fetch existing devices
   const { data: existingDevices, error: fetchDevErr } = await supabase
     .from("devices")
-    .select("id, center_id")
-    .is("deleted_at", null);
+    .select("id, center_id");
 
   if (fetchDevErr) {
     if (fetchDevErr.code === "PGRST205") {

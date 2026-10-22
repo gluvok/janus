@@ -85,7 +85,6 @@ CREATE TABLE IF NOT EXISTS factories (
     receipt_images_per_row INT NOT NULL DEFAULT 3,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
     CONSTRAINT chk_receipt_images_per_row CHECK (receipt_images_per_row BETWEEN 1 AND 6)
 );
 
@@ -94,26 +93,22 @@ CREATE TABLE IF NOT EXISTS centers (
     name TEXT NOT NULL,
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_centers_factory_name
-ON centers (factory_id, name)
-WHERE deleted_at IS NULL;
+ON centers (factory_id, name);
 
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_factory_name
-ON customers (factory_id, name)
-WHERE deleted_at IS NULL;
+ON customers (factory_id, name);
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -123,26 +118,22 @@ CREATE TABLE IF NOT EXISTS users (
     role role_enum NOT NULL DEFAULT 'base',
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_active 
-ON users (username) 
-WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username 
+ON users (username);
 
 CREATE TABLE IF NOT EXISTS devices (
     id SERIAL PRIMARY KEY,
     center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
     api_key_hash TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_center_active
-ON devices (center_id)
-WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_center
+ON devices (center_id);
 
 CREATE TABLE IF NOT EXISTS sessions (
     id SERIAL PRIMARY KEY,
@@ -150,13 +141,12 @@ CREATE TABLE IF NOT EXISTS sessions (
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ DEFAULT NULL
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions (token) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions (token);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at);
 
 -- ------------------------------------------------------------------------------
 -- MANUAL ENTRIES (Operator-Created)
@@ -171,33 +161,26 @@ CREATE TABLE IF NOT EXISTS manual_entries (
     images TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
     CONSTRAINT chk_manual_entries_weight_positive CHECK (weight > 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_manual_entries_center_vehicle 
-ON manual_entries (center_id, vehicle_number, created_at DESC)
-WHERE deleted_at IS NULL;
+ON manual_entries (center_id, vehicle_number, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_manual_entries_created_at
-ON manual_entries (created_at DESC)
-WHERE deleted_at IS NULL;
+ON manual_entries (created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_manual_entries_creator_id
-ON manual_entries (creator_id)
-WHERE deleted_at IS NULL;
+ON manual_entries (creator_id);
 
 CREATE INDEX IF NOT EXISTS idx_manual_entries_center
-ON manual_entries (center_id)
-WHERE deleted_at IS NULL;
+ON manual_entries (center_id);
 
 CREATE INDEX IF NOT EXISTS idx_manual_entries_customer
-ON manual_entries (customer_id)
-WHERE deleted_at IS NULL;
+ON manual_entries (customer_id);
 
 CREATE INDEX IF NOT EXISTS idx_manual_entries_vehicle_trgm
-ON manual_entries USING gin (vehicle_number gin_trgm_ops)
-WHERE deleted_at IS NULL;
+ON manual_entries USING gin (vehicle_number gin_trgm_ops);
 
 -- ------------------------------------------------------------------------------
 -- AUTOMATIC ENTRIES (Hardware-Captured)
@@ -213,29 +196,23 @@ CREATE TABLE IF NOT EXISTS automatic_entries (
     images TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
     CONSTRAINT chk_automatic_entries_weight_positive CHECK (weight > 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_device
-ON automatic_entries (device_id, created_at DESC)
-WHERE deleted_at IS NULL;
+ON automatic_entries (device_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_center_created
-ON automatic_entries (center_id, created_at DESC)
-WHERE deleted_at IS NULL;
+ON automatic_entries (center_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_vehicle
-ON automatic_entries (vehicle_number, created_at DESC)
-WHERE deleted_at IS NULL;
+ON automatic_entries (vehicle_number, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_customer
-ON automatic_entries (customer_id)
-WHERE deleted_at IS NULL;
+ON automatic_entries (customer_id);
 
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_vehicle_trgm
-ON automatic_entries USING gin (vehicle_number gin_trgm_ops)
-WHERE deleted_at IS NULL;
+ON automatic_entries USING gin (vehicle_number gin_trgm_ops);
 
 -- ------------------------------------------------------------------------------
 -- MANUAL WEIGHMENTS
@@ -247,13 +224,11 @@ CREATE TABLE IF NOT EXISTS manual_weighments (
     type weighment_type NOT NULL DEFAULT 'in',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
     CONSTRAINT chk_manual_weighments_distinct_entries CHECK (in_entry_id <> out_entry_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_manual_weighments_created
-ON manual_weighments (created_at DESC)
-WHERE deleted_at IS NULL;
+ON manual_weighments (created_at DESC);
 
 -- ------------------------------------------------------------------------------
 -- AUTOMATIC WEIGHMENTS
@@ -265,13 +240,11 @@ CREATE TABLE IF NOT EXISTS automatic_weighments (
     type weighment_type NOT NULL DEFAULT 'in',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ,
     CONSTRAINT chk_automatic_weighments_distinct_entries CHECK (in_entry_id <> out_entry_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_automatic_weighments_created
-ON automatic_weighments (created_at DESC)
-WHERE deleted_at IS NULL;
+ON automatic_weighments (created_at DESC);
 
 -- ------------------------------------------------------------------------------
 -- TICKETS
@@ -281,37 +254,30 @@ CREATE TABLE IF NOT EXISTS tickets (
     concern TEXT NOT NULL,
     reply TEXT,
     status ticket_status NOT NULL DEFAULT 'pending',
-    entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE CASCADE,
+    entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE RESTRICT,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_tickets_user_status 
-ON tickets (user_id, status, created_at DESC) 
-WHERE deleted_at IS NULL;
+ON tickets (user_id, status, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_tickets_entry 
-ON tickets (entry_id) 
-WHERE deleted_at IS NULL;
+ON tickets (entry_id);
 
 CREATE INDEX IF NOT EXISTS idx_tickets_created_desc
-ON tickets (created_at DESC)
-WHERE deleted_at IS NULL;
+ON tickets (created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_tickets_search_trgm
-ON tickets USING gin (concern gin_trgm_ops, reply gin_trgm_ops)
-WHERE deleted_at IS NULL;
+ON tickets USING gin (concern gin_trgm_ops, reply gin_trgm_ops);
 
 -- Common indexes
 CREATE INDEX IF NOT EXISTS idx_users_search_trgm
-ON users USING gin (name gin_trgm_ops, username gin_trgm_ops)
-WHERE deleted_at IS NULL;
+ON users USING gin (name gin_trgm_ops, username gin_trgm_ops);
 
 CREATE INDEX IF NOT EXISTS idx_centers_factory
-ON centers (factory_id)
-WHERE deleted_at IS NULL;
+ON centers (factory_id);
 
 -- ==============================================================================
 -- COMPUTED COLUMNS FOR WEIGHMENTS
@@ -521,18 +487,15 @@ CREATE OR REPLACE FUNCTION trigger_invalidate_sessions_on_user_update()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (NEW.password_hash <> OLD.password_hash)
-       OR (NEW.username <> OLD.username)
-       OR (NEW.deleted_at IS NOT NULL AND OLD.deleted_at IS NULL) THEN
-        UPDATE sessions
-        SET deleted_at = NOW(), updated_at = NOW()
-        WHERE user_id = NEW.id AND deleted_at IS NULL;
+       OR (NEW.username <> OLD.username) THEN
+        DELETE FROM sessions WHERE user_id = NEW.id;
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_invalidate_sessions_on_user_update
-AFTER UPDATE OF password_hash, deleted_at, username ON users
+AFTER UPDATE OF password_hash, username ON users
 FOR EACH ROW
 EXECUTE FUNCTION trigger_invalidate_sessions_on_user_update();
 

@@ -328,7 +328,7 @@ export async function executeWeighmentsGetQuery(
       mode === "automatic" ? AUTOMATIC_WEIGHMENTS_PROJECTION : MANUAL_WEIGHMENTS_PROJECTION;
 
     // 3. Assemble Supabase base query with date filtering
-    let query = supabase.from(tableName).select(projection).is("deleted_at", null);
+    let query = supabase.from(tableName).select(projection);
 
     query = applyDateRange(query, searchParams);
 

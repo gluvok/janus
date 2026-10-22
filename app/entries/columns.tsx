@@ -26,6 +26,7 @@ import { type Entry, type EntryMode, isManualEntry } from "./types";
 interface EntriesTableMeta {
   onViewPhotos?: (entry: Entry) => void;
   onEditEntry?: (entry: Entry) => void;
+  onDeleteEntry?: (entry: Entry) => void;
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, Entry>();
@@ -64,6 +65,8 @@ const MODE_ROW_ACTION_RESOLVERS: Record<
     copyText: string;
     copyLabel: string;
     onEdit?: () => void;
+    onDelete?: () => void;
+    deleteLabel?: string;
   }
 > = {
   automatic: (entry, meta) => {
@@ -75,11 +78,15 @@ const MODE_ROW_ACTION_RESOLVERS: Record<
       copyText: entry.vehicle_number,
       copyLabel: "Copy Vehicle No.",
       onEdit: canEdit && meta?.onEditEntry ? () => meta.onEditEntry!(entry) : undefined,
+      onDelete: meta?.onDeleteEntry ? () => meta.onDeleteEntry!(entry) : undefined,
+      deleteLabel: "Delete Entry",
     };
   },
-  manual: (entry) => ({
+  manual: (entry, meta) => ({
     copyText: entry.vehicle_number,
     copyLabel: "Copy Vehicle No.",
+    onDelete: meta?.onDeleteEntry ? () => meta.onDeleteEntry!(entry) : undefined,
+    deleteLabel: "Delete Entry",
   }),
 };
 

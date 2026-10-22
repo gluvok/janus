@@ -241,9 +241,9 @@ The `/customers` route provides a dedicated data table for managing transport, l
   - Server-side created date range: `?from=<ISO>&to=<ISO>` (`.gte("created_at", ...)`, `.lte("created_at", ...)`)
   - Server-side multi-column sorting: `?sort=col1.asc,col2.desc` (defaults to `id.desc`)
   - Full list retrieval: `?all=true` for filter dropdown hydration across Entries and Weighments
-- **Schema Mapping**: Maps directly to dedicated `customers` table in `schema.sql` (`id`, `name`, `factory_id`, `created_at`, `updated_at`, `deleted_at`) with unique index on `(factory_id, name) WHERE deleted_at IS NULL`.
+- **Schema Mapping**: Maps directly to dedicated `customers` table in `schema.sql` (`id`, `name`, `factory_id`, `created_at`, `updated_at`) with unique index on `(factory_id, name)`.
 - **Minimal Form Modal (`CustomerFormDialog`)**: Prompts exclusively for **Customer Name**, eliminating credentials or auth requirements. Validated using `createCustomerSchema` with `react-hook-form` and `zodResolver`.
-- **Soft Deletion & Safeguards**: Deleting a customer soft-deletes the record with confirmation dialog and toast notifications.
+- **Hard Deletion & Foreign Key Protection**: Deleting a customer executes a hard delete enforced by database `ON DELETE RESTRICT` constraints (blocking deletion if linked entries exist) with confirmation dialog and toast notifications.
 
 ## Getting Started
 

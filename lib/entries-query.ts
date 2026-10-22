@@ -225,8 +225,7 @@ export async function executeEntriesGetQuery(
 
     let query: any = (supabase as any)
       .from(config.tableName)
-      .select(config.projection, { count: "exact" })
-      .is("deleted_at", null);
+      .select(config.projection, { count: "exact" });
 
     const search = searchParams.get("search")?.trim();
     if (search) {
@@ -266,6 +265,59 @@ export async function executeEntriesGetQuery(
   } catch (error) {
     console.error(`GET /api/entries/${mode} error:`, error);
     const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+  }
+}
+
+export const deleteEntriesSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1, "At least one ID must be provided"),
+});
+
+/**
+ * Handles hard deletion of entries with database-enforced ON DELETE RESTRICT foreign key protection.
+ */
+export async function executeEntriesDelete(
+  request: Request,
+  tableName: "automatic_entries" | "manual_entries",
+): Promise<NextResponse> {
+  try {
+    const rawBody = await request.json();
+    const validation = deleteEntriesSchema.safeParse(rawBody);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.issues[0]?.message ?? "Invalid input" },
+        { status: StatusCodes.BAD_REQUEST },
+      );
+    }
+
+    const { ids } = validation.data;
+
+    const { error } = await supabase.from(tableName).delete().in("id", ids);
+
+    if (error) {
+      if (error.code === "23503") {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot delete entry because linked operational records (weighments or tickets) exist.",
+          },
+          { status: StatusCodes.CONFLICT },
+        );
+      }
+      return NextResponse.json(
+        { error: error.message },
+        { status: StatusCodes.INTERNAL_SERVER_ERROR },
+      );
+    }
+
+    const modeLabel = tableName === "automatic_entries" ? "automatic" : "manual";
+    return NextResponse.json({
+      success: true,
+      message: `Successfully deleted ${ids.length} ${modeLabel} entry record${ids.length > 1 ? "s" : ""}.`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
   }
 }

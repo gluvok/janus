@@ -10,7 +10,19 @@ import {
   useDataTable,
   type FacetedFilterOption,
 } from "@/components/data-table";
-import { UserIcon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
@@ -229,6 +241,9 @@ export function EntriesDataTable() {
   const [photosDialogOpen, setPhotosDialogOpen] = useState<boolean>(false);
   const [editingEntry, setEditingEntry] = useState<AutomaticEntry | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
+  const [entriesToDelete, setEntriesToDelete] = useState<Entry[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const handleViewPhotos = useCallback((entry: Entry) => {
     setSelectedEntryForPhotos(entry);
@@ -242,12 +257,18 @@ export function EntriesDataTable() {
     }
   }, []);
 
+  const handleDeleteEntry = useCallback((entry: Entry) => {
+    setEntriesToDelete([entry]);
+    setDeleteDialogOpen(true);
+  }, []);
+
   const tableMeta = useMemo(
     () => ({
       onViewPhotos: handleViewPhotos,
       onEditEntry: handleEditEntry,
+      onDeleteEntry: handleDeleteEntry,
     }),
-    [handleViewPhotos, handleEditEntry],
+    [handleViewPhotos, handleEditEntry, handleDeleteEntry],
   );
 
   const fetchEntries = useCallback(async (queryParams: Record<string, unknown>) => {
@@ -343,6 +364,9 @@ export function EntriesDataTable() {
     setFilter,
     refresh,
     tableState,
+    setRowSelection,
+    selectedRows,
+    selectedCount,
   } = useDataTable<Entry>({
     tableId,
     columns,
@@ -352,6 +376,45 @@ export function EntriesDataTable() {
     enabled: !isInitialLoading && !!initialData,
     initialData,
   });
+
+  const handleBatchDelete = useCallback(() => {
+    if (selectedCount === 0) return;
+    setEntriesToDelete(selectedRows);
+    setDeleteDialogOpen(true);
+  }, [selectedCount, selectedRows]);
+
+  const confirmDelete = async () => {
+    if (entriesToDelete.length === 0) return;
+    setIsDeleting(true);
+    try {
+      const endpoint = ENTRY_MODE_ENDPOINTS[mode];
+      await axios.delete(endpoint, {
+        data: { ids: entriesToDelete.map((e) => e.id) },
+      });
+
+      const isBatch = entriesToDelete.length > 1;
+      toast.add({
+        type: "success",
+        title: isBatch ? "Entries deleted" : "Entry deleted",
+        description: isBatch
+          ? `Successfully deleted ${entriesToDelete.length} ${mode} entries.`
+          : `Entry #${entriesToDelete[0].id} (${entriesToDelete[0].vehicle_number}) deleted successfully.`,
+      });
+
+      setRowSelection({});
+      setDeleteDialogOpen(false);
+      setEntriesToDelete([]);
+      refresh();
+    } catch (err: unknown) {
+      toast.add({
+        type: "error",
+        title: "Deletion blocked",
+        description: getErrorMessage(err, "Failed to delete entry."),
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filterConfigs = useMemo<EntriesFilterConfig[]>(
     () => MODE_FILTER_BUILDERS[mode]({ centerOptions, customerOptions, creatorOptions }),
@@ -388,6 +451,19 @@ export function EntriesDataTable() {
         onResetAll={resetAllCriteria}
       />
 
+      {/* Floating Bulk Action Bar */}
+      {selectedCount > 0 && (
+        <div className="flex items-center justify-between rounded-md border border-border/80 bg-muted/40 px-3 py-1.5 text-xs">
+          <span className="font-medium text-muted-foreground">
+            {selectedCount} entry{selectedCount > 1 ? "s" : ""} selected
+          </span>
+          <Button variant="destructive" size="xs" onClick={handleBatchDelete} className="gap-1.5">
+            <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+            <span>Delete Selected</span>
+          </Button>
+        </div>
+      )}
+
       {/* Reusable Data Table Content */}
       <DataTableContent table={table} loading={loading} error={error} onRetry={refresh} />
 
@@ -416,6 +492,72 @@ export function EntriesDataTable() {
         entry={editingEntry}
         onSuccess={refresh}
       />
+
+      {/* Delete Entry Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDialogOpen(false);
+            setEntriesToDelete([]);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md pb-3">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="flex size-7 items-center justify-center rounded-md bg-destructive/10 text-destructive">
+                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+              </div>
+              <DialogTitle>
+                {entriesToDelete.length > 1
+                  ? `Delete ${entriesToDelete.length} Entries`
+                  : "Delete Entry"}
+              </DialogTitle>
+            </div>
+            <DialogDescription>
+              {entriesToDelete.length > 1
+                ? `Are you sure you want to delete these ${entriesToDelete.length} entries? Entries with linked weighments or tickets cannot be deleted.`
+                : entriesToDelete[0]
+                  ? `Are you sure you want to delete entry #${entriesToDelete[0].id} (${entriesToDelete[0].vehicle_number})? Entries with linked weighments or tickets cannot be deleted.`
+                  : "Confirm entry deletion."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setEntriesToDelete([]);
+              }}
+              disabled={isDeleting}
+              className="h-8 gap-1.5 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={confirmDelete}
+              disabled={isDeleting || entriesToDelete.length === 0}
+              className="h-8 gap-1.5 text-xs"
+            >
+              {isDeleting ? (
+                <Spinner className="size-3.5" data-icon="inline-start" />
+              ) : (
+                <HugeiconsIcon icon={Delete02Icon} className="size-3.5" data-icon="inline-start" />
+              )}
+              {entriesToDelete.length > 1
+                ? `Delete ${entriesToDelete.length} Entries`
+                : "Delete Entry"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
