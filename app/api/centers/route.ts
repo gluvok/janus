@@ -19,8 +19,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const rawBody = await request.json();
-    const validation = updateCenterSchema.safeParse(rawBody);
+    const validation = updateCenterSchema.safeParse(await request.json());
 
     if (!validation.success) {
       return NextResponse.json(
