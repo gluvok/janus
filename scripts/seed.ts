@@ -9,8 +9,7 @@ import { Role } from "@/lib/constants/enums";
 import { hashPassword } from "@/lib/auth/password";
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey =
-  process.env.SUPABASE_PUBLISHABLE_KEY
+const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error("Error: Supabase URL and key environment variables are required.");

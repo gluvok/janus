@@ -87,6 +87,17 @@ pnpm seed
 - **Hardware Edge Users**: Usernames `pi1`, `pi2`, Password `hardware123` (Role: `hardware`).
 - **Commodities**: Default commodity catalog (Wheat, Scrap Copper, Corn, etc.).
 
+### Seed Only Admin User
+
+If you only want to create or reset an admin user without touching centers, commodities, or devices, run `pnpm seed:admin` with the target `factory_id` as the only argument (it seeds username `admin` and password `admin123`):
+
+```bash
+pnpm seed:admin <factory_id>
+
+# Example:
+pnpm seed:admin 3
+```
+
 ### Optional: Full QA / Test Dataset
 
 To seed full rich multi-factory fixtures (entries, tickets, weighments):

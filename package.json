@@ -15,6 +15,7 @@
     "test:coverage": "vitest run --coverage",
     "db:clear": "tsx --env-file=.env.local scripts/clear-db.ts",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "seed:admin": "tsx --env-file=.env.local scripts/create-admin.ts",
     "seed:test": "tsx --env-file=.env.local scripts/test-seed.ts",
     "crop:images": "tsx --env-file=.env.local scripts/crop-existing-images.ts"
   },
