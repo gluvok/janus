@@ -52,6 +52,20 @@ describe("Weighments Service", () => {
         validateSequentialApproval(mockClient, 1, "MH12AB1234", "2026-08-09T14:00:00Z", 2, 1),
       ).rejects.toThrow(/Cannot approve entry #2 because earlier device entry #1/);
     });
+
+    it("should include centers relation and filter by centers.factory_id when factoryId is provided", async () => {
+      const query = createMockQueryBuilder({ maybeSingleData: null });
+      mockClient.from.mockReturnValue(query);
+
+      await expect(
+        validateSequentialApproval(mockClient, 1, "MH12AB1234", "2026-08-09T14:00:00Z", 2, 1, 5),
+      ).resolves.toBeUndefined();
+
+      expect(query.select).toHaveBeenCalledWith(
+        "id, created_at, created_by, users:users!created_by(role), centers!inner(factory_id)",
+      );
+      expect(query.eq).toHaveBeenCalledWith("centers.factory_id", 5);
+    });
   });
 
   describe("tryMergeEntries", () => {

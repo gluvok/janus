@@ -18,7 +18,9 @@ export async function validateSequentialApproval(
 ): Promise<void> {
   let query = client
     .from("entries")
-    .select("id, created_at, created_by, users:users!created_by(role)")
+    .select(
+      "id, created_at, created_by, users:users!created_by(role), centers!inner(factory_id)",
+    )
     .eq("center_id", centerId)
     .eq("vehicle_number", vehicleNumber)
     .eq("status", EntryStatus.PENDING)
@@ -27,7 +29,7 @@ export async function validateSequentialApproval(
     .is("deleted_at", null);
 
   if (factoryId !== undefined && factoryId !== null) {
-    query = query.eq("factory_id", factoryId);
+    query = query.eq("centers.factory_id", factoryId);
   }
 
   if (entrySource !== undefined && entrySource !== null) {

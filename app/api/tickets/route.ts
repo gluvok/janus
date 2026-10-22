@@ -100,9 +100,9 @@ export const POST = withAuth(async (req, user, client) => {
   if (entry_id) {
     const { data: entry, error: entryError } = await client
       .from("entries")
-      .select("id, factory_id")
+      .select("id, centers!inner(factory_id)")
       .eq("id", entry_id)
-      .eq("factory_id", user.factory_id!)
+      .eq("centers.factory_id", user.factory_id!)
       .is("deleted_at", null)
       .maybeSingle();
 
@@ -112,13 +112,13 @@ export const POST = withAuth(async (req, user, client) => {
   } else if (weighment_id) {
     const { data: weighment, error: weighmentError } = await client
       .from("weighments")
-      .select("id, in_entry:in_entry_id(factory_id)")
+      .select("id, in_entry:entries!in_entry_id!inner(centers!inner(factory_id))")
       .eq("id", weighment_id)
       .is("deleted_at", null)
       .maybeSingle();
 
-    const inEntry = weighment?.in_entry as { factory_id?: number } | undefined;
-    if (weighmentError || !weighment || inEntry?.factory_id !== user.factory_id) {
+    const inEntry = weighment?.in_entry as { centers?: { factory_id?: number } } | undefined;
+    if (weighmentError || !weighment || inEntry?.centers?.factory_id !== user.factory_id) {
       return apiError("Linked weighment not found in your factory", StatusCodes.NOT_FOUND);
     }
   }

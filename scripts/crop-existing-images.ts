@@ -139,8 +139,8 @@ async function main() {
     while (true) {
       const { data: entries, error: entriesErr } = await supabase
         .from("entries")
-        .select("id, images")
-        .eq("factory_id", factory.id)
+        .select("id, images, centers!inner(factory_id)")
+        .eq("centers.factory_id", factory.id)
         .is("deleted_at", null)
         .not("images", "eq", "{}")
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
