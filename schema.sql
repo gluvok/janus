@@ -163,7 +163,6 @@ CREATE TABLE IF NOT EXISTS entries (
     auto_approved BOOLEAN NOT NULL DEFAULT FALSE,
     center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
     customer_id INT REFERENCES customers(id) ON DELETE RESTRICT,
-    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
     created_by INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     approved_by INT REFERENCES users(id) ON DELETE RESTRICT DEFAULT NULL,
     images TEXT[] DEFAULT '{}',
@@ -173,36 +172,36 @@ CREATE TABLE IF NOT EXISTS entries (
     CONSTRAINT chk_entries_weight_positive CHECK (weight > 0)
 );
 
-CREATE INDEX IF NOT EXISTS idx_entries_factory_vehicle 
-ON entries (factory_id, vehicle_number, status, created_at DESC)
+CREATE INDEX IF NOT EXISTS idx_entries_vehicle_status_created 
+ON entries (vehicle_number, status, created_at DESC)
 WHERE deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_entries_factory_center_created
-ON entries (factory_id, center_id, created_at DESC)
+CREATE INDEX IF NOT EXISTS idx_entries_center_created
+ON entries (center_id, created_at DESC)
 WHERE deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_entries_factory_created
-ON entries (factory_id, created_at DESC)
+CREATE INDEX IF NOT EXISTS idx_entries_created
+ON entries (created_at DESC)
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_entries_created_by
-ON entries (factory_id, created_by)
+ON entries (created_by)
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_entries_approved_by
-ON entries (factory_id, approved_by)
+ON entries (approved_by)
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_entries_center
-ON entries (factory_id, center_id)
+ON entries (center_id)
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_entries_customer
-ON entries (factory_id, customer_id)
+ON entries (customer_id)
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_entries_fifo_approval
-ON entries (factory_id, center_id, vehicle_number, status, created_at ASC)
+ON entries (center_id, vehicle_number, status, created_at ASC)
 WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_entries_vehicle_trgm

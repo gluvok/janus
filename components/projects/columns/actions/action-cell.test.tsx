@@ -71,7 +71,6 @@ describe("ActionCell - Entry Approval Gating", () => {
     weight: 15000,
     source: EntrySource.MANUAL,
     center_id: 1,
-    factory_id: 1,
     created_by: 1,
     status: EntryStatus.PENDING,
     auto_approved: false,

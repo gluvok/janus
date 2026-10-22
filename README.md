@@ -158,6 +158,7 @@ Configurable via the **Settings** page (admin-only):
 ## 6. Performance & Session Caching
 
 - **In-Memory Session Cache (`lru-cache`)**: Incoming HTTP requests validate session tokens against an in-memory LRU cache (1-hour TTL, max 5,000 entries) before querying the database, eliminating 90%+ of redundant auth queries.
+- **Entry & Weighment Factory Scoping**: The `entries` table does not maintain a direct `factory_id` column. Multi-tenant scoping for entries and weighments is enforced via linked physical collection centers (`entries.center_id -> centers.factory_id`), keeping tenant isolation clean and relational.
 - **Instant Invalidation**: Password changes, username/name/role updates, user deactivations, logouts, and factory setting updates (such as factory name and weighment receipt layout) trigger immediate cache eviction via reverse user and factory indexes for zero-delay consistency.
 - **PostgreSQL Trigram & Composite Indexes**: `schema.sql` includes `pg_trgm` GIN indexes for fast text filtering and composite covering indexes for sequential approval and sorting.
 

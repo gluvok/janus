@@ -156,7 +156,6 @@ export async function createEntry(client: typeof supabase, params: CreateEntryPa
       weight: Number(weight),
       center_id: Number(centerId),
       customer_id: customerId ? Number(customerId) : null,
-      factory_id: factoryId,
       created_by: creatorId,
       approved_by: approvedBy,
       status: finalStatus,
@@ -211,6 +210,19 @@ export async function deleteEntries(
     throw new Error(ApiErrorMessage.CANNOT_DELETE_SELECTED_ENTRIES);
   }
 
+  // 2. Validate that entries belong to centers associated with this factory
+  const { data: validEntries } = await client
+    .from("entries")
+    .select("id, centers!inner(factory_id)")
+    .in("id", entryIds)
+    .eq("centers.factory_id", factoryId)
+    .is("deleted_at", null);
+
+  const validIds = (validEntries || []).map((e: { id: number }) => e.id);
+  if (validIds.length === 0) {
+    return { deletedIds: [] };
+  }
+
   const now = new Date().toISOString();
   const { data: deletedEntries, error } = await client
     .from("entries")
@@ -218,9 +230,8 @@ export async function deleteEntries(
       deleted_at: now,
       updated_at: now,
     })
-    .in("id", entryIds)
+    .in("id", validIds)
     .is("deleted_at", null)
-    .eq("factory_id", factoryId)
     .select("id, images");
 
   if (error) {

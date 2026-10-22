@@ -26,10 +26,10 @@ export const GET = withAuth<{ id: string }>(async (_req, user, client, ctx) => {
     client
       .from("entries")
       .select(
-        `*, centers(name), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers(name, user_id)`,
+        `*, centers!inner(name, factory_id), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers(name, user_id)`,
       )
       .eq("id", entryId)
-      .eq("factory_id", user.factory_id!)
+      .eq("centers.factory_id", user.factory_id!)
       .is("deleted_at", null)
       .maybeSingle(),
     client
@@ -154,9 +154,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, user, client, ctx) => 
   // 1. Fetch current entry
   const { data: existing, error: fetchErr } = await client
     .from("entries")
-    .select("*, created_by_user:users!created_by(role)")
+    .select("*, centers!inner(factory_id), created_by_user:users!created_by(role)")
     .eq("id", entryId)
-    .eq("factory_id", user.factory_id!)
+    .eq("centers.factory_id", user.factory_id!)
     .is("deleted_at", null)
     .maybeSingle();
 
@@ -264,7 +264,6 @@ export const PATCH = withAuth<{ id: string }>(async (req, user, client, ctx) => 
     .from("entries")
     .update(updates)
     .eq("id", entryId)
-    .eq("factory_id", user.factory_id!)
     .select("*")
     .single();
 

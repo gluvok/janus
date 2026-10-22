@@ -227,7 +227,7 @@ describe("Entries route handlers (/api/entries)", () => {
 
       expect(response.status).toBe(200);
       expect(selectMock).toHaveBeenCalledWith(
-        "*, centers(name), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers!inner(name, user_id)",
+        "*, centers!inner(name, factory_id), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers!inner(name, user_id)",
         { count: "exact" },
       );
       expect(eqMock).toHaveBeenCalledWith("customers.user_id", 10);
@@ -705,15 +705,23 @@ describe("Entries route handlers (/api/entries)", () => {
           }
           if (table === "entries") {
             return {
+              select: vi.fn(() => ({
+                in: vi.fn(() => ({
+                  eq: vi.fn(() => ({
+                    is: vi.fn().mockResolvedValue({
+                      data: [{ id: 1 }, { id: 2 }],
+                      error: null,
+                    }),
+                  })),
+                })),
+              })),
               update: vi.fn(() => ({
                 in: vi.fn(() => ({
                   is: vi.fn(() => ({
-                    eq: vi.fn(() => ({
-                      select: vi.fn().mockResolvedValue({
-                        data: [{ id: 1 }, { id: 2 }],
-                        error: null,
-                      }),
-                    })),
+                    select: vi.fn().mockResolvedValue({
+                      data: [{ id: 1 }, { id: 2 }],
+                      error: null,
+                    }),
                   })),
                 })),
               })),

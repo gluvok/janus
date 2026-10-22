@@ -98,9 +98,7 @@ describe("Weighments [id] DELETE route handler", () => {
 
     const entriesUpdateMock = vi.fn(() => ({
       in: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          is: vi.fn().mockResolvedValue({ error: null }),
-        })),
+        is: vi.fn().mockResolvedValue({ error: null }),
       })),
     }));
 
@@ -116,7 +114,7 @@ describe("Weighments [id] DELETE route handler", () => {
                       id: 100,
                       in_entry_id: 10,
                       out_entry_id: 20,
-                      in_entry: { factory_id: 1 },
+                      in_entry: { centers: { factory_id: 1 } },
                     },
                   ],
                   error: null,

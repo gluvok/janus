@@ -36,13 +36,13 @@ export const GET = withAuth(async (req, user, client) => {
 
   const selectString =
     user.role === Role.BASE
-      ? `*, centers(name), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers!inner(name, user_id)`
-      : `*, centers(name), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers(name)`;
+      ? `*, centers!inner(name, factory_id), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers!inner(name, user_id)`
+      : `*, centers!inner(name, factory_id), created_by_user:users!created_by(name, role), approved_by_user:users!approved_by(name, role), customers(name)`;
 
   let query = client
     .from("entries")
     .select(selectString, { count: "exact" })
-    .eq("factory_id", user.factory_id)
+    .eq("centers.factory_id", user.factory_id)
     .is("deleted_at", null)
     .order(sortColumn, { ascending: !sortDesc });
 

@@ -421,15 +421,23 @@ describe("Entries Service", () => {
         }
         if (table === "entries") {
           return {
+            select: vi.fn(() => ({
+              in: vi.fn(() => ({
+                eq: vi.fn(() => ({
+                  is: vi.fn().mockResolvedValue({
+                    data: [{ id: 5 }, { id: 6 }],
+                    error: null,
+                  }),
+                })),
+              })),
+            })),
             update: vi.fn(() => ({
               in: vi.fn(() => ({
                 is: vi.fn(() => ({
-                  eq: vi.fn(() => ({
-                    select: vi.fn().mockResolvedValue({
-                      data: [{ id: 5 }, { id: 6 }],
-                      error: null,
-                    }),
-                  })),
+                  select: vi.fn().mockResolvedValue({
+                    data: [{ id: 5 }, { id: 6 }],
+                    error: null,
+                  }),
                 })),
               })),
             })),

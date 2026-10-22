@@ -190,8 +190,7 @@ export async function handleVehicleChangeSync(
           vehicle_number: newVehicleNumber,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", partnerEntryId)
-        .eq("factory_id", factoryId);
+        .eq("id", partnerEntryId);
     } else {
       const { data: partnerEntry } = await client
         .from("entries")

@@ -131,7 +131,9 @@ export async function deleteWeighments(
   // 1. Fetch weighments with factory verification
   const { data: weighments, error: fetchErr } = await client
     .from("weighments")
-    .select(`id, in_entry_id, out_entry_id, in_entry:entries!in_entry_id!inner(factory_id)`)
+    .select(
+      `id, in_entry_id, out_entry_id, in_entry:entries!in_entry_id!inner(centers!inner(factory_id))`,
+    )
     .in("id", weighmentIds)
     .is("deleted_at", null);
 
@@ -142,7 +144,8 @@ export async function deleteWeighments(
 
   const validWeighments = (weighments || []).filter(
     (w: Record<string, unknown>) =>
-      (w["in_entry"] as { factory_id?: number } | undefined)?.factory_id === factoryId,
+      (w["in_entry"] as { centers?: { factory_id?: number } } | undefined)?.centers?.factory_id ===
+      factoryId,
   );
 
   if (validWeighments.length === 0) {
@@ -184,7 +187,6 @@ export async function deleteWeighments(
         updated_at: now,
       })
       .in("id", cascadedEntryIds)
-      .eq("factory_id", factoryId)
       .is("deleted_at", null);
 
     if (cascadeErr) {

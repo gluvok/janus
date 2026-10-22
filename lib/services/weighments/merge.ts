@@ -18,10 +18,10 @@ export async function tryMergeEntries(
     const { data, error: fetchErr } = await client
       .from("entries")
       .select(
-        "id, status, vehicle_number, created_at, created_by, center_id, creator:users!created_by(role)",
+        "id, status, vehicle_number, created_at, created_by, center_id, centers!inner(factory_id), creator:users!created_by(role)",
       )
       .eq("id", entryId)
-      .eq("factory_id", factoryId)
+      .eq("centers.factory_id", factoryId)
       .is("deleted_at", null)
       .maybeSingle();
 
@@ -63,9 +63,9 @@ export async function tryMergeEntries(
   let e1Query = client
     .from("entries")
     .select(
-      "id, vehicle_number, weight, created_at, created_by, center_id, creator:users!created_by!inner(role)",
+      "id, vehicle_number, weight, created_at, created_by, center_id, centers!inner(factory_id), creator:users!created_by!inner(role)",
     )
-    .eq("factory_id", factoryId)
+    .eq("centers.factory_id", factoryId)
     .eq("vehicle_number", e2.vehicle_number)
     .eq("status", EntryStatus.APPROVED)
     .lt("created_at", e2.created_at)
@@ -119,9 +119,9 @@ export async function tryMergeEntries(
   let eNextQuery = client
     .from("entries")
     .select(
-      "id, vehicle_number, weight, created_at, created_by, center_id, creator:users!created_by!inner(role)",
+      "id, vehicle_number, weight, created_at, created_by, center_id, centers!inner(factory_id), creator:users!created_by!inner(role)",
     )
-    .eq("factory_id", factoryId)
+    .eq("centers.factory_id", factoryId)
     .eq("vehicle_number", e2.vehicle_number)
     .eq("status", EntryStatus.APPROVED)
     .gt("created_at", e2.created_at)

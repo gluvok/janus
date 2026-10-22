@@ -99,7 +99,6 @@ export interface Entry {
   source: EntrySource;
   center_id: number;
   customer_id?: number | null;
-  factory_id: number;
   created_by: number;
   approved_by?: number | null;
   status: EntryStatus;

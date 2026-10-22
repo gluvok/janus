@@ -211,8 +211,8 @@ describe("DELETE /api/weighments", () => {
   it("successfully soft deletes weighments and returns count", async () => {
     const weighmentsQuery = createMockQueryBuilder({
       data: [
-        { id: 10, in_entry_id: 1, out_entry_id: 2, in_entry: { factory_id: 1 } },
-        { id: 20, in_entry_id: 3, out_entry_id: 4, in_entry: { factory_id: 1 } },
+        { id: 10, in_entry_id: 1, out_entry_id: 2, in_entry: { centers: { factory_id: 1 } } },
+        { id: 20, in_entry_id: 3, out_entry_id: 4, in_entry: { centers: { factory_id: 1 } } },
       ],
     });
     const entriesQuery = createMockQueryBuilder();

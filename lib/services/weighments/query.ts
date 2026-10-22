@@ -62,8 +62,8 @@ export async function fetchWeighmentsList(
       (async (): Promise<BaseScopeResult> => {
         const { data } = await client
           .from("entries")
-          .select("id, customers!inner(user_id)")
-          .eq("factory_id", user.factory_id!)
+          .select("id, centers!inner(factory_id), customers!inner(user_id)")
+          .eq("centers.factory_id", user.factory_id!)
           .eq("customers.user_id", userId)
           .is("deleted_at", null);
         return {
@@ -83,8 +83,8 @@ export async function fetchWeighmentsList(
           (async (): Promise<DualFilterResult> => {
             let entryQuery = client
               .from("entries")
-              .select("id")
-              .eq("factory_id", user.factory_id!)
+              .select("id, centers!inner(factory_id)")
+              .eq("centers.factory_id", user.factory_id!)
               .is("deleted_at", null);
             if (key === "user_id") {
               entryQuery = entryQuery.or(`created_by.eq.${id},approved_by.eq.${id}`);
@@ -111,8 +111,8 @@ export async function fetchWeighmentsList(
           (async (): Promise<SpecificFilterResult> => {
             const { data } = await client
               .from("entries")
-              .select("id")
-              .eq("factory_id", user.factory_id!)
+              .select("id, centers!inner(factory_id)")
+              .eq("centers.factory_id", user.factory_id!)
               .eq(entryCol, id)
               .is("deleted_at", null);
             return {
@@ -132,8 +132,8 @@ export async function fetchWeighmentsList(
       (async (): Promise<SearchFilterResult> => {
         const { data } = await client
           .from("entries")
-          .select("id")
-          .eq("factory_id", user.factory_id!)
+          .select("id, centers!inner(factory_id)")
+          .eq("centers.factory_id", user.factory_id!)
           .ilike("vehicle_number", `%${search}%`)
           .is("deleted_at", null);
         return {
@@ -150,10 +150,10 @@ export async function fetchWeighmentsList(
   let query = client
     .from("weighments")
     .select(
-      `*, in_entry:entries!in_entry_id!inner(id, weight, images, created_at, center_id, created_by, approved_by, customer_id, vehicle_number, centers(name), users:users!created_by(name), customers(name)), out_entry:entries!out_entry_id(id, weight, images, created_at, center_id, created_by, approved_by, customer_id, vehicle_number, centers(name), users:users!created_by(name), customers(name))`,
+      `*, in_entry:entries!in_entry_id!inner(id, weight, images, created_at, center_id, created_by, approved_by, customer_id, vehicle_number, centers!inner(name, factory_id), users:users!created_by(name), customers(name)), out_entry:entries!out_entry_id(id, weight, images, created_at, center_id, created_by, approved_by, customer_id, vehicle_number, centers(name), users:users!created_by(name), customers(name))`,
       { count: "exact" },
     )
-    .eq("in_entry.factory_id", user.factory_id!)
+    .eq("in_entry.centers.factory_id", user.factory_id!)
     .is("deleted_at", null);
 
   if (typeParam && typeParam !== "all") {

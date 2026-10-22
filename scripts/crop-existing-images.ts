@@ -35,7 +35,7 @@ const JPEG_QUALITY = 85;
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error(
     "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY env vars.\n" +
-    "Run with: pnpm tsx --env-file=.env.local scripts/crop-existing-images.ts",
+      "Run with: pnpm tsx --env-file=.env.local scripts/crop-existing-images.ts",
   );
   process.exit(1);
 }
@@ -125,9 +125,9 @@ async function main() {
     const cropConfigs: CameraCropConfig[] = Array.isArray(factory.camera_crops)
       ? (factory.camera_crops as CameraCropConfig[])
       : [
-        { camera: 1, top: 5, bottom: 34, left: 37, right: 28 },
-        { camera: 2, top: 12, bottom: 31, left: 20, right: 49 },
-      ];
+          { camera: 1, top: 5, bottom: 34, left: 37, right: 28 },
+          { camera: 2, top: 12, bottom: 31, left: 20, right: 49 },
+        ];
 
     console.log(`🏭 Factory: ${factory.name} (ID ${factory.id})`);
     console.log(`   Crop configs: ${JSON.stringify(cropConfigs)}`);
