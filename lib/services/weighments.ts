@@ -18,9 +18,7 @@ export async function validateSequentialApproval(
 ): Promise<void> {
   let query = client
     .from("entries")
-    .select(
-      "id, created_at, created_by, users:users!created_by(role), centers!inner(factory_id)",
-    )
+    .select("id, created_at, created_by, users:users!created_by(role), centers!inner(factory_id)")
     .eq("center_id", centerId)
     .eq("vehicle_number", vehicleNumber)
     .eq("status", EntryStatus.PENDING)
