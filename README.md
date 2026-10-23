@@ -12,6 +12,7 @@ Industrial Weighing, Procurement & Multi-Tenant Center Management System.
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_PUBLISHABLE_KEY=your-service-role-key
+DATA_API_KEY=your-secret-api-key-here
 ```
 
 ---
@@ -182,7 +183,59 @@ All authenticated users can access the `/account` portal from the sidebar user m
 
 ---
 
-## 8. Verification Gates
+## 8. ERP Data Integration API (`/api/data`)
+
+An external integration endpoint for ERP systems to retrieve all weighment records in a single payload.
+
+- **Method**: `GET`
+- **Route**: `/api/data`
+- **Authentication**: `X-API-KEY` header matching the server's `DATA_API_KEY` (or `API_KEY`) environment variable.
+- **Behavior**: Retrieves all non-deleted automatic weighment records (from `automatic_weighments`) without pagination in the API response. Internal database queries are executed in batches of 1,000 and aggregated before returning.
+- **Response Format**:
+  ```json
+  {
+    "success": true,
+    "total": 100,
+    "data": [
+      {
+        "id": 1,
+        "unit": "kg",
+        "type": "unassigned",
+        "rate_id": 5,
+        "gross_weight": 15000,
+        "tare_weight": 5000,
+        "net_weight": 10000,
+        "images": [],
+        "in_entry_id": 1,
+        "in_entry_created_at": "2026-10-20T00:00:00Z",
+        "out_entry_id": 2,
+        "out_entry_created_at": "2026-10-20T01:00:00Z",
+        "in_center_id": 1,
+        "in_center_name": "Main Center",
+        "out_center_id": 1,
+        "out_center_name": "Main Center",
+        "in_user_id": 2,
+        "in_user_name": "Operator 1",
+        "out_user_id": 2,
+        "out_user_name": "Operator 1",
+        "in_customer_id": null,
+        "in_customer_name": "",
+        "out_customer_id": null,
+        "out_customer_name": "",
+        "vehicle_number": "KA01AB1234",
+        "created_at": "2026-10-20T01:00:00Z",
+        "updated_at": "2026-10-20T01:00:00Z"
+      }
+    ]
+  }
+  ```
+- **Error Responses**:
+  - `401 Unauthorized`: API key is missing or invalid (`{ "error": "Unauthorized" }`).
+  - `500 Internal Server Error`: Database error or server exception.
+
+---
+
+## 9. Verification Gates
 
 ```bash
 pnpm run lint:fix && pnpm run fmt:check && pnpm run type-check && pnpm test && pnpm run build

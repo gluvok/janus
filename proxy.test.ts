@@ -33,6 +33,13 @@ describe("Next.js Middleware Proxy", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  it("passes through public data route /api/data without session token", async () => {
+    const req = new NextRequest("http://localhost/api/data");
+    const res = await proxy(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("allows access with valid session token in cookie and sets header attributes", async () => {
     vi.mocked(validateSession).mockResolvedValue({
       sub: "123",
