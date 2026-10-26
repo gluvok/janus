@@ -70,6 +70,7 @@ export interface Factory {
   name: string;
   check_center_on_merge?: boolean;
   receipt_images_per_row?: number;
+  api_key?: string | null;
   camera_crops?: Array<{
     camera: number;
     top: number;
@@ -79,6 +80,38 @@ export interface Factory {
   }>;
   created_at: string;
   updated_at: string;
+}
+
+export interface DataApiWeighmentItem {
+  id: number;
+  unit: Unit | string;
+  type: WeighmentType | string;
+  rate_id?: number | null;
+  gross_weight: number;
+  tare_weight: number;
+  net_weight: number;
+  vehicle_number: string;
+  in_entry_id: number;
+  in_entry_created_at?: string;
+  out_entry_id: number;
+  out_entry_created_at?: string;
+  in_center_id?: number | null;
+  in_center_name?: string;
+  out_center_id?: number | null;
+  out_center_name?: string;
+  in_user_id?: number | null;
+  in_user_name?: string;
+  out_user_id?: number | null;
+  out_user_name?: string;
+  in_customer_id?: number | null;
+  in_customer_name?: string;
+  out_customer_id?: number | null;
+  out_customer_name?: string;
+  images: string[];
+  created_at: string;
+  updated_at: string;
+  in_entry: Record<string, unknown>;
+  out_entry: Record<string, unknown>;
 }
 
 export interface Session {

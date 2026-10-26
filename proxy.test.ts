@@ -113,4 +113,11 @@ describe("Next.js Middleware Proxy", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("location")).toBeNull();
   });
+
+  it("passes through /api/data route without session token", async () => {
+    const req = new NextRequest("http://localhost/api/data");
+    const res = await proxy(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+  });
 });

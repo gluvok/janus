@@ -4,6 +4,7 @@
 -- ==============================================================================
 
 -- 0. DESTRUCTIVE CLEANUP (Drop existing tables, types, and views to ensure a fresh schema build)
+DROP TABLE IF EXISTS factory_processed_weighments CASCADE;
 DROP TABLE IF EXISTS tickets CASCADE;
 DROP TABLE IF EXISTS weighments CASCADE;
 DROP TABLE IF EXISTS entries CASCADE;
@@ -58,11 +59,16 @@ CREATE TABLE IF NOT EXISTS factories (
       {"camera": 1, "top": 0, "bottom": 0, "left": 0, "right": 0},
       {"camera": 2, "top": 0, "bottom": 0, "left": 0, "right": 0}
     ]'::jsonb,
+    api_key TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     CONSTRAINT chk_receipt_images_per_row CHECK (receipt_images_per_row BETWEEN 1 AND 6)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_factories_api_key
+ON factories (api_key)
+WHERE deleted_at IS NULL;
 
 -- CENTERS TABLE (Physical collection centers)
 CREATE TABLE IF NOT EXISTS centers (
@@ -248,6 +254,18 @@ CREATE TABLE IF NOT EXISTS tickets (
     )
 );
 
+-- FACTORY PROCESSED WEIGHMENTS TABLE (Tracks statefully processed weighment IDs per factory)
+CREATE TABLE IF NOT EXISTS factory_processed_weighments (
+    id SERIAL PRIMARY KEY,
+    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
+    weighment_id INT NOT NULL REFERENCES weighments(id) ON DELETE CASCADE,
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_factory_processed_weighments UNIQUE (factory_id, weighment_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_factory_processed_weighments_factory
+ON factory_processed_weighments (factory_id);
+
 CREATE INDEX IF NOT EXISTS idx_tickets_user_status 
 ON tickets (user_id, status, created_at DESC) 
 WHERE deleted_at IS NULL;
@@ -397,6 +415,7 @@ ALTER TABLE IF EXISTS rates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS weighments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS factory_processed_weighments ENABLE ROW LEVEL SECURITY;
 
 -- 4. THIN RLS POLICIES
 DROP POLICY IF EXISTS "Allow access factories" ON factories;
@@ -409,6 +428,7 @@ DROP POLICY IF EXISTS "Allow access rates" ON rates;
 DROP POLICY IF EXISTS "Allow access weighments" ON weighments;
 DROP POLICY IF EXISTS "Allow access entries" ON entries;
 DROP POLICY IF EXISTS "Allow access tickets" ON tickets;
+DROP POLICY IF EXISTS "Allow access factory_processed_weighments" ON factory_processed_weighments;
 
 CREATE POLICY "Allow access factories" ON factories FOR ALL USING (true);
 CREATE POLICY "Allow access users" ON users FOR ALL USING (true);
@@ -420,6 +440,7 @@ CREATE POLICY "Allow access rates" ON rates FOR ALL USING (true);
 CREATE POLICY "Allow access weighments" ON weighments FOR ALL USING (true);
 CREATE POLICY "Allow access entries" ON entries FOR ALL USING (true);
 CREATE POLICY "Allow access tickets" ON tickets FOR ALL USING (true);
+CREATE POLICY "Allow access factory_processed_weighments" ON factory_processed_weighments FOR ALL USING (true);
 
 -- 5. AUTO-INCREMENT SEQUENCE RESET FUNCTIONS
 DROP FUNCTION IF EXISTS public.reset_table_sequence(text);
@@ -448,7 +469,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
     t text;
-    tbls text[] := ARRAY['tickets', 'weighments', 'entries', 'sessions', 'rates', 'customers', 'commodities', 'centers', 'users', 'factories'];
+    tbls text[] := ARRAY['factory_processed_weighments', 'tickets', 'weighments', 'entries', 'sessions', 'rates', 'customers', 'commodities', 'centers', 'users', 'factories'];
     seq_name text;
 BEGIN
     FOREACH t IN ARRAY tbls LOOP

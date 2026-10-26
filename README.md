@@ -30,6 +30,7 @@ For a new database instance, run the following SQL scripts in your Supabase SQL 
 
 1. `schema.sql` — provisions tables, enums, triggers, and RLS policies.
 2. `storage.sql` — provisions the `gluvok` storage bucket and file access policies.
+3. `data_api.sql` — provisions `api_key` on `factories` and the `factory_processed_weighments` table for the Factory Data API.
 
 ### Start Development Server
 
@@ -182,7 +183,120 @@ All authenticated users can access the `/account` portal from the sidebar user m
 
 ---
 
-## 8. Verification Gates
+## 8. Factory Data API (`/api/data`)
+
+The `/api/data` endpoint provides an external integration route for third-party systems and factories to fetch weighments with linked entries and flattened metrics.
+
+### Authentication & Headers
+
+| Header           | Type                | Description                                                                                                                                                 |
+| :--------------- | :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x-api-key`      | `string` (Required) | Factory API key used to resolve tenant scope.                                                                                                               |
+| `x-processed-id` | `number` (Optional) | ID of the last processed weighment. The server records this ID in `factory_processed_weighments` and excludes all recorded processed IDs from the response. |
+
+### Stateful Processing Workflow
+
+1. **Initial Call**: Client requests `/api/data` with only `x-api-key`. Because no IDs have been marked processed yet, the server returns the entire active weighment list.
+2. **Subsequent Calls**: When the client has processed a weighment (e.g. ID #10), it sends `x-processed-id: 10`. The server records ID 10 and returns all weighments except ID 10.
+3. **Cumulative Exclusion**: When the client processes ID #8 and sends `x-processed-id: 8`, the server records ID 8 and returns all weighments except both ID 10 and ID 8.
+4. **Fetching Remaining**: If the client calls without `x-processed-id`, the server continues to exclude all previously recorded processed IDs, returning only the remaining un-processed weighments.
+
+```bash
+# Initial fetch
+curl -H "x-api-key: your-factory-api-key" https://your-domain.com/api/data
+
+# Acknowledging processed weighment ID 10
+curl -H "x-api-key: your-factory-api-key" \
+     -H "x-processed-id: 10" \
+     https://your-domain.com/api/data
+```
+
+If the `x-api-key` header is missing or does not match an active factory record in the database, the endpoint returns `401 Unauthorized`.
+
+### Response Format
+
+Returns HTTP 200 with factory metadata, record count, and an array of weighments with both top-level flattened computed metrics and full embedded `in_entry` and `out_entry` objects:
+
+```json
+{
+  "data": [
+    {
+      "id": 101,
+      "unit": "kg",
+      "type": "unassigned",
+      "rate_id": null,
+      "gross_weight": 15000,
+      "tare_weight": 5000,
+      "net_weight": 10000,
+      "vehicle_number": "KA-01-AB-1234",
+      "in_entry_id": 11,
+      "in_entry_created_at": "2026-10-26T09:30:00.000Z",
+      "out_entry_id": 12,
+      "out_entry_created_at": "2026-10-26T10:45:00.000Z",
+      "in_center_id": 1,
+      "in_center_name": "Weighbridge North",
+      "out_center_id": 1,
+      "out_center_name": "Weighbridge North",
+      "in_user_id": 2,
+      "in_user_name": "Operator One",
+      "out_user_id": 2,
+      "out_user_name": "Operator One",
+      "in_customer_id": 3,
+      "in_customer_name": "Farmer Bob",
+      "out_customer_id": 3,
+      "out_customer_name": "Farmer Bob",
+      "images": ["in_cam1.jpg", "out_cam1.jpg"],
+      "created_at": "2026-10-26T10:00:00.000Z",
+      "updated_at": "2026-10-26T11:00:00.000Z",
+      "in_entry": {
+        "id": 11,
+        "vehicle_number": "KA-01-AB-1234",
+        "detected_vehicle_number": "KA-01-AB-1234",
+        "weight": 15000,
+        "status": "approved",
+        "auto_approved": true,
+        "center_id": 1,
+        "center_name": "Weighbridge North",
+        "customer_id": 3,
+        "customer_name": "Farmer Bob",
+        "created_by": 2,
+        "created_by_name": "Operator One",
+        "approved_by": 2,
+        "images": ["in_cam1.jpg"],
+        "created_at": "2026-10-26T09:30:00.000Z",
+        "updated_at": "2026-10-26T09:35:00.000Z"
+      },
+      "out_entry": {
+        "id": 12,
+        "vehicle_number": "KA-01-AB-1234",
+        "detected_vehicle_number": null,
+        "weight": 5000,
+        "status": "approved",
+        "auto_approved": false,
+        "center_id": 1,
+        "center_name": "Weighbridge North",
+        "customer_id": 3,
+        "customer_name": "Farmer Bob",
+        "created_by": 2,
+        "created_by_name": "Operator One",
+        "approved_by": 2,
+        "images": ["out_cam1.jpg"],
+        "created_at": "2026-10-26T10:45:00.000Z",
+        "updated_at": "2026-10-26T10:50:00.000Z"
+      }
+    }
+  ],
+  "factory": {
+    "id": 7,
+    "name": "Sunrise Sugar Mills"
+  },
+  "count": 1
+}
+```
+
+---
+
+## 9. Verification Gates
 
 ```bash
 pnpm run lint:fix && pnpm run fmt:check && pnpm run type-check && pnpm test && pnpm run build
