@@ -176,58 +176,34 @@ describe("GET /api/data", () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.factory).toEqual({ id: 7, name: "Sunrise Sugar Mills" });
+    expect(json.factory).toBeUndefined();
     expect(json.count).toBe(1);
     expect(json.data).toHaveLength(1);
     expect(weighmentsQuery.not).not.toHaveBeenCalled();
 
     const item = json.data[0];
-    expect(item.id).toBe(101);
-    expect(item.gross_weight).toBe(15000);
-    expect(item.tare_weight).toBe(5000);
-    expect(item.net_weight).toBe(10000);
-    expect(item.vehicle_number).toBe("KA-01-AB-1234");
-    expect(item.in_center_name).toBe("Weighbridge North");
-    expect(item.in_user_name).toBe("Operator One");
-    expect(item.in_customer_name).toBe("Farmer Bob");
-
-    expect(item.in_entry).toEqual({
-      id: 11,
+    expect(item).toEqual({
+      id: 101,
       vehicle_number: "KA-01-AB-1234",
-      detected_vehicle_number: "KA-01-AB-1234",
-      weight: 15000,
-      status: "approved",
-      auto_approved: true,
-      center_id: 1,
-      center_name: "Weighbridge North",
-      customer_id: 3,
-      customer_name: "Farmer Bob",
-      created_by: 2,
-      created_by_name: "Operator One",
-      approved_by: 2,
-      images: ["in_cam1.jpg"],
-      created_at: "2026-10-26T09:30:00.000Z",
-      updated_at: "2026-10-26T09:35:00.000Z",
+      gross_weight: 15000,
+      tare_weight: 5000,
+      net_weight: 10000,
+      in_entry_id: 11,
+      in_entry_time: "2026-10-26T09:30:00.000Z",
+      out_entry_id: 12,
+      out_entry_time: "2026-10-26T10:45:00.000Z",
+      in_center_id: 1,
+      in_center_name: "Weighbridge North",
+      out_center_id: 1,
+      out_center_name: "Weighbridge North",
     });
-
-    expect(item.out_entry).toEqual({
-      id: 12,
-      vehicle_number: "KA-01-AB-1234",
-      detected_vehicle_number: null,
-      weight: 5000,
-      status: "approved",
-      auto_approved: false,
-      center_id: 1,
-      center_name: "Weighbridge North",
-      customer_id: 3,
-      customer_name: "Farmer Bob",
-      created_by: 2,
-      created_by_name: "Operator One",
-      approved_by: 2,
-      images: ["out_cam1.jpg"],
-      created_at: "2026-10-26T10:45:00.000Z",
-      updated_at: "2026-10-26T10:50:00.000Z",
-    });
+    expect(item.unit).toBeUndefined();
+    expect(item.created_at).toBeUndefined();
+    expect(item.updated_at).toBeUndefined();
+    expect(item.in_weight).toBeUndefined();
+    expect(item.out_weight).toBeUndefined();
+    expect(item.in_entry).toBeUndefined();
+    expect(item.out_entry).toBeUndefined();
   });
 
   it("records x-processed-id in database and excludes it from results", async () => {

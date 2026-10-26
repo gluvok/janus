@@ -215,81 +215,27 @@ If the `x-api-key` header is missing or does not match an active factory record 
 
 ### Response Format
 
-Returns HTTP 200 with factory metadata, record count, and an array of weighments with both top-level flattened computed metrics and full embedded `in_entry` and `out_entry` objects:
+Returns HTTP 200 with record count and an array of thin flattened weighment records (see [docs/data_curl.md](docs/data_curl.md) for full cURL guide):
 
 ```json
 {
   "data": [
     {
       "id": 101,
-      "unit": "kg",
-      "type": "unassigned",
-      "rate_id": null,
+      "vehicle_number": "KA-01-AB-1234",
       "gross_weight": 15000,
       "tare_weight": 5000,
       "net_weight": 10000,
-      "vehicle_number": "KA-01-AB-1234",
       "in_entry_id": 11,
-      "in_entry_created_at": "2026-10-26T09:30:00.000Z",
+      "in_entry_time": "2026-10-26T09:30:00.000Z",
       "out_entry_id": 12,
-      "out_entry_created_at": "2026-10-26T10:45:00.000Z",
+      "out_entry_time": "2026-10-26T10:45:00.000Z",
       "in_center_id": 1,
       "in_center_name": "Weighbridge North",
       "out_center_id": 1,
-      "out_center_name": "Weighbridge North",
-      "in_user_id": 2,
-      "in_user_name": "Operator One",
-      "out_user_id": 2,
-      "out_user_name": "Operator One",
-      "in_customer_id": 3,
-      "in_customer_name": "Farmer Bob",
-      "out_customer_id": 3,
-      "out_customer_name": "Farmer Bob",
-      "images": ["in_cam1.jpg", "out_cam1.jpg"],
-      "created_at": "2026-10-26T10:00:00.000Z",
-      "updated_at": "2026-10-26T11:00:00.000Z",
-      "in_entry": {
-        "id": 11,
-        "vehicle_number": "KA-01-AB-1234",
-        "detected_vehicle_number": "KA-01-AB-1234",
-        "weight": 15000,
-        "status": "approved",
-        "auto_approved": true,
-        "center_id": 1,
-        "center_name": "Weighbridge North",
-        "customer_id": 3,
-        "customer_name": "Farmer Bob",
-        "created_by": 2,
-        "created_by_name": "Operator One",
-        "approved_by": 2,
-        "images": ["in_cam1.jpg"],
-        "created_at": "2026-10-26T09:30:00.000Z",
-        "updated_at": "2026-10-26T09:35:00.000Z"
-      },
-      "out_entry": {
-        "id": 12,
-        "vehicle_number": "KA-01-AB-1234",
-        "detected_vehicle_number": null,
-        "weight": 5000,
-        "status": "approved",
-        "auto_approved": false,
-        "center_id": 1,
-        "center_name": "Weighbridge North",
-        "customer_id": 3,
-        "customer_name": "Farmer Bob",
-        "created_by": 2,
-        "created_by_name": "Operator One",
-        "approved_by": 2,
-        "images": ["out_cam1.jpg"],
-        "created_at": "2026-10-26T10:45:00.000Z",
-        "updated_at": "2026-10-26T10:50:00.000Z"
-      }
+      "out_center_name": "Weighbridge North"
     }
   ],
-  "factory": {
-    "id": 7,
-    "name": "Sunrise Sugar Mills"
-  },
   "count": 1
 }
 ```

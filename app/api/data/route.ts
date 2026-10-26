@@ -1,43 +1,13 @@
 /**
  * @file app/api/data/route.ts
- * @description External integration endpoint for factories to retrieve their weighments and linked entries.
- * Authenticated via the 'x-api-key' request header.
+ * @description External integration endpoint for factories to retrieve flattened weighments.
+ * Authenticated via the 'x-api-key' request header, with stateful processed ID exclusion.
  */
 
 import { type NextRequest, NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/db";
-import { formatWeighmentRecord } from "@/lib/services/weighments";
 import { type DataApiWeighmentItem } from "@/types";
-
-function formatEntryObject(
-  entry: Record<string, unknown> | null | undefined,
-): Record<string, unknown> | null {
-  if (!entry) return null;
-
-  const centerName = (entry.centers as { name?: string } | undefined)?.name ?? "";
-  const userName = (entry.users as { name?: string } | undefined)?.name ?? "";
-  const customerName = (entry.customers as { name?: string } | undefined)?.name ?? "";
-
-  return {
-    id: entry.id,
-    vehicle_number: entry.vehicle_number,
-    detected_vehicle_number: entry.detected_vehicle_number,
-    weight: Number(entry.weight),
-    status: entry.status,
-    auto_approved: entry.auto_approved,
-    center_id: entry.center_id,
-    center_name: centerName,
-    customer_id: entry.customer_id,
-    customer_name: customerName,
-    created_by: entry.created_by,
-    created_by_name: userName,
-    approved_by: entry.approved_by,
-    images: Array.isArray(entry.images) ? entry.images : [],
-    created_at: entry.created_at,
-    updated_at: entry.updated_at,
-  };
-}
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const apiKey = req.headers.get("x-api-key");
@@ -70,7 +40,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // 2. If x-processed-id header is provided, record it for this factory
   const rawProcessedId = req.headers.get("x-processed-id");
-  if (rawProcessedId && rawProcessedId.trim() !== "") {
+  if (rawProcessedId) {
     const processedId = parseInt(rawProcessedId.trim(), 10);
     if (Number.isSafeInteger(processedId) && processedId > 0) {
       const { error: upsertErr } = await supabase
@@ -103,16 +73,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const selectQuery = `
     *,
     in_entry:entries!in_entry_id!inner(
-      id, weight, images, created_at, updated_at, center_id, created_by, approved_by, customer_id, vehicle_number, detected_vehicle_number, status, auto_approved,
-      centers!inner(name, factory_id),
-      users:users!created_by(name),
-      customers(name)
+      id, weight, created_at, center_id, vehicle_number,
+      centers!inner(name, factory_id)
     ),
     out_entry:entries!out_entry_id(
-      id, weight, images, created_at, updated_at, center_id, created_by, approved_by, customer_id, vehicle_number, detected_vehicle_number, status, auto_approved,
-      centers(name),
-      users:users!created_by(name),
-      customers(name)
+      id, weight, created_at, center_id, vehicle_number,
+      centers(name)
     )
   `
     .replace(/\s+/g, " ")
@@ -140,27 +106,39 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 4. Format payload: flattened weighment summary + embedded in_entry and out_entry records
+  // 5. Format payload: pure flattened weighment records
   const rawRows = (rows as unknown as Record<string, unknown>[] | null) || [];
   const formattedData: DataApiWeighmentItem[] = rawRows.map((row: Record<string, unknown>) => {
-    const flattened = formatWeighmentRecord(row);
-    const inEntry = formatEntryObject(row.in_entry as Record<string, unknown> | null);
-    const outEntry = formatEntryObject(row.out_entry as Record<string, unknown> | null);
+    const inEntry = (row["in_entry"] as Record<string, unknown>) || {};
+    const outEntry = (row["out_entry"] as Record<string, unknown>) || {};
+
+    const inWeight = Number(inEntry.weight || 0);
+    const outWeight = Number(outEntry.weight || 0);
+
+    const grossWeight = Math.max(inWeight, outWeight);
+    const tareWeight = Math.min(inWeight, outWeight);
+    const netWeight = grossWeight - tareWeight;
 
     return {
-      ...(flattened as unknown as Omit<DataApiWeighmentItem, "in_entry" | "out_entry">),
-      in_entry: inEntry || {},
-      out_entry: outEntry || {},
+      id: Number(row.id),
+      vehicle_number: String(inEntry.vehicle_number || outEntry.vehicle_number || ""),
+      gross_weight: grossWeight,
+      tare_weight: tareWeight,
+      net_weight: netWeight,
+      in_entry_id: Number(row.in_entry_id),
+      in_entry_time: String(inEntry.created_at || ""),
+      out_entry_id: Number(row.out_entry_id),
+      out_entry_time: String(outEntry.created_at || ""),
+      in_center_id: (inEntry.center_id as number | undefined) ?? null,
+      in_center_name: (inEntry.centers as { name?: string } | undefined)?.name ?? "",
+      out_center_id: (outEntry.center_id as number | undefined) ?? null,
+      out_center_name: (outEntry.centers as { name?: string } | undefined)?.name ?? "",
     };
   });
 
   return NextResponse.json(
     {
       data: formattedData,
-      factory: {
-        id: factory.id,
-        name: factory.name,
-      },
       count: formattedData.length,
     },
     { status: StatusCodes.OK },
