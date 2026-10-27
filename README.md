@@ -30,7 +30,7 @@ For a new database instance, run the following SQL scripts in your Supabase SQL 
 
 1. `schema.sql` — provisions tables, enums, triggers, and RLS policies.
 2. `storage.sql` — provisions the `gluvok` storage bucket and file access policies.
-3. `data_api.sql` — provisions `api_key` on `factories` and the `factory_processed_weighments` table for the Factory Data API.
+3. `data_api.sql` — provisions `api_key` on `factories`, the `factory_processed_weighments` table, and the atomic `get_factory_weighment_data` stored procedure for the Factory Data API.
 
 ### Start Development Server
 
@@ -226,6 +226,7 @@ Returns HTTP 200 with record count and an array of thin flattened weighment reco
       "gross_weight": 15000,
       "tare_weight": 5000,
       "net_weight": 10000,
+      "images": ["in_cam1.jpg", "out_cam1.jpg"],
       "in_entry_id": 11,
       "in_entry_time": "2026-10-26T09:30:00.000Z",
       "out_entry_id": 12,

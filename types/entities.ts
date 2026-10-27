@@ -88,6 +88,7 @@ export interface DataApiWeighmentItem {
   gross_weight: number;
   tare_weight: number;
   net_weight: number;
+  images: string[];
   in_entry_id: number;
   in_entry_time: string;
   out_entry_id: number;

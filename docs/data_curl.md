@@ -43,6 +43,7 @@ curl -X GET "http://localhost:3000/api/data" \
       "gross_weight": 15000,
       "tare_weight": 5000,
       "net_weight": 10000,
+      "images": ["in_cam1.jpg", "out_cam1.jpg"],
       "in_entry_id": 11,
       "in_entry_time": "2026-10-26T09:30:00.000Z",
       "out_entry_id": 12,

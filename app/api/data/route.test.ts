@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const mockFrom = vi.fn();
+const mockRpc = vi.fn();
 
 vi.mock("@/db", () => ({
   supabase: {
-    from: (table: string) => mockFrom(table),
+    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }));
 
@@ -23,6 +23,7 @@ describe("GET /api/data", () => {
     expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("returns 401 Unauthorized when x-api-key header is whitespace only", async () => {
@@ -34,21 +35,13 @@ describe("GET /api/data", () => {
     expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("returns 500 when factory lookup fails with database error", async () => {
-    const factoryQuery: Record<string, unknown> = {};
-    factoryQuery.select = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.eq = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.is = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.maybeSingle = vi.fn().mockResolvedValue({
+  it("returns 500 when RPC encounters a database error", async () => {
+    mockRpc.mockResolvedValue({
       data: null,
       error: { message: "Database connection failed" },
-    });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "factories") return factoryQuery;
-      return {};
     });
 
     const req = new NextRequest("http://localhost/api/data", {
@@ -58,22 +51,17 @@ describe("GET /api/data", () => {
 
     expect(res.status).toBe(500);
     const json = await res.json();
-    expect(json.error).toBe("Database error during authentication");
+    expect(json.error).toBe("Failed to retrieve weighment data");
+    expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
+      p_api_key: "test_key_123",
+      p_processed_id: null,
+    });
   });
 
   it("returns 401 Unauthorized when no active factory matches the API key", async () => {
-    const factoryQuery: Record<string, unknown> = {};
-    factoryQuery.select = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.eq = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.is = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.maybeSingle = vi.fn().mockResolvedValue({
-      data: null,
+    mockRpc.mockResolvedValue({
+      data: { unauthorized: true },
       error: null,
-    });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "factories") return factoryQuery;
-      return {};
     });
 
     const req = new NextRequest("http://localhost/api/data", {
@@ -84,89 +72,38 @@ describe("GET /api/data", () => {
     expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Invalid API key");
+    expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
+      p_api_key: "non_existent_key",
+      p_processed_id: null,
+    });
   });
 
   it("returns 200 with formatted weighments and linked entries when no IDs are processed", async () => {
-    const factoryQuery: Record<string, unknown> = {};
-    factoryQuery.select = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.eq = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.is = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: 7, name: "Sunrise Sugar Mills" },
-      error: null,
-    });
-
-    const processedQuery: Record<string, unknown> = {};
-    processedQuery.select = vi.fn().mockReturnValue(processedQuery);
-    processedQuery.eq = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-
-    const mockWeighmentRows = [
+    const mockWeighmentData = [
       {
         id: 101,
-        unit: "kg",
-        type: "unassigned",
-        rate_id: null,
+        vehicle_number: "KA-01-AB-1234",
+        gross_weight: 15000,
+        tare_weight: 5000,
+        net_weight: 10000,
+        images: ["in_cam1.jpg", "out_cam1.jpg"],
         in_entry_id: 11,
+        in_entry_time: "2026-10-26T09:30:00.000Z",
         out_entry_id: 12,
-        created_at: "2026-10-26T10:00:00.000Z",
-        updated_at: "2026-10-26T11:00:00.000Z",
-        in_entry: {
-          id: 11,
-          vehicle_number: "KA-01-AB-1234",
-          detected_vehicle_number: "KA-01-AB-1234",
-          weight: 15000,
-          status: "approved",
-          auto_approved: true,
-          center_id: 1,
-          created_by: 2,
-          approved_by: 2,
-          customer_id: 3,
-          images: ["in_cam1.jpg"],
-          created_at: "2026-10-26T09:30:00.000Z",
-          updated_at: "2026-10-26T09:35:00.000Z",
-          centers: { name: "Weighbridge North", factory_id: 7 },
-          users: { name: "Operator One" },
-          customers: { name: "Farmer Bob" },
-        },
-        out_entry: {
-          id: 12,
-          vehicle_number: "KA-01-AB-1234",
-          detected_vehicle_number: null,
-          weight: 5000,
-          status: "approved",
-          auto_approved: false,
-          center_id: 1,
-          created_by: 2,
-          approved_by: 2,
-          customer_id: 3,
-          images: ["out_cam1.jpg"],
-          created_at: "2026-10-26T10:45:00.000Z",
-          updated_at: "2026-10-26T10:50:00.000Z",
-          centers: { name: "Weighbridge North" },
-          users: { name: "Operator One" },
-          customers: { name: "Farmer Bob" },
-        },
+        out_entry_time: "2026-10-26T10:45:00.000Z",
+        in_center_id: 1,
+        in_center_name: "Weighbridge North",
+        out_center_id: 1,
+        out_center_name: "Weighbridge North",
       },
     ];
 
-    const weighmentsQuery: Record<string, unknown> = {};
-    weighmentsQuery.select = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.eq = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.is = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.not = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.order = vi.fn().mockResolvedValue({
-      data: mockWeighmentRows,
+    mockRpc.mockResolvedValue({
+      data: {
+        data: mockWeighmentData,
+        count: 1,
+      },
       error: null,
-    });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "factories") return factoryQuery;
-      if (table === "factory_processed_weighments") return processedQuery;
-      if (table === "weighments") return weighmentsQuery;
-      return {};
     });
 
     const req = new NextRequest("http://localhost/api/data", {
@@ -175,11 +112,15 @@ describe("GET /api/data", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
+      p_api_key: "valid_live_key_999",
+      p_processed_id: null,
+    });
+
     const json = await res.json();
     expect(json.factory).toBeUndefined();
     expect(json.count).toBe(1);
     expect(json.data).toHaveLength(1);
-    expect(weighmentsQuery.not).not.toHaveBeenCalled();
 
     const item = json.data[0];
     expect(item).toEqual({
@@ -188,6 +129,7 @@ describe("GET /api/data", () => {
       gross_weight: 15000,
       tare_weight: 5000,
       net_weight: 10000,
+      images: ["in_cam1.jpg", "out_cam1.jpg"],
       in_entry_id: 11,
       in_entry_time: "2026-10-26T09:30:00.000Z",
       out_entry_id: 12,
@@ -197,50 +139,15 @@ describe("GET /api/data", () => {
       out_center_id: 1,
       out_center_name: "Weighbridge North",
     });
-    expect(item.unit).toBeUndefined();
-    expect(item.created_at).toBeUndefined();
-    expect(item.updated_at).toBeUndefined();
-    expect(item.in_weight).toBeUndefined();
-    expect(item.out_weight).toBeUndefined();
-    expect(item.in_entry).toBeUndefined();
-    expect(item.out_entry).toBeUndefined();
   });
 
   it("records x-processed-id in database and excludes it from results", async () => {
-    const factoryQuery: Record<string, unknown> = {};
-    factoryQuery.select = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.eq = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.is = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: 7, name: "Sunrise Sugar Mills" },
+    mockRpc.mockResolvedValue({
+      data: {
+        data: [],
+        count: 0,
+      },
       error: null,
-    });
-
-    const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-    const processedQuery: Record<string, unknown> = {
-      upsert: mockUpsert,
-    };
-    processedQuery.select = vi.fn().mockReturnValue(processedQuery);
-    processedQuery.eq = vi.fn().mockResolvedValue({
-      data: [{ weighment_id: 10 }],
-      error: null,
-    });
-
-    const weighmentsQuery: Record<string, unknown> = {};
-    weighmentsQuery.select = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.eq = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.is = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.not = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.order = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "factories") return factoryQuery;
-      if (table === "factory_processed_weighments") return processedQuery;
-      if (table === "weighments") return weighmentsQuery;
-      return {};
     });
 
     const req = new NextRequest("http://localhost/api/data", {
@@ -252,101 +159,23 @@ describe("GET /api/data", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
-    expect(mockUpsert).toHaveBeenCalledWith(
-      { factory_id: 7, weighment_id: 10 },
-      { onConflict: "factory_id,weighment_id", ignoreDuplicates: true },
-    );
-    expect(weighmentsQuery.not).toHaveBeenCalledWith("id", "in", "(10)");
-  });
-
-  it("excludes multiple accumulated processed IDs", async () => {
-    const factoryQuery: Record<string, unknown> = {};
-    factoryQuery.select = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.eq = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.is = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: 7, name: "Sunrise Sugar Mills" },
-      error: null,
+    expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
+      p_api_key: "valid_key",
+      p_processed_id: 10,
     });
 
-    const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-    const processedQuery: Record<string, unknown> = {
-      upsert: mockUpsert,
-    };
-    processedQuery.select = vi.fn().mockReturnValue(processedQuery);
-    processedQuery.eq = vi.fn().mockResolvedValue({
-      data: [{ weighment_id: 10 }, { weighment_id: 8 }],
-      error: null,
-    });
-
-    const weighmentsQuery: Record<string, unknown> = {};
-    weighmentsQuery.select = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.eq = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.is = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.not = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.order = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "factories") return factoryQuery;
-      if (table === "factory_processed_weighments") return processedQuery;
-      if (table === "weighments") return weighmentsQuery;
-      return {};
-    });
-
-    const req = new NextRequest("http://localhost/api/data", {
-      headers: {
-        "x-api-key": "valid_key",
-        "x-processed-id": "8",
-      },
-    });
-    const res = await GET(req);
-
-    expect(res.status).toBe(200);
-    expect(mockUpsert).toHaveBeenCalledWith(
-      { factory_id: 7, weighment_id: 8 },
-      { onConflict: "factory_id,weighment_id", ignoreDuplicates: true },
-    );
-    expect(weighmentsQuery.not).toHaveBeenCalledWith("id", "in", "(10,8)");
+    const json = await res.json();
+    expect(json.data).toEqual([]);
+    expect(json.count).toBe(0);
   });
 
   it("handles invalid or non-numeric x-processed-id gracefully without failing", async () => {
-    const factoryQuery: Record<string, unknown> = {};
-    factoryQuery.select = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.eq = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.is = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: 7, name: "Sunrise Sugar Mills" },
+    mockRpc.mockResolvedValue({
+      data: {
+        data: [],
+        count: 0,
+      },
       error: null,
-    });
-
-    const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-    const processedQuery: Record<string, unknown> = {
-      upsert: mockUpsert,
-    };
-    processedQuery.select = vi.fn().mockReturnValue(processedQuery);
-    processedQuery.eq = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-
-    const weighmentsQuery: Record<string, unknown> = {};
-    weighmentsQuery.select = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.eq = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.is = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.not = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.order = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "factories") return factoryQuery;
-      if (table === "factory_processed_weighments") return processedQuery;
-      if (table === "weighments") return weighmentsQuery;
-      return {};
     });
 
     const req = new NextRequest("http://localhost/api/data", {
@@ -358,50 +187,13 @@ describe("GET /api/data", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
-    expect(mockUpsert).not.toHaveBeenCalled();
-    expect(weighmentsQuery.not).not.toHaveBeenCalled();
-  });
-
-  it("returns 500 when weighments query encounters a database error", async () => {
-    const factoryQuery: Record<string, unknown> = {};
-    factoryQuery.select = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.eq = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.is = vi.fn().mockReturnValue(factoryQuery);
-    factoryQuery.maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: 7, name: "Sunrise Sugar Mills" },
-      error: null,
+    expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
+      p_api_key: "valid_key",
+      p_processed_id: null,
     });
 
-    const processedQuery: Record<string, unknown> = {};
-    processedQuery.select = vi.fn().mockReturnValue(processedQuery);
-    processedQuery.eq = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-
-    const weighmentsQuery: Record<string, unknown> = {};
-    weighmentsQuery.select = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.eq = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.is = vi.fn().mockReturnValue(weighmentsQuery);
-    weighmentsQuery.order = vi.fn().mockResolvedValue({
-      data: null,
-      error: { message: "Query timeout" },
-    });
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "factories") return factoryQuery;
-      if (table === "factory_processed_weighments") return processedQuery;
-      if (table === "weighments") return weighmentsQuery;
-      return {};
-    });
-
-    const req = new NextRequest("http://localhost/api/data", {
-      headers: { "x-api-key": "valid_key" },
-    });
-    const res = await GET(req);
-
-    expect(res.status).toBe(500);
     const json = await res.json();
-    expect(json.error).toBe("Failed to retrieve weighment data");
+    expect(json.data).toEqual([]);
+    expect(json.count).toBe(0);
   });
 });
