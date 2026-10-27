@@ -56,6 +56,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     {
       data: result.data || [],
       count: result.count ?? (result.data ? result.data.length : 0),
+      acknowledged_processed_id: processedId ?? null,
     },
     { status: StatusCodes.OK },
   );

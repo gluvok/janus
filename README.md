@@ -237,7 +237,8 @@ Returns HTTP 200 with record count and an array of thin flattened weighment reco
       "out_center_name": "Weighbridge North"
     }
   ],
-  "count": 1
+  "count": 1,
+  "acknowledged_processed_id": 10
 }
 ```
 

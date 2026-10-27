@@ -121,6 +121,7 @@ describe("GET /api/data", () => {
     expect(json.factory).toBeUndefined();
     expect(json.count).toBe(1);
     expect(json.data).toHaveLength(1);
+    expect(json.acknowledged_processed_id).toBeNull();
 
     const item = json.data[0];
     expect(item).toEqual({
@@ -167,6 +168,7 @@ describe("GET /api/data", () => {
     const json = await res.json();
     expect(json.data).toEqual([]);
     expect(json.count).toBe(0);
+    expect(json.acknowledged_processed_id).toBe(10);
   });
 
   it("handles invalid or non-numeric x-processed-id gracefully without failing", async () => {
@@ -195,5 +197,6 @@ describe("GET /api/data", () => {
     const json = await res.json();
     expect(json.data).toEqual([]);
     expect(json.count).toBe(0);
+    expect(json.acknowledged_processed_id).toBeNull();
   });
 });

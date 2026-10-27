@@ -54,7 +54,8 @@ curl -X GET "http://localhost:3000/api/data" \
       "out_center_name": "Weighbridge North"
     }
   ],
-  "count": 1
+  "count": 1,
+  "acknowledged_processed_id": 10
 }
 ```
 
