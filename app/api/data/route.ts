@@ -10,8 +10,7 @@ import { supabase } from "@/db";
 import { type DataApiWeighmentItem } from "@/types";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const rawApiKey = req.headers.get("x-api-key");
-  const apiKey = rawApiKey ? rawApiKey.trim() : "";
+  const apiKey = req.headers.get("x-api-key");
   if (!apiKey) {
     return NextResponse.json(
       { error: "Missing x-api-key header" },
@@ -23,7 +22,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const rawProcessedId = req.headers.get("x-processed-id");
   let processedId: number | null = null;
   if (rawProcessedId) {
-    const parsed = parseInt(rawProcessedId.trim(), 10);
+    const parsed = parseInt(rawProcessedId, 10);
     if (Number.isSafeInteger(parsed) && parsed > 0) {
       processedId = parsed;
     }
@@ -55,7 +54,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json(
     {
       data: result.data || [],
-      count: result.count ?? (result.data ? result.data.length : 0),
+      count: result.count,
       acknowledged_processed_id: processedId ?? null,
     },
     { status: StatusCodes.OK },
