@@ -638,10 +638,10 @@ END;
 $$;
 
 DROP FUNCTION IF EXISTS public.get_factory_weighment_data(TEXT, INT);
+DROP FUNCTION IF EXISTS public.get_factory_weighment_data(TEXT);
 
 CREATE OR REPLACE FUNCTION get_factory_weighment_data(
-    p_api_key TEXT,
-    p_processed_id INT DEFAULT NULL
+    p_api_key TEXT
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -660,14 +660,7 @@ BEGIN
         RETURN jsonb_build_object('unauthorized', true);
     END IF;
 
-    -- 2. Stateful processed ID acknowledgment
-    IF p_processed_id IS NOT NULL AND p_processed_id > 0 THEN
-        INSERT INTO factory_processed_weighments (factory_id, weighment_id)
-        VALUES (v_factory_id, p_processed_id)
-        ON CONFLICT (factory_id, weighment_id) DO NOTHING;
-    END IF;
-
-    -- 3. Query unprocessed weighments with anti-join
+    -- 2. Query unprocessed weighments with anti-join
     SELECT jsonb_build_object(
         'data', COALESCE(jsonb_agg(item), '[]'::jsonb),
         'count', COUNT(item)
@@ -712,6 +705,51 @@ BEGIN
     ) sub;
 
     RETURN v_result;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS public.acknowledge_factory_weighment(TEXT, INT);
+
+CREATE OR REPLACE FUNCTION acknowledge_factory_weighment(
+    p_api_key TEXT,
+    p_weighment_id INT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_factory_id INT;
+    v_exists BOOLEAN;
+BEGIN
+    -- 1. Look up active factory by API key
+    SELECT id INTO v_factory_id
+    FROM factories
+    WHERE api_key = p_api_key AND deleted_at IS NULL;
+
+    IF v_factory_id IS NULL THEN
+        RETURN jsonb_build_object('unauthorized', true);
+    END IF;
+
+    -- 2. Validate that the weighment exists and belongs to this factory
+    SELECT EXISTS (
+        SELECT 1
+        FROM weighments w
+        JOIN entries in_e ON in_e.id = w.in_entry_id AND in_e.deleted_at IS NULL
+        JOIN centers in_c ON in_c.id = in_e.center_id AND in_c.deleted_at IS NULL AND in_c.factory_id = v_factory_id
+        WHERE w.id = p_weighment_id AND w.deleted_at IS NULL
+    ) INTO v_exists;
+
+    IF NOT v_exists THEN
+        RETURN jsonb_build_object('not_found', true);
+    END IF;
+
+    -- 3. Idempotently insert into factory_processed_weighments
+    INSERT INTO factory_processed_weighments (factory_id, weighment_id)
+    VALUES (v_factory_id, p_weighment_id)
+    ON CONFLICT (factory_id, weighment_id) DO NOTHING;
+
+    RETURN jsonb_build_object('success', true, 'acknowledged_id', p_weighment_id);
 END;
 $$;
 

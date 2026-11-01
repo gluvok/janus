@@ -1,38 +1,28 @@
 # Data API cURL Guide (`/api/data`)
 
-Endpoint for third-party systems and factories to retrieve flattened weighment records.
+Endpoint for third-party systems and factories to retrieve flattened weighment records and acknowledge processed IDs.
 
 ---
 
 ## Headers
 
-| Header           | Required | Description                                                                           |
-| :--------------- | :------- | :------------------------------------------------------------------------------------ |
-| `x-api-key`      | **Yes**  | Factory API key                                                                       |
-| `x-processed-id` | No       | ID of the last processed weighment (records ID and excludes all processed weighments) |
+| Header         | Required | Description        |
+| :------------- | :------- | :----------------- |
+| `x-api-key`    | **Yes**  | Factory API key    |
+| `Content-Type` | For POST | `application/json` |
 
 ---
 
 ## cURL Commands
 
-### 1. Fetch Unprocessed Weighments
+### 1. Fetch Unprocessed Weighments (GET)
 
 ```bash
 curl -X GET "http://localhost:3000/api/data" \
   -H "x-api-key: YOUR_FACTORY_API_KEY"
 ```
 
-### 2. Acknowledge Processed ID (e.g. ID #10)
-
-```bash
-curl -X GET "http://localhost:3000/api/data" \
-  -H "x-api-key: YOUR_FACTORY_API_KEY" \
-  -H "x-processed-id: 10"
-```
-
----
-
-## Response (`200 OK`)
+#### GET Response (`200 OK`)
 
 ```json
 {
@@ -54,8 +44,30 @@ curl -X GET "http://localhost:3000/api/data" \
       "out_center_name": "Weighbridge North"
     }
   ],
-  "count": 1,
-  "acknowledged_processed_id": 10
+  "count": 1
+}
+```
+
+---
+
+### 2. Acknowledge Processed Weighment (POST)
+
+```bash
+curl -X POST "http://localhost:3000/api/data" \
+  -H "x-api-key: YOUR_FACTORY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"weighment_id": 101}'
+```
+
+_(Note: `{ "id": 101 }` is also accepted as an alias)_
+
+#### POST Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "acknowledged_id": 101,
+  "message": "Weighment acknowledged successfully"
 }
 ```
 
@@ -63,8 +75,10 @@ curl -X GET "http://localhost:3000/api/data" \
 
 ## Status Codes
 
-| Code  | Meaning               | Reason                         |
-| :---- | :-------------------- | :----------------------------- |
-| `200` | OK                    | Successful request             |
-| `401` | Unauthorized          | Missing or invalid `x-api-key` |
-| `500` | Internal Server Error | Database failure               |
+| Code  | Meaning               | Reason                                                 |
+| :---- | :-------------------- | :----------------------------------------------------- |
+| `200` | OK                    | Successful retrieval or acknowledgment                 |
+| `400` | Bad Request           | Missing or invalid JSON body / weighment ID            |
+| `401` | Unauthorized          | Missing or invalid `x-api-key`                         |
+| `404` | Not Found             | Weighment does not exist or belongs to another factory |
+| `500` | Internal Server Error | Database failure                                       |

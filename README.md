@@ -30,7 +30,7 @@ For a new database instance, run the following SQL scripts in your Supabase SQL 
 
 1. `schema.sql` — provisions tables, enums, triggers, and RLS policies.
 2. `storage.sql` — provisions the `gluvok` storage bucket and file access policies.
-3. `data_api.sql` — provisions `api_key` on `factories`, the `factory_processed_weighments` table, and the atomic `get_factory_weighment_data` stored procedure for the Factory Data API.
+3. `data_api.sql` — provisions `api_key` on `factories`, the `factory_processed_weighments` table, and the `get_factory_weighment_data` / `acknowledge_factory_weighment` stored procedures for the Factory Data API.
 
 ### Start Development Server
 
@@ -185,37 +185,22 @@ All authenticated users can access the `/account` portal from the sidebar user m
 
 ## 8. Factory Data API (`/api/data`)
 
-The `/api/data` endpoint provides an external integration route for third-party systems and factories to fetch weighments with linked entries and flattened metrics.
+The `/api/data` endpoint provides an external integration route for third-party systems and factories to fetch unprocessed weighments and acknowledge processed records.
 
-### Authentication & Headers
+### Authentication
 
-| Header           | Type                | Description                                                                                                                                                 |
-| :--------------- | :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `x-api-key`      | `string` (Required) | Factory API key used to resolve tenant scope.                                                                                                               |
-| `x-processed-id` | `number` (Optional) | ID of the last processed weighment. The server records this ID in `factory_processed_weighments` and excludes all recorded processed IDs from the response. |
+All requests require `x-api-key` header — the factory's API key used to resolve tenant scope. Missing or invalid keys return `401 Unauthorized`.
 
-### Stateful Processing Workflow
+### GET /api/data — Fetch Unprocessed Weighments
 
-1. **Initial Call**: Client requests `/api/data` with only `x-api-key`. Because no IDs have been marked processed yet, the server returns the entire active weighment list.
-2. **Subsequent Calls**: When the client has processed a weighment (e.g. ID #10), it sends `x-processed-id: 10`. The server records ID 10 and returns all weighments except ID 10.
-3. **Cumulative Exclusion**: When the client processes ID #8 and sends `x-processed-id: 8`, the server records ID 8 and returns all weighments except both ID 10 and ID 8.
-4. **Fetching Remaining**: If the client calls without `x-processed-id`, the server continues to exclude all previously recorded processed IDs, returning only the remaining un-processed weighments.
+Returns all weighments that have not yet been acknowledged for this factory.
 
 ```bash
-# Initial fetch
-curl -H "x-api-key: your-factory-api-key" https://your-domain.com/api/data
-
-# Acknowledging processed weighment ID 10
-curl -H "x-api-key: your-factory-api-key" \
-     -H "x-processed-id: 10" \
-     https://your-domain.com/api/data
+curl -X GET "https://your-domain.com/api/data" \
+  -H "x-api-key: your-factory-api-key"
 ```
 
-If the `x-api-key` header is missing or does not match an active factory record in the database, the endpoint returns `401 Unauthorized`.
-
-### Response Format
-
-Returns HTTP 200 with record count and an array of thin flattened weighment records (see [docs/data_curl.md](docs/data_curl.md) for full cURL guide):
+**Response (`200 OK`):**
 
 ```json
 {
@@ -237,10 +222,36 @@ Returns HTTP 200 with record count and an array of thin flattened weighment reco
       "out_center_name": "Weighbridge North"
     }
   ],
-  "count": 1,
-  "acknowledged_processed_id": 10
+  "count": 1
 }
 ```
+
+### POST /api/data — Acknowledge a Processed Weighment
+
+Marks a weighment as processed for this factory. Idempotent — re-acknowledging an already-acknowledged ID returns `200 OK`.
+
+```bash
+curl -X POST "https://your-domain.com/api/data" \
+  -H "x-api-key: your-factory-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"weighment_id": 101}'
+```
+
+_(Note: `{ "id": 101 }` is also accepted as an alias)_
+
+**Response (`200 OK`):**
+
+```json
+{
+  "success": true,
+  "acknowledged_id": 101,
+  "message": "Weighment acknowledged successfully"
+}
+```
+
+Returns `404 Not Found` if the weighment does not exist or does not belong to this factory.
+
+See [docs/data_curl.md](docs/data_curl.md) for the full cURL reference and status code table.
 
 ---
 
