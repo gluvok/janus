@@ -29,7 +29,7 @@ curl -X GET "http://localhost:3000/api/data" \
   "data": [
     {
       "id": 101,
-      "vehicle_number": "KA-01-AB-1234",
+      "vehicle_number": "KA01AB1234",
       "gross_weight": 15000,
       "tare_weight": 5000,
       "net_weight": 10000,

@@ -9,9 +9,14 @@ import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/db";
 import { type DataApiWeighmentItem } from "@/types";
 
+function getApiKey(req: NextRequest): string | null {
+  const key = req.headers.get("x-api-key");
+  return key && key.trim() ? key.trim() : null;
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const apiKey = req.headers.get("x-api-key");
-  if (!apiKey || !apiKey.trim()) {
+  const apiKey = getApiKey(req);
+  if (!apiKey) {
     return NextResponse.json(
       { error: "Missing x-api-key header" },
       { status: StatusCodes.UNAUTHORIZED },
@@ -20,7 +25,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // Execute atomic PostgreSQL RPC function for authentication and retrieval of unprocessed weighments
   const { data: rpcResult, error: rpcError } = await supabase.rpc("get_factory_weighment_data", {
-    p_api_key: apiKey.trim(),
+    p_api_key: apiKey,
   });
 
   if (rpcError) {
@@ -50,8 +55,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const apiKey = req.headers.get("x-api-key");
-  if (!apiKey || !apiKey.trim()) {
+  const apiKey = getApiKey(req);
+  if (!apiKey) {
     return NextResponse.json(
       { error: "Missing x-api-key header" },
       { status: StatusCodes.UNAUTHORIZED },
@@ -87,7 +92,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const { data: rpcResult, error: rpcError } = await supabase.rpc("acknowledge_factory_weighment", {
-    p_api_key: apiKey.trim(),
+    p_api_key: apiKey,
     p_weighment_id: weighmentId,
   });
 
