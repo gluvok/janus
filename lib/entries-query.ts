@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import { and, or, like, eq, inArray, gte, lte, count, desc, asc, type SQL } from "drizzle-orm";
+import { and, or, like, eq, inArray, gte, lte, count, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import {
   parsePagination,
