@@ -1,128 +1,60 @@
 /**
  * @file scripts/seed-entry-photos.ts
- * @description Uploads sample transport photos to the 'test' Supabase storage bucket
- * and links their public URLs to entries in the database.
+ * @description Links sample transport photos to automatic entries in the database using Drizzle ORM.
  */
 
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required in .env.local");
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { eq, asc } from "drizzle-orm";
+import { db, schema } from "../db/client.ts";
 
 // Realistic transport and weighbridge sample photos
 const SAMPLE_PHOTOS = [
-  {
-    name: "entry_truck_front.jpg",
-    url: "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=1200&q=80",
-    label: "Front Vehicle View (MH12AB1001)",
-  },
-  {
-    name: "entry_weighbridge_scale.jpg",
-    url: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80",
-    label: "Gross Scale Platform & Axle Reading",
-  },
-  {
-    name: "entry_cargo_inspection.jpg",
-    url: "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1200&q=80",
-    label: "Rear Cargo Inspection (Bagged Grain)",
-  },
-  {
-    name: "entry_delivery_manifest.jpg",
-    url: "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=1200&q=80",
-    label: "Signed Weighbridge Delivery Slip",
-  },
+  "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=1200&q=80",
 ];
 
 async function seedPhotos() {
-  console.log("🚚 Starting Entry Photos Seeding...");
-  console.log(`📡 Supabase Endpoint: ${supabaseUrl}`);
+  console.log("🚚 Starting Entry Photos Seeding (Turso / Drizzle)...");
 
-  // 1. Fetch images as buffers
-  const uploadedUrls: string[] = [];
-
-  for (const photo of SAMPLE_PHOTOS) {
-    try {
-      console.log(`⬇️ Downloading sample asset: ${photo.name}...`);
-      const res = await fetch(photo.url);
-      if (!res.ok) {
-        console.warn(`Failed to fetch ${photo.url}, status: ${res.status}`);
-        uploadedUrls.push(photo.url);
-        continue;
-      }
-      const arrayBuffer = await res.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      console.log(`⬆️ Uploading to Supabase Storage bucket 'test': ${photo.name}...`);
-      const uploadRes = await supabase.storage.from("test").upload(photo.name, buffer, {
-        contentType: "image/jpeg",
-        upsert: true,
-      });
-
-      if (uploadRes.error) {
-        console.warn(`⚠️ Storage upload for ${photo.name} failed (${uploadRes.error.message}).`);
-        console.warn(`ℹ️ Using direct fallback CDN URL: ${photo.url}`);
-        uploadedUrls.push(photo.url);
-      } else {
-        const { data: publicUrlData } = supabase.storage.from("test").getPublicUrl(photo.name);
-        console.log(`✅ Uploaded to bucket 'test': ${publicUrlData.publicUrl}`);
-        uploadedUrls.push(publicUrlData.publicUrl);
-      }
-    } catch (err) {
-      console.warn(`Error processing photo ${photo.name}:`, err);
-      uploadedUrls.push(photo.url);
-    }
-  }
-
-  // 2. Link photos to recent entries
-  console.log("📝 Querying recent entries to update with photos...");
-  const { data: entries, error: entriesError } = await supabase
-    .from("entries")
-    .select("id, vehicle_number")
-    .order("id", { ascending: true })
+  // 1. Query recent automatic entries
+  const entries = await db
+    .select({
+      id: schema.automatic_entries.id,
+      vehicle_number: schema.automatic_entries.vehicle_number,
+    })
+    .from(schema.automatic_entries)
+    .orderBy(asc(schema.automatic_entries.id))
     .limit(10);
 
-  if (entriesError || !entries || entries.length === 0) {
-    console.error("❌ Could not fetch entries to link photos:", entriesError);
+  if (entries.length === 0) {
+    console.error("❌ No automatic entries found to link photos.");
     return;
   }
 
-  // Assign photo groups:
-  // Entry 1: 3 photos (Front, Scale, Cargo)
-  // Entry 2: 2 photos (Front, Scale)
-  // Entry 3: 4 photos (All 4)
-  // Entry 4: 1 photo (Front)
   const assignments = [
     {
       id: entries[0]?.id,
-      images: [uploadedUrls[0], uploadedUrls[1], uploadedUrls[2]].filter(Boolean),
+      images: [SAMPLE_PHOTOS[0], SAMPLE_PHOTOS[1], SAMPLE_PHOTOS[2]],
     },
-    { id: entries[1]?.id, images: [uploadedUrls[0], uploadedUrls[1]].filter(Boolean) },
-    { id: entries[2]?.id, images: uploadedUrls.filter(Boolean) },
-    { id: entries[3]?.id, images: [uploadedUrls[0]].filter(Boolean) },
+    { id: entries[1]?.id, images: [SAMPLE_PHOTOS[0], SAMPLE_PHOTOS[1]] },
+    { id: entries[2]?.id, images: SAMPLE_PHOTOS },
+    { id: entries[3]?.id, images: [SAMPLE_PHOTOS[0]] },
   ];
 
   for (const item of assignments) {
     if (!item.id || item.images.length === 0) continue;
-    const { error: updateError } = await supabase
-      .from("entries")
-      .update({ images: item.images })
-      .eq("id", item.id);
-
-    if (updateError) {
-      console.error(`❌ Failed to update Entry #${item.id}:`, updateError.message);
-    } else {
-      console.log(`📸 Updated Entry #${item.id} with ${item.images.length} photo(s).`);
-    }
+    await db
+      .update(schema.automatic_entries)
+      .set({ images: item.images, updated_at: new Date().toISOString() })
+      .where(eq(schema.automatic_entries.id, item.id));
+    console.log(`📸 Updated Entry #${item.id} with ${item.images.length} photo(s).`);
   }
 
   console.log("🎉 Entry photos successfully seeded!");
 }
 
-seedPhotos();
+seedPhotos().catch((err) => {
+  console.error("❌ Seeding entry photos failed:", err);
+  process.exit(1);
+});

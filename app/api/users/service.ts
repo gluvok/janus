@@ -1,7 +1,8 @@
 import { z } from "zod";
 import argon2 from "argon2";
 import { StatusCodes } from "http-status-codes";
-import { supabase } from "@/lib/supabase";
+import { and, eq, ne, inArray } from "drizzle-orm";
+import { db, schema } from "@/db/client";
 import { buildPaginatedEntityResult } from "@/lib/api-query";
 import {
   userRoleEnum,
@@ -42,19 +43,19 @@ export const USER_SELECT_PROJECTION =
   "id, username, name, role, factory_id, created_at, updated_at" as const;
 
 async function assertUsernameAvailable(username: string, excludeId?: number): Promise<void> {
-  let query = supabase.from("users").select("id").eq("username", username);
-
+  const conditions = [eq(schema.users.username, username)];
   if (excludeId !== undefined) {
-    query = query.neq("id", excludeId);
+    conditions.push(ne(schema.users.id, excludeId));
   }
 
-  const { data, error } = await query.maybeSingle();
+  const existing = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(and(...conditions))
+    .limit(1)
+    .then((rows) => rows[0]);
 
-  if (error) {
-    throw new ServiceError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
-
-  if (data) {
+  if (existing) {
     throw new ServiceError(`Username "${username}" is already taken.`, StatusCodes.CONFLICT);
   }
 }
@@ -82,15 +83,14 @@ export async function fetchUsersList(searchParams: URLSearchParams) {
       allowedSortColumns: ALLOWED_SORT_COLUMNS,
       defaultSort: { col: "id", ascending: false },
       searchColumns: ["name", "username"],
-      applyCustomFilters: (query, sp) => {
+      applyCustomFilters: (whereConditions, sp) => {
         const rawRole = sp.get("role")?.trim();
         if (rawRole && rawRole !== "all") {
           const parsed = rolesFilterSchema.safeParse(rawRole);
           if (parsed.success && parsed.data.length > 0) {
-            return query.in("role", parsed.data);
+            whereConditions.push(inArray(schema.users.role, parsed.data));
           }
         }
-        return query;
       },
     });
   } catch (err: unknown) {
@@ -110,21 +110,24 @@ export async function createUserAccount(data: CreateUserInput) {
 
   const passwordHash = await argon2.hash(password.trim());
 
-  const { data: created, error: insertError } = await supabase
-    .from("users")
-    .insert({
+  const [created] = await db
+    .insert(schema.users)
+    .values({
       username: cleanUsername,
       name: name.trim(),
       role,
       password_hash: passwordHash,
       factory_id: 1,
     })
-    .select(USER_SELECT_PROJECTION)
-    .single();
-
-  if (insertError) {
-    throw new ServiceError(insertError.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
+    .returning({
+      id: schema.users.id,
+      username: schema.users.username,
+      name: schema.users.name,
+      role: schema.users.role,
+      factory_id: schema.users.factory_id,
+      created_at: schema.users.created_at,
+      updated_at: schema.users.updated_at,
+    });
 
   return created;
 }
@@ -135,15 +138,16 @@ export async function createUserAccount(data: CreateUserInput) {
 export async function updateUserAccount(data: UpdateUserInput) {
   const { id, username, name, role, password } = data;
 
-  const { data: existingUser, error: fetchErr } = await supabase
-    .from("users")
-    .select("id, username, role")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (fetchErr) {
-    throw new ServiceError(fetchErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
+  const existingUser = await db
+    .select({
+      id: schema.users.id,
+      username: schema.users.username,
+      role: schema.users.role,
+    })
+    .from(schema.users)
+    .where(eq(schema.users.id, id))
+    .limit(1)
+    .then((rows) => rows[0]);
 
   if (!existingUser) {
     throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
@@ -166,16 +170,19 @@ export async function updateUserAccount(data: UpdateUserInput) {
     updates.password_hash = await argon2.hash(password.trim());
   }
 
-  const { data: updated, error: updateError } = await supabase
-    .from("users")
-    .update(updates)
-    .eq("id", id)
-    .select(USER_SELECT_PROJECTION)
-    .single();
-
-  if (updateError) {
-    throw new ServiceError(updateError.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
+  const [updated] = await db
+    .update(schema.users)
+    .set(updates)
+    .where(eq(schema.users.id, id))
+    .returning({
+      id: schema.users.id,
+      username: schema.users.username,
+      name: schema.users.name,
+      role: schema.users.role,
+      factory_id: schema.users.factory_id,
+      created_at: schema.users.created_at,
+      updated_at: schema.users.updated_at,
+    });
 
   return updated;
 }
@@ -184,29 +191,35 @@ export async function updateUserAccount(data: UpdateUserInput) {
  * Hard-deletes user accounts, with ON DELETE RESTRICT foreign key protection.
  */
 export async function deleteUserAccounts(targetIds: number[]) {
-  const { data: targetUsers, error: fetchErr } = await supabase
-    .from("users")
-    .select("id, username")
-    .in("id", targetIds);
-
-  if (fetchErr) {
-    throw new ServiceError(fetchErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
+  const targetUsers = await db
+    .select({ id: schema.users.id, username: schema.users.username })
+    .from(schema.users)
+    .where(inArray(schema.users.id, targetIds));
 
   if (!targetUsers || targetUsers.length === 0) {
     throw new ServiceError("No users found matching the specified ID(s).", StatusCodes.NOT_FOUND);
   }
 
-  const { error: deleteErr } = await supabase.from("users").delete().in("id", targetIds);
+  try {
+    await db.delete(schema.users).where(inArray(schema.users.id, targetIds));
+  } catch (dbErr) {
+    const isForeignKeyViolation =
+      dbErr instanceof Error &&
+      (dbErr.message.includes("FOREIGN KEY") ||
+        dbErr.message.includes("constraint failed") ||
+        (dbErr as { code?: string }).code === "23503" ||
+        (dbErr as { code?: string }).code === "SQLITE_CONSTRAINT");
 
-  if (deleteErr) {
-    if (deleteErr.code === "23503") {
+    if (isForeignKeyViolation) {
       throw new ServiceError(
         "Cannot delete user account(s) because linked operational records (entries or tickets) exist.",
         StatusCodes.CONFLICT,
       );
     }
-    throw new ServiceError(deleteErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    throw new ServiceError(
+      dbErr instanceof Error ? dbErr.message : "Failed to delete users",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+    );
   }
 
   return { deletedCount: targetIds.length };

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { supabase } from "@/lib/supabase";
+import { and, eq, ne } from "drizzle-orm";
+import { db, schema } from "@/db/client";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
 import { updateCenterSchema } from "@/app/centers/types";
 
@@ -31,12 +32,12 @@ export async function PATCH(request: Request) {
     const { id, name } = validation.data;
 
     // Check for duplicate name among centers
-    const { data: existing } = await supabase
-      .from("centers")
-      .select("id")
-      .eq("name", name)
-      .neq("id", id)
-      .maybeSingle();
+    const existing = await db
+      .select({ id: schema.centers.id })
+      .from(schema.centers)
+      .where(and(eq(schema.centers.name, name), ne(schema.centers.id, id)))
+      .limit(1)
+      .then((rows) => rows[0]);
 
     if (existing) {
       return NextResponse.json(
@@ -45,22 +46,26 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { data, error } = await supabase
-      .from("centers")
-      .update({ name, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select("id, name, created_at, updated_at")
-      .single();
+    const [updated] = await db
+      .update(schema.centers)
+      .set({ name, updated_at: new Date().toISOString() })
+      .where(eq(schema.centers.id, id))
+      .returning({
+        id: schema.centers.id,
+        name: schema.centers.name,
+        created_at: schema.centers.created_at,
+        updated_at: schema.centers.updated_at,
+      });
 
-    if (error || !data) {
+    if (!updated) {
       return NextResponse.json(
-        { error: error?.message ?? "Failed to update center" },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
+        { error: "Center not found or failed to update center" },
+        { status: StatusCodes.NOT_FOUND },
       );
     }
 
     return NextResponse.json({
-      center: data,
+      center: updated,
       message: `Center "${name}" updated successfully.`,
     });
   } catch (err) {

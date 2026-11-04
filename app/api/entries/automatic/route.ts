@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { supabase } from "@/lib/supabase";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db/client";
 import { executeEntriesGetQuery, executeEntriesDelete } from "@/lib/entries-query";
 import { updateAutomaticEntrySchema } from "@/lib/validation";
 
@@ -27,13 +28,19 @@ export async function PATCH(request: Request) {
     const { id, vehicle_number, customer_id } = validation.data;
 
     // Fetch existing automatic entry
-    const { data: existing, error: fetchError } = await supabase
-      .from("automatic_entries")
-      .select("id, vehicle_number, detected_vehicle_number, customer_id")
-      .eq("id", id)
-      .maybeSingle();
+    const existing = await db
+      .select({
+        id: schema.automatic_entries.id,
+        vehicle_number: schema.automatic_entries.vehicle_number,
+        detected_vehicle_number: schema.automatic_entries.detected_vehicle_number,
+        customer_id: schema.automatic_entries.customer_id,
+      })
+      .from(schema.automatic_entries)
+      .where(eq(schema.automatic_entries.id, id))
+      .limit(1)
+      .then((rows) => rows[0]);
 
-    if (fetchError || !existing) {
+    if (!existing) {
       return NextResponse.json(
         { error: "Automatic entry not found" },
         { status: StatusCodes.NOT_FOUND },
@@ -60,11 +67,12 @@ export async function PATCH(request: Request) {
       }
 
       // Verify target customer exists
-      const { data: customerRecord } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("id", customer_id)
-        .maybeSingle();
+      const customerRecord = await db
+        .select({ id: schema.customers.id })
+        .from(schema.customers)
+        .where(eq(schema.customers.id, customer_id))
+        .limit(1)
+        .then((rows) => rows[0]);
 
       if (!customerRecord) {
         return NextResponse.json(
@@ -84,23 +92,28 @@ export async function PATCH(request: Request) {
       updates.customer_id = customer_id;
     }
 
-    const { data, error: updateError } = await supabase
-      .from("automatic_entries")
-      .update(updates)
-      .eq("id", id)
-      .select("id, vehicle_number, detected_vehicle_number, customer_id, updated_at")
-      .single();
+    const [updated] = await db
+      .update(schema.automatic_entries)
+      .set(updates)
+      .where(eq(schema.automatic_entries.id, id))
+      .returning({
+        id: schema.automatic_entries.id,
+        vehicle_number: schema.automatic_entries.vehicle_number,
+        detected_vehicle_number: schema.automatic_entries.detected_vehicle_number,
+        customer_id: schema.automatic_entries.customer_id,
+        updated_at: schema.automatic_entries.updated_at,
+      });
 
-    if (updateError || !data) {
+    if (!updated) {
       return NextResponse.json(
-        { error: updateError?.message ?? "Failed to update entry" },
+        { error: "Failed to update entry" },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
     }
 
     return NextResponse.json(
       {
-        entry: data,
+        entry: updated,
         message: "Entry updated successfully.",
       },
       { status: StatusCodes.OK },

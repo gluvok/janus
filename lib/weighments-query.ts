@@ -1,17 +1,18 @@
 /**
  * @file lib/weighments-query.ts
  * @description Shared backend query utilities for weighments endpoints (/api/weighments/automatic and /api/weighments/manual).
- * Handles Supabase dual-entry joins, computed weight fields, directional relational sorting, and directional filtering.
+ * Handles Drizzle dual-entry relational joins, computed weight fields, directional relational sorting, and directional filtering.
  */
 
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { supabase } from "@/lib/supabase";
+import { and, gte, lte, type SQL } from "drizzle-orm";
 import { z } from "zod";
+import { db, schema } from "@/db/client";
 import {
   parsePagination,
   parseSorting,
-  applyDateRange,
+  dateQuerySchema,
   formatPaginatedResponse,
   type SortRule,
   type PaginationParams,
@@ -54,64 +55,6 @@ export interface ComputedWeighment {
   in_entry: WeighmentEntryRow;
   out_entry: WeighmentEntryRow;
 }
-
-const AUTOMATIC_WEIGHMENTS_PROJECTION = `
-  id,
-  type,
-  created_at,
-  updated_at,
-  in_entry:automatic_entries!in_entry_id (
-    id,
-    vehicle_number,
-    weight,
-    images,
-    center_id,
-    customer_id,
-    created_at,
-    center:centers(id, name),
-    customer:customers(id, name)
-  ),
-  out_entry:automatic_entries!out_entry_id (
-    id,
-    vehicle_number,
-    weight,
-    images,
-    center_id,
-    customer_id,
-    created_at,
-    center:centers(id, name),
-    customer:customers(id, name)
-  )
-`;
-
-const MANUAL_WEIGHMENTS_PROJECTION = `
-  id,
-  type,
-  created_at,
-  updated_at,
-  in_entry:manual_entries!in_entry_id (
-    id,
-    vehicle_number,
-    weight,
-    images,
-    center_id,
-    customer_id,
-    created_at,
-    center:centers(id, name),
-    customer:customers(id, name)
-  ),
-  out_entry:manual_entries!out_entry_id (
-    id,
-    vehicle_number,
-    weight,
-    images,
-    center_id,
-    customer_id,
-    created_at,
-    center:centers(id, name),
-    customer:customers(id, name)
-  )
-`;
 
 export const ALLOWED_WEIGHMENT_SORT_COLUMNS = [
   "id",
@@ -322,33 +265,59 @@ export async function executeWeighmentsGetQuery(
       ALLOWED_WEIGHMENT_SORT_COLUMNS,
     );
 
-    // 2. Select projection & table name
-    const tableName = mode === "automatic" ? "automatic_weighments" : "manual_weighments";
-    const projection =
-      mode === "automatic" ? AUTOMATIC_WEIGHMENTS_PROJECTION : MANUAL_WEIGHMENTS_PROJECTION;
+    // 2. Assemble date range filters
+    const whereConditions: SQL[] = [];
+    const tableObj = mode === "automatic" ? schema.automatic_weighments : schema.manual_weighments;
 
-    // 3. Assemble Supabase base query with date filtering
-    let query = supabase.from(tableName).select(projection);
-
-    query = applyDateRange(query, searchParams);
-
-    const { data: rawData, error } = await query;
-
-    if (error) {
-      console.error(`[API /api/weighments/${mode}] Supabase fetch error:`, error);
-      return NextResponse.json(
-        {
-          error: "Failed to fetch weighments",
-          code: error.code,
-          details: error.message,
-        },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
-      );
+    const rawFrom = searchParams.get("from");
+    if (rawFrom) {
+      const parsed = dateQuerySchema.safeParse(rawFrom);
+      if (parsed.success) {
+        whereConditions.push(gte(tableObj.created_at, parsed.data.toISOString()));
+      }
     }
 
+    const rawTo = searchParams.get("to");
+    if (rawTo) {
+      const parsed = dateQuerySchema.safeParse(rawTo);
+      if (parsed.success) {
+        const toDate = new Date(parsed.data);
+        toDate.setHours(23, 59, 59, 999);
+        whereConditions.push(lte(tableObj.created_at, toDate.toISOString()));
+      }
+    }
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+    const withRelations = {
+      in_entry: {
+        with: {
+          center: { columns: { id: true, name: true } },
+          customer: { columns: { id: true, name: true } },
+        },
+      },
+      out_entry: {
+        with: {
+          center: { columns: { id: true, name: true } },
+          customer: { columns: { id: true, name: true } },
+        },
+      },
+    } as const;
+
+    // 3. Fetch from Drizzle
+    const rawRows =
+      mode === "automatic"
+        ? await db.query.automatic_weighments.findMany({
+            where: whereClause ? { RAW: whereClause } : undefined,
+            with: withRelations,
+          })
+        : await db.query.manual_weighments.findMany({
+            where: whereClause ? { RAW: whereClause } : undefined,
+            with: withRelations,
+          });
+
     // 4. Compute derived weights for each row
-    const rawRows = (rawData ?? []) as unknown as RawWeighmentRow[];
-    const computedRows = rawRows.map(computeWeighmentFields);
+    const computedRows = (rawRows as unknown as RawWeighmentRow[]).map(computeWeighmentFields);
 
     // 5. In-memory filter by search, type, and directional center / customer
     const filteredRows = filterComputedWeighments(computedRows, searchParams);

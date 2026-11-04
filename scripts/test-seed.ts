@@ -1,31 +1,18 @@
 /**
  * @file scripts/test-seed.ts
- * @description High-volume database seed script for development, pagination, and testing.
+ * @description High-volume database seed script for development, pagination, and testing using Drizzle ORM and Turso.
  * Seeds rich test datasets across factories, users (staff roles), centers,
  * customers, entries (paired & standalone), weighments, and support tickets
  * matching schema.sql with staggered timestamps for authentic pagination & sorting.
  */
 
 import argon2 from "argon2";
-import { supabase } from "./supabase.ts";
+import { inArray } from "drizzle-orm";
+import { db, client, schema } from "../db/client.ts";
 
 type Role = "admin" | "manager" | "operator" | "base";
 type WeighmentType = "in" | "out";
-type TicketStatus = "pending" | "approved" | "rejected";
-
-const TABLES_IN_CLEAR_ORDER = [
-  "tickets",
-  "automatic_weighments",
-  "manual_weighments",
-  "automatic_entries",
-  "manual_entries",
-  "devices",
-  "sessions",
-  "customers",
-  "centers",
-  "users",
-  "factories",
-];
+type TicketStatus = "pending" | "resolved" | "rejected";
 
 /**
  * Returns an ISO timestamp offset by `days` days and `minutesOffset` minutes into the past.
@@ -43,30 +30,23 @@ function daysAgo(days: number, minutesOffset = 0): string {
 async function clearDatabase() {
   console.log("🧹 [Clean Mode] Clearing all existing records from database...");
 
-  for (const table of TABLES_IN_CLEAR_ORDER) {
-    const { error } = await supabase.from(table).delete().neq("id", 0);
-    if (error) {
-      if (error.code === "PGRST205") {
-        console.warn(`  ⚠️ Table '${table}' does not exist in schema.`);
-      } else {
-        console.warn(`  ⚠️ Could not clear table '${table}':`, error.message);
-      }
-    } else {
-      console.log(`  ✓ Cleared table: ${table}`);
-    }
-
-    try {
-      await supabase.rpc("reset_table_sequence", { table_name: table });
-    } catch {
-      // Ignore if rpc does not exist
-    }
-  }
+  await db.delete(schema.tickets);
+  await db.delete(schema.automatic_weighments);
+  await db.delete(schema.manual_weighments);
+  await db.delete(schema.automatic_entries);
+  await db.delete(schema.manual_entries);
+  await db.delete(schema.devices);
+  await db.delete(schema.sessions);
+  await db.delete(schema.customers);
+  await db.delete(schema.centers);
+  await db.delete(schema.users);
+  await db.delete(schema.factories);
 
   try {
-    await supabase.rpc("reset_all_sequences");
+    await client.execute("DELETE FROM sqlite_sequence;");
     console.log("  ✓ Reset all auto-increment sequences.");
   } catch {
-    // Ignore if rpc is not present
+    // Ignore if sqlite_sequence is empty or not yet created
   }
 }
 
@@ -76,8 +56,8 @@ async function main() {
     args.includes("--clean") || args.includes("--reset") || process.env.RESET === "true";
 
   console.log("=================================================");
-  console.log("🚀 Starting Mesto High-Volume Test Database Seeding");
-  console.log(`📡 Supabase Endpoint: ${process.env.SUPABASE_URL}`);
+  console.log("🚀 Starting Mesto High-Volume Test Database Seeding (Turso / Drizzle)");
+  console.log(`📡 Database URL: ${process.env.TURSO_DATABASE_URL || "default"}`);
   console.log(`🧹 Clean Mode: ${shouldClean ? "ENABLED" : "DISABLED"}`);
   console.log("=================================================");
 
@@ -91,25 +71,23 @@ async function main() {
   const factoryMap = new Map<string, number>();
 
   const factoryNames = factoryConfigs.map((f) => f.name);
-  const { data: existingFactories, error: factoryFetchErr } = await supabase
-    .from("factories")
-    .select("id, name")
-    .in("name", factoryNames);
+  const existingFactories = await db
+    .select({ id: schema.factories.id, name: schema.factories.name })
+    .from(schema.factories)
+    .where(inArray(schema.factories.name, factoryNames));
 
-  if (factoryFetchErr) throw factoryFetchErr;
-  for (const f of existingFactories || []) {
+  for (const f of existingFactories) {
     factoryMap.set(f.name, f.id);
     console.log(`  ✓ Found existing factory: '${f.name}' (id: ${f.id})`);
   }
 
   const missingFactories = factoryConfigs.filter((f) => !factoryMap.has(f.name));
   if (missingFactories.length > 0) {
-    const { data: createdFactories, error: factoryCreateErr } = await supabase
-      .from("factories")
-      .insert(missingFactories)
-      .select("id, name");
+    const createdFactories = await db
+      .insert(schema.factories)
+      .values(missingFactories)
+      .returning({ id: schema.factories.id, name: schema.factories.name });
 
-    if (factoryCreateErr || !createdFactories) throw factoryCreateErr;
     for (const f of createdFactories) {
       factoryMap.set(f.name, f.id);
       console.log(`  + Created factory: '${f.name}' (id: ${f.id})`);
@@ -215,21 +193,20 @@ async function main() {
   const userMap = new Map<string, number>();
   const usernames = userConfigs.map((u) => u.username);
 
-  const { data: existingUsers, error: usersFetchErr } = await supabase
-    .from("users")
-    .select("id, username")
-    .in("username", usernames);
+  const existingUsers = await db
+    .select({ id: schema.users.id, username: schema.users.username })
+    .from(schema.users)
+    .where(inArray(schema.users.username, usernames));
 
-  if (usersFetchErr) throw usersFetchErr;
-  for (const u of existingUsers || []) {
+  for (const u of existingUsers) {
     if (u.username) userMap.set(u.username, u.id);
   }
 
   const missingUsers = userConfigs.filter((u) => !userMap.has(u.username));
   if (missingUsers.length > 0) {
-    const { data: createdUsers, error: usersCreateErr } = await supabase
-      .from("users")
-      .insert(
+    const createdUsers = await db
+      .insert(schema.users)
+      .values(
         missingUsers.map((u) => ({
           username: u.username,
           name: u.name,
@@ -238,9 +215,8 @@ async function main() {
           factory_id: u.factoryId,
         })),
       )
-      .select("id, username");
+      .returning({ id: schema.users.id, username: schema.users.username });
 
-    if (usersCreateErr || !createdUsers) throw usersCreateErr;
     for (const u of createdUsers) {
       if (u.username) userMap.set(u.username, u.id);
     }
@@ -248,70 +224,70 @@ async function main() {
   console.log(`  ✓ Seeded ${userMap.size} users across staff roles.`);
 
   // 3. CENTERS (50 Centers: 35 for Factory 1, 15 for Factory 2)
-  console.log("\n🏢 [3/7] Seeding 50 Centers (enabling rich multi-page pagination)...");
+  console.log("\n⚖️ [3/7] Seeding 50 Centers (35 Factory 1, 15 Factory 2)...");
   const factory1CenterNames = [
     "Main Weighbridge",
-    "North Automatic Scale",
-    "South Gate Weighbridge",
-    "East Inbound Scale",
-    "West Outbound Scale",
-    "Grain Silo Platform 1",
-    "Grain Silo Platform 2",
-    "Fertilizer Bulk Terminal",
-    "Rail Inflow Weighbridge",
-    "Central Logistics Platform",
-    "North-East Weighbridge A",
-    "North-East Weighbridge B",
-    "South-West Rapid Scale",
-    "Automated Bypass Scale 1",
-    "Automated Bypass Scale 2",
-    "Processing Unit 1 Scale",
-    "Processing Unit 2 Scale",
-    "Bulk Hopper Weighbridge",
-    "Container Yard Scale A",
-    "Container Yard Scale B",
-    "Liquid Terminal Scale",
-    "Feed Mill Weighbridge",
-    "Storage Silo Scale 3",
-    "Storage Silo Scale 4",
-    "Express Exit Platform",
-    "Raw Material Inflow Scale",
-    "Finished Goods Scale",
-    "Secondary Gate Weighbridge",
-    "Dispatch Weighbridge 1",
-    "Dispatch Weighbridge 2",
-    "Heavy Freight Weighbridge",
-    "Quality Check Scale",
-    "Tare Verification Scale",
-    "Reserve Auxiliary Scale",
-    "Emergency Overflow Scale",
+    "North Gate Scale",
+    "South Silo Terminal",
+    "Grain Unloading Bay 1",
+    "Grain Unloading Bay 2",
+    "East Platform Scale",
+    "West Weighbridge",
+    "Central Hopper Scale",
+    "Raw Material Depot",
+    "Dispatch Bridge A",
+    "Dispatch Bridge B",
+    "Auxiliary Terminal 1",
+    "Auxiliary Terminal 2",
+    "Bio-Fuel Intake Scale",
+    "Fertilizer Unloading Dock",
+    "Bulk Storage Terminal",
+    "Export Inspection Bridge",
+    "Warehouse 3 Scale",
+    "Warehouse 7 Scale",
+    "Rail Siding Scale 1",
+    "Rail Siding Scale 2",
+    "Container Yard Bridge",
+    "Heavy Haul Scale East",
+    "Heavy Haul Scale West",
+    "Grain Elevator Scale",
+    "Cold Storage Weighbridge",
+    "Processing Plant Scale 1",
+    "Processing Plant Scale 2",
+    "Liquid Cargo Weighbridge",
+    "Seed Processing Terminal",
+    "By-Products Scale",
+    "Maintenance Yard Scale",
+    "Feed Mill Platform",
+    "Paddy Intake Bridge",
+    "Emergency Standby Bridge",
   ];
 
   const factory2CenterNames = [
-    "Apex Terminal 1",
-    "Apex South Scale",
-    "Apex East Gate Platform",
-    "Apex Railhead Scale",
-    "Apex Bulk Grain Terminal",
-    "Apex Automated Scale A",
-    "Apex Automated Scale B",
-    "Apex Silo Weighbridge",
-    "Apex Express Scale",
-    "Apex Inbound Platform 2",
-    "Apex Outbound Platform 2",
-    "Apex Dispatch Scale",
-    "Apex Freight Yard Bridge",
-    "Apex Auxiliary Scale",
-    "Apex Inspection Scale",
+    "Apex Central Weighbridge",
+    "Apex North Scale",
+    "Apex South Gate",
+    "Apex Grain Dock 1",
+    "Apex Grain Dock 2",
+    "Apex Container Scale",
+    "Apex Rail Scale",
+    "Apex Heavy Platform",
+    "Apex Silo Complex",
+    "Apex Agro Depot 1",
+    "Apex Agro Depot 2",
+    "Apex Dispatch Terminal",
+    "Apex Express Bridge",
+    "Apex Bulk Transfer",
+    "Apex West Gate Scale",
   ];
 
-  interface CenterInsertData {
+  interface CenterInsert {
     name: string;
     factory_id: number;
     created_at: string;
   }
 
-  const centersToInsert: CenterInsertData[] = [];
+  const centersToInsert: CenterInsert[] = [];
 
   factory1CenterNames.forEach((name, idx) => {
     centersToInsert.push({
@@ -331,24 +307,26 @@ async function main() {
 
   const centerMap = new Map<string, number>();
 
-  const { data: existingCenters, error: centersFetchErr } = await supabase
-    .from("centers")
-    .select("id, name, factory_id")
-    .in("factory_id", [primaryFactoryId, secondaryFactoryId]);
+  const existingCenters = await db
+    .select({
+      id: schema.centers.id,
+      name: schema.centers.name,
+      factory_id: schema.centers.factory_id,
+    })
+    .from(schema.centers)
+    .where(inArray(schema.centers.factory_id, [primaryFactoryId, secondaryFactoryId]));
 
-  if (centersFetchErr) throw centersFetchErr;
-  for (const c of existingCenters || []) {
+  for (const c of existingCenters) {
     centerMap.set(c.name, c.id);
   }
 
   const missingCenters = centersToInsert.filter((c) => !centerMap.has(c.name));
   if (missingCenters.length > 0) {
-    const { data: createdCenters, error: centersCreateErr } = await supabase
-      .from("centers")
-      .insert(missingCenters)
-      .select("id, name");
+    const createdCenters = await db
+      .insert(schema.centers)
+      .values(missingCenters)
+      .returning({ id: schema.centers.id, name: schema.centers.name });
 
-    if (centersCreateErr || !createdCenters) throw centersCreateErr;
     for (const c of createdCenters) {
       centerMap.set(c.name, c.id);
     }
@@ -364,43 +342,28 @@ async function main() {
     api_key_hash: deviceKeyHash,
   }));
 
-  // 1) Fetch existing devices
-  const { data: existingDevices, error: fetchDevErr } = await supabase
-    .from("devices")
-    .select("id, center_id");
+  const existingDevices = await db
+    .select({ id: schema.devices.id, center_id: schema.devices.center_id })
+    .from(schema.devices);
 
-  if (fetchDevErr) {
-    if (fetchDevErr.code === "PGRST205") {
-      console.warn("  ⚠️ Note: 'devices' table does not exist in schema cache yet.");
-    } else {
-      console.warn("  ⚠️ Could not fetch devices:", fetchDevErr.message);
-    }
-  } else {
-    const existingCenterIds = new Set<number>();
-    if (existingDevices) {
-      for (const d of existingDevices) {
-        deviceMap.set(d.center_id, d.id);
-        existingCenterIds.add(d.center_id);
-      }
-    }
-
-    const missingDevices = devicesToInsert.filter((d) => !existingCenterIds.has(d.center_id));
-    if (missingDevices.length > 0) {
-      const { data: createdDevices, error: devicesErr } = await supabase
-        .from("devices")
-        .insert(missingDevices)
-        .select("id, center_id");
-
-      if (devicesErr) {
-        console.warn("  ⚠️ Could not seed devices:", devicesErr.message);
-      } else if (createdDevices) {
-        for (const d of createdDevices) {
-          deviceMap.set(d.center_id, d.id);
-        }
-      }
-    }
-    console.log(`  ✓ Provisioned ${deviceMap.size} 1:1 hardware devices in 'devices' table.`);
+  const existingCenterIds = new Set<number>();
+  for (const d of existingDevices) {
+    deviceMap.set(d.center_id, d.id);
+    existingCenterIds.add(d.center_id);
   }
+
+  const missingDevices = devicesToInsert.filter((d) => !existingCenterIds.has(d.center_id));
+  if (missingDevices.length > 0) {
+    const createdDevices = await db
+      .insert(schema.devices)
+      .values(missingDevices)
+      .returning({ id: schema.devices.id, center_id: schema.devices.center_id });
+
+    for (const d of createdDevices) {
+      deviceMap.set(d.center_id, d.id);
+    }
+  }
+  console.log(`  ✓ Provisioned ${deviceMap.size} 1:1 hardware devices in 'devices' table.`);
 
   // 4. CUSTOMERS (50 Customer Profiles)
   console.log("\n🧑‍🌾 [4/7] Seeding 50 Customers...");
@@ -410,338 +373,226 @@ async function main() {
     factoryId: number;
     daysOffset: number;
   }> = [
-    // Factory 1 Customers
+    // Factory 1 Customers (35)
     {
-      name: "Ramesh Kumar",
-      username: "customer1",
+      name: "Kisan Agro Traders",
+      username: "kisan_agro",
       factoryId: primaryFactoryId,
       daysOffset: 45,
     },
     {
-      name: "Anita Sharma",
-      username: "customer2",
+      name: "Punjab Grain Logistics",
+      username: "punjab_grain",
       factoryId: primaryFactoryId,
       daysOffset: 44,
     },
     {
-      name: "Suresh Patel",
-      username: "customer3",
+      name: "Haryana Wheat Syndicate",
+      username: "haryana_wheat",
       factoryId: primaryFactoryId,
       daysOffset: 43,
     },
     {
-      name: "Rajendra Singh",
-      username: "customer4",
+      name: "Golden Harvest Millers",
+      username: "golden_harvest",
       factoryId: primaryFactoryId,
       daysOffset: 42,
     },
     {
-      name: "Vikram Rathore",
-      username: "customer5",
+      name: "Bharat Rice Exports",
+      username: "bharat_rice",
       factoryId: primaryFactoryId,
       daysOffset: 41,
     },
+    { name: "Maha Agri Corp", username: "maha_agri", factoryId: primaryFactoryId, daysOffset: 40 },
     {
-      name: "Pooja Verma",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 40,
-    },
-    {
-      name: "Devendra Yadav",
-      username: null,
+      name: "Deccan Flour Mills",
+      username: "deccan_flour",
       factoryId: primaryFactoryId,
       daysOffset: 39,
     },
     {
-      name: "Kavita Choudhary",
-      username: null,
+      name: "Shree Krishna Feed Mills",
+      username: "krishna_feed",
       factoryId: primaryFactoryId,
       daysOffset: 38,
     },
     {
-      name: "Sunil Deshmukh",
-      username: null,
+      name: "Annapurna Grain Merchants",
+      username: "annapurna_grain",
       factoryId: primaryFactoryId,
       daysOffset: 37,
     },
     {
-      name: "Prakash Joshi",
-      username: null,
+      name: "Godavari Agro Supply",
+      username: "godavari_agro",
       factoryId: primaryFactoryId,
       daysOffset: 36,
     },
     {
-      name: "Mahesh Kulkarni",
-      username: null,
+      name: "Malwa Cereals Co.",
+      username: "malwa_cereals",
       factoryId: primaryFactoryId,
       daysOffset: 35,
     },
     {
-      name: "Geeta Meena",
-      username: null,
+      name: "Surat Pulses Depot",
+      username: "surat_pulses",
       factoryId: primaryFactoryId,
       daysOffset: 34,
     },
     {
-      name: "Harish Rawat",
-      username: null,
+      name: "Avadh Agro Industries",
+      username: "avadh_agro",
       factoryId: primaryFactoryId,
       daysOffset: 33,
     },
     {
-      name: "Manoj Tiwari",
-      username: null,
+      name: "Indus Grain Storage",
+      username: "indus_grain",
       factoryId: primaryFactoryId,
       daysOffset: 32,
     },
     {
-      name: "Anil Chauhan",
-      username: null,
+      name: "Satluj Farm Produce",
+      username: "satluj_produce",
       factoryId: primaryFactoryId,
       daysOffset: 31,
     },
     {
-      name: "Babulal Gurjar",
-      username: null,
+      name: "Kaveri Organics Ltd",
+      username: "kaveri_org",
       factoryId: primaryFactoryId,
       daysOffset: 30,
     },
     {
-      name: "Santosh Dhakad",
-      username: null,
+      name: "Ganga Valley Millers",
+      username: "ganga_millers",
       factoryId: primaryFactoryId,
       daysOffset: 29,
     },
     {
-      name: "Mukesh Bhati",
-      username: null,
+      name: "Vindhya Harvest Hub",
+      username: "vindhya_hub",
       factoryId: primaryFactoryId,
       daysOffset: 28,
     },
     {
-      name: "Dharmendra Saini",
-      username: null,
+      name: "Marwar Grain Trading",
+      username: "marwar_grain",
       factoryId: primaryFactoryId,
       daysOffset: 27,
     },
     {
-      name: "Rajeshwari Bai",
-      username: null,
+      name: "Brahmaputra Agro Logistics",
+      username: "brahma_agro",
       factoryId: primaryFactoryId,
       daysOffset: 26,
     },
+    { name: "Konkan Seed Company", username: null, factoryId: primaryFactoryId, daysOffset: 25 },
+    { name: "Carnatic Rice Mills", username: null, factoryId: primaryFactoryId, daysOffset: 24 },
+    { name: "Doon Valley Agro", username: null, factoryId: primaryFactoryId, daysOffset: 23 },
+    { name: "Thar Grain Consortium", username: null, factoryId: primaryFactoryId, daysOffset: 22 },
+    { name: "Saurashtra Feeds", username: null, factoryId: primaryFactoryId, daysOffset: 21 },
+    { name: "Utkal Cereals Corp", username: null, factoryId: primaryFactoryId, daysOffset: 20 },
     {
-      name: "Jagdish Bishnoi",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 25,
-    },
-    {
-      name: "Kailash Mali",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 24,
-    },
-    {
-      name: "Govind Dan",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 23,
-    },
-    {
-      name: "Bhawani Singh",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 22,
-    },
-    {
-      name: "Manish Solanki",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 21,
-    },
-    {
-      name: "Gopal Agarwal",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 20,
-    },
-    {
-      name: "Nandkishore Vyas",
+      name: "Bundelkhand Agro Traders",
       username: null,
       factoryId: primaryFactoryId,
       daysOffset: 19,
     },
+    { name: "Coromandel Produce", username: null, factoryId: primaryFactoryId, daysOffset: 18 },
+    { name: "Rohilkhand Millers", username: null, factoryId: primaryFactoryId, daysOffset: 17 },
+    { name: "Kalinga Agri Exports", username: null, factoryId: primaryFactoryId, daysOffset: 16 },
+    { name: "Chola Grain Network", username: null, factoryId: primaryFactoryId, daysOffset: 15 },
+    { name: "Mewar Farm Solutions", username: null, factoryId: primaryFactoryId, daysOffset: 14 },
+    { name: "Khandesh Flour Co.", username: null, factoryId: primaryFactoryId, daysOffset: 13 },
+    { name: "Bhoomi Grain Hub", username: null, factoryId: primaryFactoryId, daysOffset: 12 },
+    { name: "Greenfield Agri Supply", username: null, factoryId: primaryFactoryId, daysOffset: 11 },
+
+    // Factory 2 Customers (15)
     {
-      name: "Kamla Devi",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 18,
-    },
-    {
-      name: "Mohanlal Kumhar",
-      username: null,
-      factoryId: primaryFactoryId,
-      daysOffset: 17,
-    },
-    {
-      name: "Ramswaroop Jat",
-      username: null,
-      factoryId: primaryFactoryId,
+      name: "Apex Agro Feed Ltd",
+      username: "apex_feed",
+      factoryId: secondaryFactoryId,
       daysOffset: 16,
     },
     {
-      name: "Bhagwan Sahay",
-      username: null,
-      factoryId: primaryFactoryId,
+      name: "Apex Grain Dist",
+      username: "apex_grain",
+      factoryId: secondaryFactoryId,
       daysOffset: 15,
     },
     {
-      name: "Shyam Sundar",
-      username: null,
-      factoryId: primaryFactoryId,
+      name: "Apex Bio Energy",
+      username: "apex_bio",
+      factoryId: secondaryFactoryId,
       daysOffset: 14,
     },
     {
-      name: "Ratan Lal",
-      username: null,
-      factoryId: primaryFactoryId,
+      name: "Apex Milling Corp",
+      username: "apex_mill",
+      factoryId: secondaryFactoryId,
       daysOffset: 13,
     },
     {
-      name: "Narendra Modi Logistics",
-      username: null,
-      factoryId: primaryFactoryId,
+      name: "Apex Organics Hub",
+      username: "apex_org",
+      factoryId: secondaryFactoryId,
       daysOffset: 12,
     },
     {
-      name: "Suraj Agro Traders",
-      username: null,
-      factoryId: primaryFactoryId,
+      name: "Apex Pulse Terminal",
+      username: "apex_pulse",
+      factoryId: secondaryFactoryId,
       daysOffset: 11,
     },
-
-    // Factory 2 Customers
     {
-      name: "Apex Agritech Co.",
-      username: "customer6",
-      factoryId: secondaryFactoryId,
-      daysOffset: 30,
-    },
-    {
-      name: "Kalyan Krishi Kendra",
-      username: "customer7",
-      factoryId: secondaryFactoryId,
-      daysOffset: 28,
-    },
-    {
-      name: "Vidarbha Agro Farms",
-      username: "customer8",
-      factoryId: secondaryFactoryId,
-      daysOffset: 26,
-    },
-    {
-      name: "Marathwada Bio Fuels",
-      username: "customer9",
-      factoryId: secondaryFactoryId,
-      daysOffset: 24,
-    },
-    {
-      name: "Deccan Grain Carriers",
-      username: "customer10",
-      factoryId: secondaryFactoryId,
-      daysOffset: 22,
-    },
-    {
-      name: "Sahyadri Agro Allied",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 20,
-    },
-    {
-      name: "Baramati FPO",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 18,
-    },
-    {
-      name: "Godavari Agro Exporters",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 16,
-    },
-    {
-      name: "Krishna Valley Mills",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 14,
-    },
-    {
-      name: "Western Agro Terminal",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 12,
-    },
-    {
-      name: "Satpura Crop Sciences",
-      username: null,
+      name: "Apex Seed Producers",
+      username: "apex_seeds",
       factoryId: secondaryFactoryId,
       daysOffset: 10,
     },
     {
-      name: "Panchganga Seed Co.",
-      username: null,
+      name: "Apex Dairy Feeds",
+      username: "apex_dairy",
       factoryId: secondaryFactoryId,
-      daysOffset: 8,
+      daysOffset: 9,
     },
-    {
-      name: "Narmada Agri Products",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 6,
-    },
-    {
-      name: "Malwa Agro Consortium",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 4,
-    },
-    {
-      name: "Chambal Grain Storage",
-      username: null,
-      factoryId: secondaryFactoryId,
-      daysOffset: 2,
-    },
+    { name: "Apex Freight & Agro", username: null, factoryId: secondaryFactoryId, daysOffset: 8 },
+    { name: "Apex Oilseed Trading", username: null, factoryId: secondaryFactoryId, daysOffset: 7 },
+    { name: "Apex Wheat Depots", username: null, factoryId: secondaryFactoryId, daysOffset: 6 },
+    { name: "Apex Corn Solutions", username: null, factoryId: secondaryFactoryId, daysOffset: 5 },
+    { name: "Apex Export Grain", username: null, factoryId: secondaryFactoryId, daysOffset: 4 },
+    { name: "Apex Terminal Storage", username: null, factoryId: secondaryFactoryId, daysOffset: 3 },
+    { name: "Chambal Grain Storage", username: null, factoryId: secondaryFactoryId, daysOffset: 2 },
   ];
 
   const customerMap = new Map<string, number>();
   const customerNames = customerRawConfigs.map((c) => c.name);
 
-  const { data: existingCustomers, error: custFetchErr } = await supabase
-    .from("customers")
-    .select("id, name")
-    .in("name", customerNames);
+  const existingCustomers = await db
+    .select({ id: schema.customers.id, name: schema.customers.name })
+    .from(schema.customers)
+    .where(inArray(schema.customers.name, customerNames));
 
-  if (custFetchErr) throw custFetchErr;
-  for (const c of existingCustomers || []) {
+  for (const c of existingCustomers) {
     customerMap.set(c.name, c.id);
   }
 
   const missingCustomers = customerRawConfigs.filter((c) => !customerMap.has(c.name));
   if (missingCustomers.length > 0) {
-    const { data: createdCustomers, error: custCreateErr } = await supabase
-      .from("customers")
-      .insert(
+    const createdCustomers = await db
+      .insert(schema.customers)
+      .values(
         missingCustomers.map((c) => ({
           name: c.name,
           factory_id: c.factoryId,
           created_at: daysAgo(c.daysOffset, 25),
         })),
       )
-      .select("id, name");
+      .returning({ id: schema.customers.id, name: schema.customers.name });
 
-    if (custCreateErr || !createdCustomers) throw custCreateErr;
     for (const c of createdCustomers) {
       customerMap.set(c.name, c.id);
     }
@@ -759,7 +610,6 @@ async function main() {
   const operator2Id = userMap.get("operator2")!;
 
   // 6. PAIRED ENTRIES & WEIGHMENTS (60 Pairs = 120 Entries & 60 Weighments)
-  // 40 pairs (80 entries) concentrated specifically on 'Main Weighbridge' for pagination testing
   console.log(
     "\n🚛 [5/7] Seeding 60 Paired Inbound/Outbound Entries and Linked Weighments (40 pairs for Main Weighbridge)...",
   );
@@ -779,9 +629,9 @@ async function main() {
   // 40 Paired vehicles in Factory 1 concentrated on "Main Weighbridge"
   for (let i = 1; i <= 40; i++) {
     const vehicleNum = `MH12AB${1000 + i}`;
-    const customerId = customerIdsArray[i % 35]; // Factory 1 customer
-    const gross = 28000 + ((i * 950) % 22000); // 28,000 - 50,000 kg
-    const tare = 9000 + ((i * 350) % 6500); // 9,000 - 15,500 kg
+    const customerId = customerIdsArray[i % 35];
+    const gross = 28000 + ((i * 950) % 22000);
+    const tare = 9000 + ((i * 350) % 6500);
     pairedVehicles.push({
       vehicle: vehicleNum,
       factoryId: primaryFactoryId,
@@ -820,7 +670,7 @@ async function main() {
   for (let i = 1; i <= 10; i++) {
     const vehicleNum = `MH14CD${2000 + i}`;
     const centerId = factory2CenterIds[i % factory2CenterIds.length];
-    const customerId = customerIdsArray[35 + (i % 15)]; // Factory 2 customer
+    const customerId = customerIdsArray[35 + (i % 15)];
     const gross = 30000 + ((i * 800) % 20000);
     const tare = 10000 + ((i * 300) % 5500);
     pairedVehicles.push({
@@ -836,10 +686,8 @@ async function main() {
     });
   }
 
-  // Split pairedVehicles: 30 for automatic (hardware-captured), 30 for manual (operator-created)
   const autoPairedVehicles = pairedVehicles.slice(0, 30);
   const manualPairedVehicles = pairedVehicles.slice(30);
-
   const fallbackDeviceId = Array.from(deviceMap.values())[0] ?? 1;
 
   // --- AUTOMATIC PAIRED ENTRIES ---
@@ -882,23 +730,15 @@ async function main() {
     });
   }
 
-  const { data: createdAutoIn, error: autoInErr } = await supabase
-    .from("automatic_entries")
-    .insert(autoInEntriesToInsert)
-    .select("id, center_id, device_id");
+  const createdAutoIn = await db
+    .insert(schema.automatic_entries)
+    .values(autoInEntriesToInsert)
+    .returning({ id: schema.automatic_entries.id, center_id: schema.automatic_entries.center_id });
 
-  if (autoInErr || !createdAutoIn) {
-    throw autoInErr || new Error("Failed to bulk insert automatic inbound entries");
-  }
-
-  const { data: createdAutoOut, error: autoOutErr } = await supabase
-    .from("automatic_entries")
-    .insert(autoOutEntriesToInsert)
-    .select("id, center_id, device_id");
-
-  if (autoOutErr || !createdAutoOut) {
-    throw autoOutErr || new Error("Failed to bulk insert automatic outbound entries");
-  }
+  const createdAutoOut = await db
+    .insert(schema.automatic_entries)
+    .values(autoOutEntriesToInsert)
+    .returning({ id: schema.automatic_entries.id, center_id: schema.automatic_entries.center_id });
 
   // --- MANUAL PAIRED ENTRIES ---
   interface ManualEntryInsert {
@@ -936,23 +776,15 @@ async function main() {
     });
   }
 
-  const { data: createdManualIn, error: manualInErr } = await supabase
-    .from("manual_entries")
-    .insert(manualInEntriesToInsert)
-    .select("id, center_id");
+  const createdManualIn = await db
+    .insert(schema.manual_entries)
+    .values(manualInEntriesToInsert)
+    .returning({ id: schema.manual_entries.id, center_id: schema.manual_entries.center_id });
 
-  if (manualInErr || !createdManualIn) {
-    throw manualInErr || new Error("Failed to bulk insert manual inbound entries");
-  }
-
-  const { data: createdManualOut, error: manualOutErr } = await supabase
-    .from("manual_entries")
-    .insert(manualOutEntriesToInsert)
-    .select("id, center_id");
-
-  if (manualOutErr || !createdManualOut) {
-    throw manualOutErr || new Error("Failed to bulk insert manual outbound entries");
-  }
+  const createdManualOut = await db
+    .insert(schema.manual_entries)
+    .values(manualOutEntriesToInsert)
+    .returning({ id: schema.manual_entries.id, center_id: schema.manual_entries.center_id });
 
   // Create linked automatic weighments
   interface WeighmentInsert {
@@ -973,14 +805,10 @@ async function main() {
     });
   }
 
-  const { data: createdAutoWeighments, error: autoWeighmentErr } = await supabase
-    .from("automatic_weighments")
-    .insert(autoWeighmentsToInsert)
-    .select("id");
-
-  if (autoWeighmentErr || !createdAutoWeighments) {
-    throw autoWeighmentErr || new Error("Failed to bulk insert automatic weighments");
-  }
+  const createdAutoWeighments = await db
+    .insert(schema.automatic_weighments)
+    .values(autoWeighmentsToInsert)
+    .returning({ id: schema.automatic_weighments.id });
 
   // Create linked manual weighments
   const manualWeighmentsToInsert: WeighmentInsert[] = [];
@@ -994,14 +822,10 @@ async function main() {
     });
   }
 
-  const { data: createdManualWeighments, error: manualWeighmentErr } = await supabase
-    .from("manual_weighments")
-    .insert(manualWeighmentsToInsert)
-    .select("id");
-
-  if (manualWeighmentErr || !createdManualWeighments) {
-    throw manualWeighmentErr || new Error("Failed to bulk insert manual weighments");
-  }
+  const createdManualWeighments = await db
+    .insert(schema.manual_weighments)
+    .values(manualWeighmentsToInsert)
+    .returning({ id: schema.manual_weighments.id });
 
   console.log(
     `  ✓ Created ${createdAutoWeighments.length} automatic weighments and ${createdManualWeighments.length} manual weighments.`,
@@ -1013,7 +837,7 @@ async function main() {
   const autoStandaloneToInsert: AutomaticEntryInsert[] = [];
   const manualStandaloneToInsert: ManualEntryInsert[] = [];
 
-  // 25 Automatic Standalone Entries (15 Main Weighbridge, 10 other Factory 1 centers)
+  // 25 Automatic Standalone Entries
   const otherFactory1CenterIds = factory1CenterIds.filter((id) => id !== mainWeighbridgeId);
   for (let i = 1; i <= 15; i++) {
     const plate = `DL01XY${3000 + i}`;
@@ -1050,16 +874,12 @@ async function main() {
     });
   }
 
-  const { data: createdAutoStandalone, error: autoStandaloneErr } = await supabase
-    .from("automatic_entries")
-    .insert(autoStandaloneToInsert)
-    .select("id, center_id, device_id");
+  const createdAutoStandalone = await db
+    .insert(schema.automatic_entries)
+    .values(autoStandaloneToInsert)
+    .returning({ id: schema.automatic_entries.id, center_id: schema.automatic_entries.center_id });
 
-  if (autoStandaloneErr || !createdAutoStandalone) {
-    throw autoStandaloneErr || new Error("Failed to bulk insert automatic standalone entries");
-  }
-
-  // 25 Manual Standalone Entries (10 Main Weighbridge, 5 other Factory 1, 10 Factory 2)
+  // 25 Manual Standalone Entries
   for (let i = 16; i <= 25; i++) {
     const plate = `DL01XY${3000 + i}`;
     const customerId = i % 4 === 0 ? null : customerIdsArray[i % 35];
@@ -1107,14 +927,10 @@ async function main() {
     });
   }
 
-  const { data: createdManualStandalone, error: manualStandaloneErr } = await supabase
-    .from("manual_entries")
-    .insert(manualStandaloneToInsert)
-    .select("id, center_id");
-
-  if (manualStandaloneErr || !createdManualStandalone) {
-    throw manualStandaloneErr || new Error("Failed to bulk insert manual standalone entries");
-  }
+  const createdManualStandalone = await db
+    .insert(schema.manual_entries)
+    .values(manualStandaloneToInsert)
+    .returning({ id: schema.manual_entries.id, center_id: schema.manual_entries.center_id });
 
   console.log(
     `  ✓ Created ${createdAutoStandalone.length} automatic standalone entries and ${createdManualStandalone.length} manual standalone entries.`,
@@ -1135,12 +951,12 @@ async function main() {
     {
       concern: "Vehicle plate mismatch with transport manifest.",
       reply: "Verified physical gate register; operator corrected plate.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Tare weight discrepancy exceeds allowed ±20kg tolerance margin.",
       reply: "Recalibrated weighbridge and re-verified tare weight.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Driver disputed net weight recorded on outbound receipt.",
@@ -1150,7 +966,7 @@ async function main() {
     {
       concern: "Camera 1 crop obscured by mud spatter on lens.",
       reply: "Cleaned optical sensor housing; test frame verified.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Moisture rebate query from farmer on grain shipment.",
@@ -1160,12 +976,12 @@ async function main() {
     {
       concern: "Gross weight exceeds legal highway payload rating (50MT).",
       reply: "Excess cargo offloaded at auxiliary depot prior to transit.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Scale indicator oscillated due to high crosswinds.",
       reply: "Wind deflectors inspected and tightened.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "OCR failed to read obscured rear number plate.",
@@ -1175,7 +991,7 @@ async function main() {
     {
       concern: "Entry submitted with incorrect destination center.",
       reply: "Re-routed shipment to Silo Unit 2.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Duplicate inbound ticket generated during network timeout.",
@@ -1195,7 +1011,7 @@ async function main() {
     {
       concern: "Uncalibrated zero-point offset detected during morning zero check.",
       reply: "Zero-point balanced by weighing technician.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Customer account mapping missing on delivery challan.",
@@ -1205,12 +1021,12 @@ async function main() {
     {
       concern: "Axle sensor trigger skipped second trailer axle.",
       reply: "Multi-axle bridge sequencing sensor adjusted.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Driver requested duplicate printed receipt copy.",
       reply: "Reprint issued with duplicate watermark.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
     {
       concern: "Unregistered transport carrier entered facility.",
@@ -1230,7 +1046,7 @@ async function main() {
     {
       concern: "Weighbridge surface debris accumulation warning.",
       reply: "Platform power-washed and inspected for zero stability.",
-      status: "approved" as TicketStatus,
+      status: "resolved" as TicketStatus,
     },
   ];
 
@@ -1250,14 +1066,10 @@ async function main() {
     });
   }
 
-  const { data: createdTickets, error: ticketErr } = await supabase
-    .from("tickets")
-    .insert(ticketsToInsert)
-    .select("id");
-
-  if (ticketErr || !createdTickets) {
-    throw ticketErr || new Error("Failed to bulk insert tickets");
-  }
+  const createdTickets = await db
+    .insert(schema.tickets)
+    .values(ticketsToInsert)
+    .returning({ id: schema.tickets.id });
 
   console.log(`  ✓ Seeded ${createdTickets.length} support tickets.`);
 

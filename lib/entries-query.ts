@@ -1,18 +1,18 @@
 /**
  * @file lib/entries-query.ts
  * @description Shared backend query utilities for entries endpoints (/api/entries/automatic and /api/entries/manual).
- * Deduplicates search weight parsing, filter extraction, in-memory relational sorting, and pagination slicing.
+ * Deduplicates search weight parsing, filter extraction, in-memory relational sorting, and pagination slicing using Drizzle ORM.
  */
 
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { supabase } from "@/lib/supabase";
 import { z } from "zod";
+import { and, or, like, eq, inArray, gte, lte, count, desc, asc, type SQL } from "drizzle-orm";
+import { db, schema } from "@/db/client";
 import {
   parsePagination,
   parseSorting,
-  applyDateRange,
-  applySortingAndPagination,
+  dateQuerySchema,
   formatPaginatedResponse,
   type SortRule,
   type PaginationParams,
@@ -64,30 +64,6 @@ export const commaSeparatedIdsSchema = z
 export interface IdFilterDef {
   paramKeys: readonly string[];
   column: string;
-}
-
-/**
- * Applies multiple comma-separated ID filters from URL search params to an entries query
- * using strict Zod schema validation.
- */
-export function applyIdFilters<
-  TQuery extends {
-    in(col: string, vals: number[]): TQuery;
-  },
->(query: TQuery, searchParams: URLSearchParams, filters: readonly IdFilterDef[]): TQuery {
-  let updated = query;
-
-  for (const { paramKeys, column } of filters) {
-    const rawVal = paramKeys.map((k) => searchParams.get(k)?.trim()).find(Boolean);
-    if (rawVal && rawVal !== "all") {
-      const parsed = commaSeparatedIdsSchema.safeParse(rawVal);
-      if (parsed.success && parsed.data.length > 0) {
-        updated = updated.in(column, parsed.data);
-      }
-    }
-  }
-
-  return updated;
 }
 
 const RELATIONAL_VALUE_GETTERS: Record<string, (item: SortableEntry) => string | number> = {
@@ -155,31 +131,6 @@ const BASE_SORT_COLUMNS = [
 const AUTOMATIC_SORT_COLUMNS = [...BASE_SORT_COLUMNS, "detected_vehicle_number"] as const;
 const MANUAL_SORT_COLUMNS = [...BASE_SORT_COLUMNS, "creator", "creator_id"] as const;
 
-const BASE_SELECT_FIELDS = [
-  "id",
-  "center_id",
-  "customer_id",
-  "vehicle_number",
-  "weight",
-  "images",
-  "created_at",
-  "updated_at",
-  "center:centers(id, name)",
-  "customer:customers(id, name)",
-];
-
-const AUTOMATIC_SELECT_PROJECTION = [
-  ...BASE_SELECT_FIELDS,
-  "device_id",
-  "detected_vehicle_number",
-].join(",\n  ");
-
-const MANUAL_SELECT_PROJECTION = [
-  ...BASE_SELECT_FIELDS,
-  "creator_id",
-  "creator:users(id, name, role)",
-].join(",\n  ");
-
 const COMMON_ID_FILTERS: readonly IdFilterDef[] = [
   { paramKeys: ["center_id"], column: "center_id" },
   { paramKeys: ["customer_id"], column: "customer_id" },
@@ -187,27 +138,34 @@ const COMMON_ID_FILTERS: readonly IdFilterDef[] = [
 
 const ENTRY_CONFIGS = {
   automatic: {
-    tableName: "automatic_entries" as const,
-    projection: AUTOMATIC_SELECT_PROJECTION,
+    table: schema.automatic_entries,
     allowedSortColumns: AUTOMATIC_SORT_COLUMNS,
     relationalSortCols: new Set(["center", "customer"]),
     idFilters: COMMON_ID_FILTERS,
+    withQuery: {
+      center: { columns: { id: true, name: true } },
+      customer: { columns: { id: true, name: true } },
+    },
   },
   manual: {
-    tableName: "manual_entries" as const,
-    projection: MANUAL_SELECT_PROJECTION,
+    table: schema.manual_entries,
     allowedSortColumns: MANUAL_SORT_COLUMNS,
     relationalSortCols: new Set(["center", "customer", "creator"]),
     idFilters: [
       ...COMMON_ID_FILTERS,
       { paramKeys: ["creator", "creator_id"], column: "creator_id" },
     ],
+    withQuery: {
+      center: { columns: { id: true, name: true } },
+      customer: { columns: { id: true, name: true } },
+      creator: { columns: { id: true, name: true, role: true } },
+    },
   },
 } as const;
 
 /**
  * Executes entries query for /api/entries/automatic and /api/entries/manual,
- * handling search, common filters, date ranges, and relational sorting.
+ * handling search, common filters, date ranges, and relational sorting via Drizzle ORM.
  */
 export async function executeEntriesGetQuery(
   request: Request,
@@ -217,49 +175,118 @@ export async function executeEntriesGetQuery(
     const { searchParams } = new URL(request.url);
     const pagination = parsePagination(searchParams);
     const config = ENTRY_CONFIGS[mode];
+    const targetTable: any = config.table;
 
     const sortRules = parseSorting(searchParams, config.allowedSortColumns, {
       col: "id",
       ascending: false,
     });
 
-    let query: any = (supabase as any)
-      .from(config.tableName)
-      .select(config.projection, { count: "exact" });
+    const whereConditions: SQL[] = [];
 
+    // Search query
     const search = searchParams.get("search")?.trim();
     if (search) {
       const numericVal = parseNumericWeight(search);
       if (numericVal !== null) {
-        query = query.or(`vehicle_number.ilike.%${search}%,weight.eq.${numericVal}`);
+        whereConditions.push(
+          or(like(targetTable.vehicle_number, `%${search}%`), eq(targetTable.weight, numericVal))!,
+        );
       } else {
-        query = query.or(`vehicle_number.ilike.%${search}%`);
+        whereConditions.push(like(targetTable.vehicle_number, `%${search}%`));
       }
     }
 
-    query = applyIdFilters(query, searchParams, config.idFilters);
-    query = applyDateRange(query, searchParams);
+    // ID filters (center_id, customer_id, creator_id)
+    for (const { paramKeys, column } of config.idFilters) {
+      const rawVal = paramKeys.map((k) => searchParams.get(k)?.trim()).find(Boolean);
+      if (rawVal && rawVal !== "all") {
+        const parsed = commaSeparatedIdsSchema.safeParse(rawVal);
+        if (parsed.success && parsed.data.length > 0 && targetTable[column]) {
+          whereConditions.push(inArray(targetTable[column], parsed.data));
+        }
+      }
+    }
+
+    // Date range filter
+    const rawFrom = searchParams.get("from");
+    if (rawFrom) {
+      const parsed = dateQuerySchema.safeParse(rawFrom);
+      if (parsed.success) {
+        whereConditions.push(gte(targetTable.created_at, parsed.data.toISOString()));
+      }
+    }
+
+    const rawTo = searchParams.get("to");
+    if (rawTo) {
+      const parsed = dateQuerySchema.safeParse(rawTo);
+      if (parsed.success) {
+        const toDate = new Date(parsed.data);
+        toDate.setHours(23, 59, 59, 999);
+        whereConditions.push(lte(targetTable.created_at, toDate.toISOString()));
+      }
+    }
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+    // Count query
+    const [{ total }] = await db.select({ total: count() }).from(targetTable).where(whereClause);
 
     const hasRelationalSort = sortRules.some((r) => config.relationalSortCols.has(r.col));
 
-    if (hasRelationalSort) {
-      const { data, count, error } = await query;
-      if (error) throw error;
+    const whereOption = whereClause ? { RAW: whereClause } : undefined;
 
-      const sorted = sortEntriesRelational((data ?? []) as unknown as SortableEntry[], sortRules);
+    if (hasRelationalSort) {
+      const rows =
+        mode === "automatic"
+          ? await db.query.automatic_entries.findMany({
+              where: whereOption,
+              with: config.withQuery as any,
+            })
+          : await db.query.manual_entries.findMany({
+              where: whereOption,
+              with: config.withQuery as any,
+            });
+
+      const sorted = sortEntriesRelational(rows as unknown as SortableEntry[], sortRules);
       const sliced = paginateInMemory(sorted, pagination);
 
-      return NextResponse.json(formatPaginatedResponse(sliced, count, pagination), {
+      return NextResponse.json(formatPaginatedResponse(sliced, total, pagination), {
         status: StatusCodes.OK,
       });
     }
 
-    query = applySortingAndPagination(query, sortRules, pagination);
-    const { data, count, error } = await query;
-    if (error) throw error;
+    // Direct database sort
+    const orderByClauses: SQL[] = [];
+    for (const rule of sortRules) {
+      const colObj = targetTable[rule.col];
+      if (colObj) {
+        orderByClauses.push(rule.ascending ? asc(colObj) : desc(colObj));
+      }
+    }
+    if (orderByClauses.length === 0) {
+      orderByClauses.push(desc(targetTable.id));
+    }
+
+    const rows =
+      mode === "automatic"
+        ? await db.query.automatic_entries.findMany({
+            where: whereOption,
+            with: config.withQuery as any,
+            orderBy: () => orderByClauses,
+            limit: pagination.pageSize,
+            offset: pagination.offset,
+          })
+        : await db.query.manual_entries.findMany({
+            where: whereOption,
+            with: config.withQuery as any,
+            orderBy: () => orderByClauses,
+            limit: pagination.pageSize,
+            offset: pagination.offset,
+          });
 
     return NextResponse.json(
-      formatPaginatedResponse((data ?? []) as unknown as SortableEntry[], count, pagination),
+      formatPaginatedResponse(rows as unknown as SortableEntry[], total, pagination),
       { status: StatusCodes.OK },
     );
   } catch (error) {
@@ -292,11 +319,18 @@ export async function executeEntriesDelete(
     }
 
     const { ids } = validation.data;
+    const targetTable =
+      tableName === "automatic_entries" ? schema.automatic_entries : schema.manual_entries;
 
-    const { error } = await supabase.from(tableName).delete().in("id", ids);
-
-    if (error) {
-      if (error.code === "23503") {
+    try {
+      await db.delete(targetTable).where(inArray(targetTable.id, ids));
+    } catch (err: unknown) {
+      const errStr = String(err);
+      if (
+        errStr.includes("FOREIGN KEY") ||
+        errStr.includes("constraint failed") ||
+        (err as any)?.code === "SQLITE_CONSTRAINT"
+      ) {
         return NextResponse.json(
           {
             error:
@@ -305,10 +339,7 @@ export async function executeEntriesDelete(
           { status: StatusCodes.CONFLICT },
         );
       }
-      return NextResponse.json(
-        { error: error.message },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
-      );
+      throw err;
     }
 
     const modeLabel = tableName === "automatic_entries" ? "automatic" : "manual";

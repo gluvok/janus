@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { StatusCodes } from "http-status-codes";
-import { supabase } from "@/lib/supabase";
-import { ServiceError, USER_SELECT_PROJECTION, updateUserAccount } from "@/app/api/users/service";
+import { and, eq, asc } from "drizzle-orm";
+import { db, schema } from "@/db/client";
+import { ServiceError, updateUserAccount } from "@/app/api/users/service";
 import { nameSchema, usernameSchema, passwordSchema } from "@/app/users/types";
 
 const updateMeSchema = z.object({
@@ -12,18 +13,21 @@ const updateMeSchema = z.object({
 });
 
 async function getCurrentUser() {
-  const { data: user, error } = await supabase
-    .from("users")
-    .select(USER_SELECT_PROJECTION)
-    .eq("role", "admin")
-    .eq("factory_id", 1)
-    .order("id", { ascending: true })
+  const user = await db
+    .select({
+      id: schema.users.id,
+      username: schema.users.username,
+      name: schema.users.name,
+      role: schema.users.role,
+      factory_id: schema.users.factory_id,
+      created_at: schema.users.created_at,
+      updated_at: schema.users.updated_at,
+    })
+    .from(schema.users)
+    .where(and(eq(schema.users.role, "admin"), eq(schema.users.factory_id, 1)))
+    .orderBy(asc(schema.users.id))
     .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new ServiceError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
+    .then((rows) => rows[0]);
 
   if (!user) {
     throw new ServiceError("Primary account not found.", StatusCodes.NOT_FOUND);

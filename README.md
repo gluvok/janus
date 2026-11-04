@@ -44,7 +44,7 @@ The platform adopts a unified **Rikyū-cha (利休茶)** Japanese roasted matcha
 
 ## Centers Module & Data Table
 
-The `/centers` route provides a full-featured data table built with **TanStack Table v9** powered by server-side execution directly against Supabase:
+The `/centers` route provides a full-featured data table built with **TanStack Table v9** powered by server-side execution directly against Turso (LibSQL) via Drizzle ORM:
 
 - **Backend Endpoint**: `GET /api/centers`
   - Slicing and exact counting: `?page=<N>&pageSize=<N>` (`.range()` + `{ count: "exact" }`)
@@ -110,7 +110,7 @@ The `/centers` route provides a full-featured data table built with **TanStack T
 
 ## Entries Module & Data Table
 
-The `/entries` route provides an inspection-focused data table for transport and weighbridge entry records built with **TanStack Table v9** powered by server-side execution directly against Supabase:
+The `/entries` route provides an inspection-focused data table for transport and weighbridge entry records built with **TanStack Table v9** powered by server-side execution directly against Turso (LibSQL) via Drizzle ORM:
 
 - **Backend Endpoints**:
   - `GET /api/entries/automatic`: Dedicated endpoint for hardware-captured entries querying `automatic_entries` with joins to `centers`, `users` (customer), and `devices`. Supports search on confirmed plate, detected plate, and weight.
@@ -141,7 +141,7 @@ The `/entries` route provides an inspection-focused data table for transport and
     - `EntriesToolbar`: 2-tier responsive layout encapsulating Row 1 search box, refresh button, date range picker, column visibility options, and Row 2 faceted filters with integrated multi-sort priority chips (hidden when `sorting.length <= 1`, completely eliminating the empty 3rd row and saving ~36px vertical space). Supports `sort=none` for natural table ordering upon sort removal.
     - `EntriesErrorState`: Clean error card with retry button.
     - `EntryPhotosDialog`: Embla Carousel dialog for photo browsing.
-  - **Multi-Select Center Combobox with Inline Chips**: Center filter uses official shadcn Base UI Combobox primitives (multiple selection with inline chips, individual remove `(x)` triggers, and integrated text search). Serializes multi-center selection as comma-separated IDs (e.g. `?center_id=12,15`) querying Supabase via `.in("center_id", ids)`, with duplicate Center chips omitted from the Criteria Bar to keep active criteria clean and compact.
+  - **Multi-Select Center Combobox with Inline Chips**: Center filter uses official shadcn Base UI Combobox primitives (multiple selection with inline chips, individual remove `(x)` triggers, and integrated text search). Serializes multi-center selection as comma-separated IDs (e.g. `?center_id=12,15`) querying the database via `inArray(center_id, ids)`, with duplicate Center chips omitted from the Criteria Bar to keep active criteria clean and compact.
   - **Zero-Flash Synchronous Render State Sync**: `useDataTable` synchronously synchronizes `initialData` into state during render, eliminating the 1-frame post-paint empty table state and flash of "No entries found" on page reload. `EntriesDataTable` holds `<DataTableHydrationCard />` until both loading completes and initial data is populated.
   - **Smooth Debounced Search & Race-Condition Sequencing**:
     - Keyboard-first search input debounced at 300ms, allowing users to type, edit, and clear terms naturally with standard keyboard shortcuts without redundant API calls.
@@ -256,6 +256,22 @@ pnpm dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## Database Architecture & Drizzle ORM
+
+The application is powered by **Turso (LibSQL)** using **Drizzle ORM** (`drizzle-orm@rc` and `drizzle-kit@rc`):
+
+- **Database Provider**: Turso (distributed SQLite / LibSQL at `libsql://mesto-dheereshag.aws-ap-south-1.turso.io`)
+- **Schema & DDL**:
+  - `schema.sql`: Authoritative clean SQLite DDL without PostgreSQL-specific functions, triggers, or procedural RPCs.
+  - `db/schema.ts`: Type-safe schema definition using `drizzle-orm/sqlite-core` and relational queries via `defineRelations`.
+- **Database Client**: `db/client.ts` initializes `@libsql/client` and the Drizzle ORM instance singleton.
+- **Drizzle Kit Config**: `drizzle.config.ts` targeting `./db/schema.ts` with dialect `turso`.
+- **Environment Variables** (`.env.local`):
+  ```env
+  TURSO_DATABASE_URL="libsql://mesto-dheereshag.aws-ap-south-1.turso.io"
+  TURSO_AUTH_TOKEN="<your-turso-auth-token>"
+  ```
 
 ## Database Seeding
 

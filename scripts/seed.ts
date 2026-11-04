@@ -1,6 +1,6 @@
 /**
  * @file scripts/seed.ts
- * @description Client onboarding seed script for GluVok.
+ * @description Client onboarding seed script for GluVok with Drizzle ORM and Turso.
  * Provisions core infrastructure required to onboard a new client:
  * 1. A new Factory
  * 2. A new Admin user (dynamically numbered based on existing admins)
@@ -10,7 +10,8 @@
 
 import crypto from "node:crypto";
 import argon2 from "argon2";
-import { supabase } from "./supabase.ts";
+import { eq } from "drizzle-orm";
+import { db, schema } from "../db/client.ts";
 
 interface ParsedArgs {
   factoryName?: string;
@@ -107,23 +108,20 @@ async function main() {
   }
 
   console.log("=================================================");
-  console.log("🚀 Mesto Client Onboarding Seeder");
-  console.log(`📡 Supabase Endpoint: ${process.env.SUPABASE_URL}`);
+  console.log("🚀 Mesto Client Onboarding Seeder (Turso / Drizzle)");
+  console.log(`📡 Database URL: ${process.env.TURSO_DATABASE_URL || "default"}`);
   console.log("=================================================");
 
   // 1. QUERY EXISTING DATA COUNTS & SUFFIXES
   console.log("\n🔍 Inspecting existing database state...");
 
-  const [factoriesRes, adminsRes] = await Promise.all([
-    supabase.from("factories").select("id, name"),
-    supabase.from("users").select("id, username").eq("role", "admin"),
+  const [existingFactories, existingAdmins] = await Promise.all([
+    db.select({ id: schema.factories.id, name: schema.factories.name }).from(schema.factories),
+    db
+      .select({ id: schema.users.id, username: schema.users.username })
+      .from(schema.users)
+      .where(eq(schema.users.role, "admin")),
   ]);
-
-  if (factoriesRes.error) throw factoriesRes.error;
-  if (adminsRes.error) throw adminsRes.error;
-
-  const existingFactories = factoriesRes.data ?? [];
-  const existingAdmins = adminsRes.data ?? [];
 
   const nextFactoryNum = getNextSuffix(
     existingFactories.map((f) => f.name),
@@ -150,34 +148,32 @@ async function main() {
 
   // 2. CREATE FACTORY
   console.log(`\n🏭 Creating factory '${factoryName}'...`);
-  const { data: createdFactory, error: factoryError } = await supabase
-    .from("factories")
-    .insert({ name: factoryName })
-    .select("id, name")
-    .single();
+  const [createdFactory] = await db
+    .insert(schema.factories)
+    .values({ name: factoryName })
+    .returning({ id: schema.factories.id, name: schema.factories.name });
 
-  if (factoryError || !createdFactory) {
-    throw factoryError || new Error(`Failed to create factory ${factoryName}`);
+  if (!createdFactory) {
+    throw new Error(`Failed to create factory ${factoryName}`);
   }
   console.log(`  ✓ Factory created (ID: ${createdFactory.id}, Name: '${createdFactory.name}')`);
 
   // 3. CREATE ADMIN USER
   console.log(`\n👤 Provisioning admin user '${adminUsername}'...`);
   const adminHash = await argon2.hash(args.adminPassword);
-  const { data: createdAdmin, error: adminError } = await supabase
-    .from("users")
-    .insert({
+  const [createdAdmin] = await db
+    .insert(schema.users)
+    .values({
       username: adminUsername,
       name: adminName,
       role: "admin",
       password_hash: adminHash,
       factory_id: createdFactory.id,
     })
-    .select("id, username")
-    .single();
+    .returning({ id: schema.users.id, username: schema.users.username });
 
-  if (adminError || !createdAdmin) {
-    throw adminError || new Error(`Failed to create admin user ${adminUsername}`);
+  if (!createdAdmin) {
+    throw new Error(`Failed to create admin user ${adminUsername}`);
   }
   console.log(
     `  ✓ Admin user created (ID: ${createdAdmin.id}, Username: '${createdAdmin.username}')`,
@@ -196,13 +192,13 @@ async function main() {
     };
   });
 
-  const { data: createdCenters, error: centersError } = await supabase
-    .from("centers")
-    .insert(centersToInsert)
-    .select("id, name");
+  const createdCenters = await db
+    .insert(schema.centers)
+    .values(centersToInsert)
+    .returning({ id: schema.centers.id, name: schema.centers.name });
 
-  if (centersError || !createdCenters) {
-    throw centersError || new Error("Failed to bulk create centers");
+  if (!createdCenters || createdCenters.length === 0) {
+    throw new Error("Failed to bulk create centers");
   }
 
   const devicePairs: Array<{
@@ -216,24 +212,13 @@ async function main() {
     const rawApiKey = `glv_live_${crypto.randomUUID().replace(/-/g, "")}`;
     const apiKeyHash = await argon2.hash(rawApiKey);
 
-    const { data: devData, error: devError } = await supabase
-      .from("devices")
-      .insert({
+    const [devData] = await db
+      .insert(schema.devices)
+      .values({
         center_id: center.id,
         api_key_hash: apiKeyHash,
       })
-      .select("id")
-      .single();
-
-    if (devError) {
-      if (devError.code === "PGRST205") {
-        console.warn(
-          `  ⚠️ Note: 'devices' table does not exist in schema cache yet. Skipping device row insertion.`,
-        );
-      } else {
-        console.warn(`  ⚠️ Failed to insert device for center ${center.id}:`, devError.message);
-      }
-    }
+      .returning({ id: schema.devices.id });
 
     devicePairs.push({
       centerId: center.id,

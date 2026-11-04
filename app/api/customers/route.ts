@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { supabase } from "@/lib/supabase";
+import { and, eq, ne, inArray } from "drizzle-orm";
+import { db, schema } from "@/db/client";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
 import {
   createCustomerSchema,
@@ -37,12 +38,12 @@ export async function POST(request: Request) {
     const targetFactoryId = factory_id ?? 1;
 
     // Check for duplicate customer name in same factory
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("factory_id", targetFactoryId)
-      .eq("name", name)
-      .maybeSingle();
+    const existing = await db
+      .select({ id: schema.customers.id })
+      .from(schema.customers)
+      .where(and(eq(schema.customers.factory_id, targetFactoryId), eq(schema.customers.name, name)))
+      .limit(1)
+      .then((rows) => rows[0]);
 
     if (existing) {
       return NextResponse.json(
@@ -51,24 +52,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabase
-      .from("customers")
-      .insert({
+    const [created] = await db
+      .insert(schema.customers)
+      .values({
         name,
         factory_id: targetFactoryId,
       })
-      .select("id, name, factory_id, created_at, updated_at")
-      .single();
-
-    if (error || !data) {
-      return NextResponse.json(
-        { error: error?.message ?? "Failed to create customer" },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
-      );
-    }
+      .returning({
+        id: schema.customers.id,
+        name: schema.customers.name,
+        factory_id: schema.customers.factory_id,
+        created_at: schema.customers.created_at,
+        updated_at: schema.customers.updated_at,
+      });
 
     return NextResponse.json(
-      { customer: data, message: `Customer "${name}" created successfully.` },
+      { customer: created, message: `Customer "${name}" created successfully.` },
       { status: StatusCodes.CREATED },
     );
   } catch (err) {
@@ -92,12 +91,12 @@ export async function PATCH(request: Request) {
     const { id, name } = validation.data;
 
     // Check for duplicate name
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("name", name)
-      .neq("id", id)
-      .maybeSingle();
+    const existing = await db
+      .select({ id: schema.customers.id })
+      .from(schema.customers)
+      .where(and(eq(schema.customers.name, name), ne(schema.customers.id, id)))
+      .limit(1)
+      .then((rows) => rows[0]);
 
     if (existing) {
       return NextResponse.json(
@@ -106,22 +105,27 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { data, error } = await supabase
-      .from("customers")
-      .update({ name, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select("id, name, factory_id, created_at, updated_at")
-      .single();
+    const [updated] = await db
+      .update(schema.customers)
+      .set({ name, updated_at: new Date().toISOString() })
+      .where(eq(schema.customers.id, id))
+      .returning({
+        id: schema.customers.id,
+        name: schema.customers.name,
+        factory_id: schema.customers.factory_id,
+        created_at: schema.customers.created_at,
+        updated_at: schema.customers.updated_at,
+      });
 
-    if (error || !data) {
+    if (!updated) {
       return NextResponse.json(
-        { error: error?.message ?? "Failed to update customer" },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
+        { error: "Customer not found or failed to update" },
+        { status: StatusCodes.NOT_FOUND },
       );
     }
 
     return NextResponse.json({
-      customer: data,
+      customer: updated,
       message: `Customer "${name}" updated successfully.`,
     });
   } catch (err) {
@@ -145,19 +149,23 @@ export async function DELETE(request: Request) {
     const { ids } = validation.data;
 
     // Hard delete with ON DELETE RESTRICT enforcement
-    const { error } = await supabase.from("customers").delete().in("id", ids);
+    try {
+      await db.delete(schema.customers).where(inArray(schema.customers.id, ids));
+    } catch (dbErr) {
+      const isForeignKeyViolation =
+        dbErr instanceof Error &&
+        (dbErr.message.includes("FOREIGN KEY") ||
+          dbErr.message.includes("constraint failed") ||
+          (dbErr as { code?: string }).code === "23503" ||
+          (dbErr as { code?: string }).code === "SQLITE_CONSTRAINT");
 
-    if (error) {
-      if (error.code === "23503") {
+      if (isForeignKeyViolation) {
         return NextResponse.json(
           { error: "Cannot delete customer because linked entry records exist." },
           { status: StatusCodes.CONFLICT },
         );
       }
-      return NextResponse.json(
-        { error: error.message },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
-      );
+      throw dbErr;
     }
 
     return NextResponse.json({
