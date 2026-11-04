@@ -1,16 +1,7 @@
+import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-if (process.loadEnvFile) {
-  try {
-    process.loadEnvFile(".env.local");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Ignore if env files are missing
-    }
-  }
-}
+config({ path: ".env.local" });
 
 export default defineConfig({
   schema: "./db/schema.ts",
@@ -21,4 +12,3 @@ export default defineConfig({
     authToken: process.env.TURSO_AUTH_TOKEN,
   },
 });
-

@@ -234,17 +234,65 @@ export async function executeEntriesGetQuery(
 
     const hasRelationalSort = sortRules.some((r) => config.relationalSortCols.has(r.col));
 
-    const whereOption = whereClause ? { RAW: whereClause } : undefined;
+    const buildRelationalWhere = (table: any, ops: any) => {
+      const conditions = [];
+
+      const search = searchParams.get("search")?.trim();
+      if (search) {
+        const numericVal = parseNumericWeight(search);
+        const searchOrs = [ops.like(table.vehicle_number, `%${search}%`)];
+        if ("detected_vehicle_number" in table) {
+          searchOrs.push(ops.like(table.detected_vehicle_number, `%${search}%`));
+        }
+        if (numericVal !== null) {
+          searchOrs.push(ops.eq(table.weight, numericVal));
+        }
+        conditions.push(ops.or(...searchOrs));
+      }
+
+      for (const { paramKeys, column } of config.idFilters) {
+        const rawVal = paramKeys.map((k) => searchParams.get(k)?.trim()).find(Boolean);
+        if (rawVal && rawVal !== "all") {
+          const parsed = commaSeparatedIdsSchema.safeParse(rawVal);
+          if (parsed.success && parsed.data.length > 0 && column in table) {
+            conditions.push(ops.inArray(table[column], parsed.data));
+          }
+        }
+      }
+
+      const rawFrom = searchParams.get("from");
+      if (rawFrom) {
+        const parsed = dateQuerySchema.safeParse(rawFrom);
+        if (parsed.success) {
+          conditions.push(ops.gte(table.created_at, parsed.data.toISOString()));
+        }
+      }
+
+      const rawTo = searchParams.get("to");
+      if (rawTo) {
+        const parsed = dateQuerySchema.safeParse(rawTo);
+        if (parsed.success) {
+          const toDate = new Date(parsed.data);
+          toDate.setHours(23, 59, 59, 999);
+          conditions.push(ops.lte(table.created_at, toDate.toISOString()));
+        }
+      }
+
+      return conditions.length > 0 ? ops.and(...conditions) : undefined;
+    };
+
+    const hasFilters = whereConditions.length > 0;
+    const whereOption = hasFilters ? { RAW: buildRelationalWhere } : undefined;
 
     if (hasRelationalSort) {
       const rows =
         mode === "automatic"
           ? await db.query.automatic_entries.findMany({
-              where: whereOption,
+              ...(whereOption ? { where: whereOption } : {}),
               with: config.withQuery as any,
             })
           : await db.query.manual_entries.findMany({
-              where: whereOption,
+              ...(whereOption ? { where: whereOption } : {}),
               with: config.withQuery as any,
             });
 
@@ -256,31 +304,33 @@ export async function executeEntriesGetQuery(
       });
     }
 
-    // Direct database sort
-    const orderByClauses: SQL[] = [];
-    for (const rule of sortRules) {
-      const colObj = targetTable[rule.col];
-      if (colObj) {
-        orderByClauses.push(rule.ascending ? asc(colObj) : desc(colObj));
+    // Direct database sort referencing aliased table columns
+    const orderByFn = (table: any, { asc, desc }: any) => {
+      const clauses = [];
+      for (const rule of sortRules) {
+        if (rule.col in table) {
+          clauses.push(rule.ascending ? asc(table[rule.col]) : desc(table[rule.col]));
+        }
       }
-    }
-    if (orderByClauses.length === 0) {
-      orderByClauses.push(desc(targetTable.id));
-    }
+      if (clauses.length === 0) {
+        clauses.push(desc(table.id));
+      }
+      return clauses;
+    };
 
     const rows =
       mode === "automatic"
         ? await db.query.automatic_entries.findMany({
-            where: whereOption,
+            ...(whereOption ? { where: whereOption } : {}),
             with: config.withQuery as any,
-            orderBy: () => orderByClauses,
+            orderBy: orderByFn,
             limit: pagination.pageSize,
             offset: pagination.offset,
           })
         : await db.query.manual_entries.findMany({
-            where: whereOption,
+            ...(whereOption ? { where: whereOption } : {}),
             with: config.withQuery as any,
-            orderBy: () => orderByClauses,
+            orderBy: orderByFn,
             limit: pagination.pageSize,
             offset: pagination.offset,
           });

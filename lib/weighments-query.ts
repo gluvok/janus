@@ -6,9 +6,8 @@
 
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { and, gte, lte, type SQL } from "drizzle-orm";
 import { z } from "zod";
-import { db, schema } from "@/db/client";
+import { db } from "@/db/client";
 import {
   parsePagination,
   parseSorting,
@@ -266,28 +265,30 @@ export async function executeWeighmentsGetQuery(
     );
 
     // 2. Assemble date range filters
-    const whereConditions: SQL[] = [];
-    const tableObj = mode === "automatic" ? schema.automatic_weighments : schema.manual_weighments;
-
     const rawFrom = searchParams.get("from");
-    if (rawFrom) {
-      const parsed = dateQuerySchema.safeParse(rawFrom);
-      if (parsed.success) {
-        whereConditions.push(gte(tableObj.created_at, parsed.data.toISOString()));
-      }
-    }
-
     const rawTo = searchParams.get("to");
-    if (rawTo) {
-      const parsed = dateQuerySchema.safeParse(rawTo);
-      if (parsed.success) {
-        const toDate = new Date(parsed.data);
-        toDate.setHours(23, 59, 59, 999);
-        whereConditions.push(lte(tableObj.created_at, toDate.toISOString()));
-      }
-    }
+    const fromParsed = rawFrom ? dateQuerySchema.safeParse(rawFrom) : null;
+    const toParsed = rawTo ? dateQuerySchema.safeParse(rawTo) : null;
+    const hasDateFilter = Boolean(
+      (fromParsed && fromParsed.success) || (toParsed && toParsed.success),
+    );
 
-    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+    const whereOption = hasDateFilter
+      ? {
+          RAW: (table: any, ops: any) => {
+            const conditions = [];
+            if (fromParsed && fromParsed.success) {
+              conditions.push(ops.gte(table.created_at, fromParsed.data.toISOString()));
+            }
+            if (toParsed && toParsed.success) {
+              const toDate = new Date(toParsed.data);
+              toDate.setHours(23, 59, 59, 999);
+              conditions.push(ops.lte(table.created_at, toDate.toISOString()));
+            }
+            return conditions.length > 0 ? ops.and(...conditions) : undefined;
+          },
+        }
+      : undefined;
 
     const withRelations = {
       in_entry: {
@@ -308,11 +309,11 @@ export async function executeWeighmentsGetQuery(
     const rawRows =
       mode === "automatic"
         ? await db.query.automatic_weighments.findMany({
-            where: whereClause ? { RAW: whereClause } : undefined,
+            ...(whereOption ? { where: whereOption } : {}),
             with: withRelations,
           })
         : await db.query.manual_weighments.findMany({
-            where: whereClause ? { RAW: whereClause } : undefined,
+            ...(whereOption ? { where: whereOption } : {}),
             with: withRelations,
           });
 
