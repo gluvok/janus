@@ -5,8 +5,12 @@ import * as schema from "./schema.ts";
 
 config({ path: ".env.local" });
 
-const url = process.env.TURSO_DATABASE_URL || "libsql://mesto-dheereshag.aws-ap-south-1.turso.io";
+const url = process.env.TURSO_DATABASE_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
+
+if (!url || !authToken) {
+  throw new Error("TURSO_DATABASE_URL or TURSO_AUTH_TOKEN is not defined");
+}
 
 export const client = createClient({
   url,
