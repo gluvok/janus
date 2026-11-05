@@ -2,16 +2,14 @@ import { z } from "zod";
 import argon2 from "argon2";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
-import { buildPaginatedEntityResult } from "@/lib/api-query";
 import {
   userRoleEnum,
-  type User,
   type UserRole,
   type CreateUserInput,
   type UpdateUserInput,
 } from "@/app/users/types";
 
-const rolesFilterSchema = z
+export const rolesFilterSchema = z
   .string()
   .transform((val) => {
     const parts = val
@@ -71,38 +69,9 @@ export class ServiceError extends Error {
 }
 
 /**
- * Fetches a paginated, sorted, and filtered list of staff users.
+ * Creates a new staff user account with mandatory credentials and dynamic factory_id.
  */
-export async function fetchUsersList(searchParams: URLSearchParams) {
-  try {
-    return await buildPaginatedEntityResult<(typeof ALLOWED_SORT_COLUMNS)[number], User>({
-      searchParams,
-      table: "users",
-      select: USER_SELECT_PROJECTION,
-      allowedSortColumns: ALLOWED_SORT_COLUMNS,
-      defaultSort: { col: "id", ascending: false },
-      searchColumns: ["name", "username"],
-      applyCustomFilters: (query, sp) => {
-        const rawRole = sp.get("role")?.trim();
-        if (rawRole && rawRole !== "all") {
-          const parsed = rolesFilterSchema.safeParse(rawRole);
-          if (parsed.success && parsed.data.length > 0) {
-            return query.in("role", parsed.data);
-          }
-        }
-        return query;
-      },
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to fetch users";
-    throw new ServiceError(msg, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
-}
-
-/**
- * Creates a new staff user account with mandatory credentials.
- */
-export async function createUserAccount(data: CreateUserInput) {
+export async function createUserAccount(data: CreateUserInput, factoryId: number) {
   const { username, name, role, password } = data;
   const cleanUsername = username.trim().toLowerCase();
 
@@ -117,12 +86,15 @@ export async function createUserAccount(data: CreateUserInput) {
       name: name.trim(),
       role,
       password_hash: passwordHash,
-      factory_id: 1,
+      factory_id: factoryId,
     })
     .select(USER_SELECT_PROJECTION)
     .single();
 
   if (insertError) {
+    if (insertError.code === "23505") {
+      throw new ServiceError(`Username "${cleanUsername}" is already taken.`, StatusCodes.CONFLICT);
+    }
     throw new ServiceError(insertError.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
@@ -173,6 +145,9 @@ export async function updateUserAccount(data: UpdateUserInput) {
     .maybeSingle();
 
   if (updateError) {
+    if (updateError.code === "23505") {
+      throw new ServiceError(`Username "${cleanUsername}" is already taken.`, StatusCodes.CONFLICT);
+    }
     throw new ServiceError(updateError.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 

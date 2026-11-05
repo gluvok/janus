@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
+import { executePaginatedEntityQuery } from "@/lib/api-query";
+import { requireServerSession, AuthError } from "@/lib/auth";
 import {
   createUserSchema,
   updateUserSchema,
   deleteUserSchema,
+  type User,
   type UserRole,
 } from "@/app/users/types";
 import {
-  fetchUsersList,
+  ALLOWED_SORT_COLUMNS,
+  USER_SELECT_PROJECTION,
+  rolesFilterSchema,
   createUserAccount,
   updateUserAccount,
   deleteUserAccounts,
@@ -24,11 +29,30 @@ const ROLE_ENTITY_LABELS: Record<UserRole, string> = {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const paginatedResponse = await fetchUsersList(searchParams);
-    return NextResponse.json(paginatedResponse);
+    const user = await requireServerSession(request);
+
+    return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], User>({
+      request,
+      table: "users",
+      select: USER_SELECT_PROJECTION,
+      allowedSortColumns: ALLOWED_SORT_COLUMNS,
+      defaultSort: { col: "id", ascending: false },
+      searchColumns: ["name", "username"],
+      applyCustomFilters: (query, searchParams) => {
+        let filteredQuery = query.eq("factory_id", user.factory_id);
+
+        const rawRole = searchParams.get("role")?.trim();
+        if (rawRole && rawRole !== "all") {
+          const parsed = rolesFilterSchema.safeParse(rawRole);
+          if (parsed.success && parsed.data.length > 0) {
+            filteredQuery = filteredQuery.in("role", parsed.data);
+          }
+        }
+        return filteredQuery;
+      },
+    });
   } catch (err: unknown) {
-    if (err instanceof ServiceError) {
+    if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
     const message = err instanceof Error ? err.message : "Internal Server Error";
@@ -38,6 +62,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const user = await requireServerSession(request);
     const rawBody = await request.json();
     const validation = createUserSchema.safeParse(rawBody);
 
@@ -51,7 +76,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const created = await createUserAccount(validation.data);
+    const created = await createUserAccount(validation.data, user.factory_id);
     const label = ROLE_ENTITY_LABELS[validation.data.role] ?? "Account";
 
     return NextResponse.json(
@@ -62,6 +87,9 @@ export async function POST(request: Request) {
       { status: StatusCodes.CREATED },
     );
   } catch (err: unknown) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
     if (err instanceof ServiceError) {
       return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
@@ -72,6 +100,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    await requireServerSession(request);
     const rawBody = await request.json();
     const validation = updateUserSchema.safeParse(rawBody);
 
@@ -92,6 +121,9 @@ export async function PATCH(request: Request) {
       message: "Account updated successfully.",
     });
   } catch (err: unknown) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
     if (err instanceof ServiceError) {
       return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
@@ -102,6 +134,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    await requireServerSession(request);
     const rawBody = await request.json();
     const validation = deleteUserSchema.safeParse(rawBody);
 
@@ -122,6 +155,9 @@ export async function DELETE(request: Request) {
       message: `Successfully deleted ${deletedCount} account${deletedCount > 1 ? "s" : ""}.`,
     });
   } catch (err: unknown) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
     if (err instanceof ServiceError) {
       return NextResponse.json(
         {

@@ -112,12 +112,14 @@ export function CentersDataTable() {
       </div>
 
       {/* Center Edit Dialog */}
-      <CenterEditDialog
-        open={!!editingCenter}
-        onOpenChange={(open) => !open && setEditingCenter(null)}
-        center={editingCenter}
-        onSuccess={refresh}
-      />
+      {editingCenter && (
+        <CenterEditDialog
+          open={true}
+          onOpenChange={(open) => !open && setEditingCenter(null)}
+          center={editingCenter}
+          onSuccess={refresh}
+        />
+      )}
     </div>
   );
 }

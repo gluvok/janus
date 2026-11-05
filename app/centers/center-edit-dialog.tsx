@@ -28,7 +28,7 @@ import { getErrorMessage } from "@/lib/utils";
 export interface CenterEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  center: Center | null;
+  center: Center;
   onSuccess: () => void;
 }
 
@@ -44,13 +44,13 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
     resolver: zodResolver(updateCenterSchema),
     mode: "onChange",
     defaultValues: {
-      id: center?.id ?? 0,
-      name: center?.name ?? "",
+      id: center.id,
+      name: center.name,
     },
   });
 
   React.useEffect(() => {
-    if (open && center) {
+    if (open) {
       setServerError(null);
       reset({
         id: center.id,
@@ -60,13 +60,9 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
   }, [open, center, reset]);
 
   const onSubmit = async (values: UpdateCenterInput) => {
-    if (!center) return;
     setServerError(null);
     try {
-      await axios.patch("/api/centers", {
-        id: center.id,
-        name: values.name,
-      });
+      await axios.patch("/api/centers", values);
       toast.add({
         type: "success",
         title: "Center updated",

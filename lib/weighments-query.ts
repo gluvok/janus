@@ -117,7 +117,25 @@ export async function executeWeighmentsGetQuery(
         }
       }
 
-      // Filter by centers (in_center or out_center)
+      // Filter by in_center_id
+      const inCenterRaw = searchParams.get("in_center_id")?.trim();
+      if (inCenterRaw && inCenterRaw !== "all") {
+        const parsed = commaSeparatedIdsSchema.safeParse(inCenterRaw);
+        if (parsed.success && parsed.data.length > 0) {
+          filteredQuery = filteredQuery.in("in_center_id", parsed.data);
+        }
+      }
+
+      // Filter by out_center_id
+      const outCenterRaw = searchParams.get("out_center_id")?.trim();
+      if (outCenterRaw && outCenterRaw !== "all") {
+        const parsed = commaSeparatedIdsSchema.safeParse(outCenterRaw);
+        if (parsed.success && parsed.data.length > 0) {
+          filteredQuery = filteredQuery.in("out_center_id", parsed.data);
+        }
+      }
+
+      // Filter by combined centers (in_center or out_center)
       const rawCenters = searchParams.get("center_ids") || searchParams.get("center_id");
       if (rawCenters && rawCenters !== "all") {
         const parsedIds = commaSeparatedIdsSchema.safeParse(rawCenters);

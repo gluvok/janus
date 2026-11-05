@@ -81,7 +81,7 @@ export const DEFAULT_TABLES_COOKIE: TablesCookiePayload = {
  * Home ('/') uses the root mode.
  */
 export function isDualModeRoute(pathname: string | null | undefined): boolean {
-  if (!pathname || pathname === "/") return pathname === "/";
+  if (!pathname || pathname === "/") return false;
   const route = pathname.slice(1);
   return (DUAL_MODE_ENTITIES as readonly string[]).includes(route);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import axios from "axios";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +29,7 @@ import { type User } from "@/app/users/types";
 
 export type UserProps = {
   name: string;
-  email: string;
+  username: string;
   avatar?: string;
   initials: string;
 };
@@ -48,7 +49,7 @@ export function UserAvatarInfo({ user }: { user: UserProps }) {
       </Avatar>
       <div className="grid flex-1 leading-tight">
         <span className="truncate font-semibold">{user.name}</span>
-        <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+        <span className="truncate text-xs text-muted-foreground">@{user.username}</span>
       </div>
     </>
   );
@@ -57,6 +58,14 @@ export function UserAvatarInfo({ user }: { user: UserProps }) {
 export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
   const { isMobile } = useSidebar();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await axios.post("/api/auth/logout");
+    } finally {
+      window.location.href = "/login";
+    }
+  };
 
   return (
     <>
@@ -85,7 +94,7 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive">
+              <DropdownMenuItem variant="destructive" onClick={handleLogout}>
                 <HugeiconsIcon icon={Logout01Icon} />
                 <span>Log out</span>
               </DropdownMenuItem>

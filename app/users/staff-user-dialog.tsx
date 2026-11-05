@@ -17,7 +17,6 @@ import {
   getUserFormSchema,
   type CreateUserInput,
   type UserFormInput,
-  type UserRole,
   type UpdateUserInput,
   type User,
 } from "./types";
@@ -30,11 +29,19 @@ interface StaffUserDialogProps {
 }
 
 function getStaffInitialValues(user?: User | null): UserFormInput {
+  if (user) {
+    return {
+      id: user.id,
+      name: user.name,
+      role: user.role,
+      username: user.username,
+      password: "",
+    };
+  }
   return {
-    id: user?.id,
-    name: user?.name ?? "",
-    role: (user?.role as UserRole) || "operator",
-    username: user?.username ?? "",
+    name: "",
+    role: "operator",
+    username: "",
     password: "",
   };
 }

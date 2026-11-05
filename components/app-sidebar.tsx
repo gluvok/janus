@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import axios from "axios";
 import {
   Sidebar,
   SidebarContent,
@@ -24,24 +25,40 @@ function getInitials(name: string): string {
   if (parts.length >= 2) {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
-  return name.slice(0, 2).toUpperCase() || "US";
+  return name.slice(0, 2).toUpperCase() || "OP";
 }
 
 const DEFAULT_USER_PROPS: UserProps = {
-  name: "Admin Factory 1",
-  email: "admin1@mesto.in",
-  initials: "AF",
+  name: "Operator",
+  username: "operator",
+  initials: "OP",
 };
 
 export function AppSidebar() {
   const [accountUser, setAccountUser] = React.useState<User | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    let isMounted = true;
+    axios
+      .get<{ data: User }>("/api/users/me")
+      .then((res) => {
+        if (isMounted && res.data.data) {
+          setAccountUser(res.data.data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const userProps: UserProps = React.useMemo(() => {
     if (!accountUser) return DEFAULT_USER_PROPS;
     return {
       name: accountUser.name,
-      email: `${accountUser.username ?? "admin"}@mesto.in`,
+      username: accountUser.username,
       initials: getInitials(accountUser.name),
     };
   }, [accountUser]);

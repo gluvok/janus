@@ -24,6 +24,7 @@ export interface DataTableFilterConfig {
 
 export interface DataTableToolbarProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;
+  leadingControl?: React.ReactNode;
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
@@ -44,6 +45,7 @@ export interface DataTableToolbarProps<TData extends RowData> {
 
 export function DataTableToolbar<TData extends RowData>({
   table,
+  leadingControl,
   search,
   onSearchChange,
   searchPlaceholder = "Search records...",
@@ -66,6 +68,7 @@ export function DataTableToolbar<TData extends RowData>({
       {/* Row 1: Search Box (Left) + Refresh Button, Date Range Picker & Columns (Right) */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+          {leadingControl}
           <DataTableSearchInput
             placeholder={searchPlaceholder}
             value={search}

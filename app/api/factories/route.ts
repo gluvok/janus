@@ -2,19 +2,16 @@ import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { updateFactorySchema } from "@/app/settings/types";
+import { requireServerSession, AuthError } from "@/lib/auth";
 
-/**
- * Hardcoded factory ID for single-tenant / current-tenant preview.
- * When session authentication is introduced, this will be retrieved from the user's session context.
- */
-const HARDCODED_FACTORY_ID = 1;
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const user = await requireServerSession(request);
+
     const { data, error } = await supabase
       .from("factories")
       .select("id, name, receipt_images_per_row, created_at, updated_at")
-      .eq("id", HARDCODED_FACTORY_ID)
+      .eq("id", user.factory_id)
       .maybeSingle();
 
     if (error) {
@@ -30,6 +27,9 @@ export async function GET() {
 
     return NextResponse.json({ data });
   } catch (err: unknown) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
     const message = err instanceof Error ? err.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
   }
@@ -37,6 +37,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
+    const user = await requireServerSession(request);
     const body = await request.json();
 
     const parseResult = updateFactorySchema.safeParse(body);
@@ -50,7 +51,7 @@ export async function PATCH(request: Request) {
     const { data, error } = await supabase
       .from("factories")
       .update(parseResult.data)
-      .eq("id", HARDCODED_FACTORY_ID)
+      .eq("id", user.factory_id)
       .select("id, name, receipt_images_per_row, created_at, updated_at")
       .maybeSingle();
 
@@ -67,6 +68,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ data });
   } catch (err: unknown) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
     const message = err instanceof Error ? err.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
   }

@@ -3,16 +3,6 @@ import { z } from "zod";
 export const USER_ROLES = ["admin", "manager", "operator", "base"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
-export interface User {
-  id: number;
-  username: string;
-  name: string;
-  role: UserRole;
-  factory_id: number;
-  created_at: string;
-  updated_at: string;
-}
-
 export const userRoleEnum = z.enum(USER_ROLES);
 
 // Reusable single-source field validation schemas
@@ -34,29 +24,47 @@ export const nameSchema = z
 
 export const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
+export const userSchema = z
+  .object({
+    id: z.number().int().positive(),
+    username: usernameSchema,
+    name: nameSchema,
+    role: userRoleEnum,
+    factory_id: z.number().int().positive(),
+    created_at: z.string(),
+    updated_at: z.string(),
+  })
+  .strict();
+
+export type User = z.infer<typeof userSchema>;
+
 /* -------------------------------------------------------------------------- */
 /* Creation Schemas                                                           */
 /* -------------------------------------------------------------------------- */
 
-export const createUserSchema = z.object({
-  name: nameSchema,
-  role: userRoleEnum,
-  username: usernameSchema,
-  password: passwordSchema,
-});
+export const createUserSchema = z
+  .object({
+    name: nameSchema,
+    role: userRoleEnum,
+    username: usernameSchema,
+    password: passwordSchema,
+  })
+  .strict();
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 /* -------------------------------------------------------------------------- */
 /* Update Schemas                                                             */
 /* -------------------------------------------------------------------------- */
 
-export const updateUserSchema = z.object({
-  id: z.number().int().positive("Invalid user ID"),
-  name: nameSchema,
-  role: userRoleEnum,
-  username: usernameSchema,
-  password: passwordSchema.optional().or(z.literal("")),
-});
+export const updateUserSchema = z
+  .object({
+    id: z.number().int().positive("Invalid user ID"),
+    name: nameSchema,
+    role: userRoleEnum,
+    username: usernameSchema,
+    password: passwordSchema.optional().or(z.literal("")),
+  })
+  .strict();
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 /* -------------------------------------------------------------------------- */
@@ -65,21 +73,25 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 export function getUserFormSchema({ isEdit }: { isEdit: boolean }) {
   if (isEdit) {
-    return z.object({
-      id: z.number().optional(),
+    return z
+      .object({
+        id: z.number().int().positive().optional(),
+        name: nameSchema,
+        role: userRoleEnum,
+        username: usernameSchema,
+        password: passwordSchema.optional().or(z.literal("")),
+      })
+      .strict();
+  }
+  return z
+    .object({
+      id: z.number().int().positive().optional(),
       name: nameSchema,
       role: userRoleEnum,
       username: usernameSchema,
-      password: passwordSchema.optional().or(z.literal("")),
-    });
-  }
-  return z.object({
-    id: z.number().optional(),
-    name: nameSchema,
-    role: userRoleEnum,
-    username: usernameSchema,
-    password: passwordSchema,
-  });
+      password: passwordSchema,
+    })
+    .strict();
 }
 export type UserFormInput = z.infer<ReturnType<typeof getUserFormSchema>>;
 
@@ -87,7 +99,9 @@ export type UserFormInput = z.infer<ReturnType<typeof getUserFormSchema>>;
 /* Deletion Schemas                                                           */
 /* -------------------------------------------------------------------------- */
 
-export const deleteUserSchema = z.object({
-  ids: z.array(z.number().int().positive()).min(1, "At least one user ID is required"),
-});
+export const deleteUserSchema = z
+  .object({
+    ids: z.array(z.number().int().positive()).min(1, "At least one user ID is required"),
+  })
+  .strict();
 export type DeleteUserInput = z.infer<typeof deleteUserSchema>;

@@ -28,6 +28,7 @@ import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, getDualModeTableId } from "@/lib/table-cookie";
 import { PhotosDialog } from "@/components/photos-dialog";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
+import { TableModeToggle } from "@/components/header-mode-toggle";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
 
@@ -321,6 +322,7 @@ export function WeighmentsDataTable() {
       {/* Primary Toolbar - 2-Tier Layout with Integrated Multi-Sort */}
       <DataTableToolbar
         table={table}
+        leadingControl={<TableModeToggle />}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search weighments..."

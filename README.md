@@ -1,6 +1,6 @@
 # GluVok / Mesto Weighbridge Platform
 
-A centralized operational platform and automation management system for weighbridge facilities, featuring dual-mode (Automatic and Manual) weighments tracking, multi-scale support, role-based access control, and hardware integration.
+A centralized operational platform and automation management system for weighbridge facilities, featuring dual-mode (Automatic and Manual) weighments tracking, multi-scale support, role-based access control, persistent session authentication, and hardware integration.
 
 ---
 
@@ -11,6 +11,7 @@ A centralized operational platform and automation management system for weighbri
 - **Factories**: Master enterprise tenants managing scales, settings, and receipt formatting.
 - **Centers**: Processing facilities and scale locations. Each center has an authenticated `api_key` for hardware scale and camera integration (hidden during `GET` requests).
 - **Users**: System operators, managers, and administrators with argon2 password hashing.
+- **Sessions**: Database-backed user authentication sessions with 400-day persistent rolling HTTP-only cookies (`mesto_session`).
 - **Automatic Weighments**: Hardware/ANPR camera-captured vehicle weighments. Features PostgreSQL stored generated columns (`gross`, `tare`, `net`, `type`), inbound/outbound weights, timestamps, and camera image URLs.
 - **Manual Weighments**: Operator-recorded weighments with full creator accountability (`in_creator_id`, `out_creator_id`).
 - **Tickets**: Support and discrepancy tickets linked directly to `automatic_weighments`.
@@ -32,20 +33,33 @@ A centralized operational platform and automation management system for weighbri
 
 ---
 
+## Authentication & Session Management
+
+- **Session Architecture**: Next.js edge route protection via `middleware.ts` verifying the `mesto_session` cookie against PostgreSQL `sessions` table.
+- **Session Duration**: 400-day persistent server-set HTTP-only cookie with rolling refresh upon active use (bypassing client-side Safari ITP limits).
+- **Credentials**: Standard username and password (argon2 hashed). No external emails or sign-up workflows.
+- **Dynamic Factory Tenancy**: All operations, center filtering, and user creation are dynamically scoped to the authenticated user's `factory_id`.
+
+---
+
 ## API Routes
 
 | Method   | Endpoint                    | Description                                                                               |
 | :------- | :-------------------------- | :---------------------------------------------------------------------------------------- |
-| `GET`    | `/api/centers`              | List centers (omits `api_key`). Supports pagination & sorting.                            |
+| `POST`   | `/api/auth/login`           | Authenticate via username & password, issue rolling session cookie.                       |
+| `POST`   | `/api/auth/logout`          | Invalidate session in database and delete session cookie.                                 |
+| `GET`    | `/api/users/me`             | Retrieve currently authenticated user profile.                                            |
+| `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                     |
+| `GET`    | `/api/factories`            | Retrieve factory configuration for the authenticated user's factory.                      |
+| `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                        |
+| `GET`    | `/api/centers`              | List centers for authenticated factory. Supports pagination & sorting.                    |
 | `PATCH`  | `/api/centers`              | Update center details.                                                                    |
 | `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).  |
 | `POST`   | `/api/weighments/automatic` | Ingest vehicle weighing. Auto-matches open pending weighments or creates inbound records. |
 | `PATCH`  | `/api/weighments/automatic` | Manually correct automatic weighment plates, weights, or centers.                         |
 | `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                            |
-| `POST`   | `/api/weighments/manual`    | Record operator weighment.                                                                |
-| `PATCH`  | `/api/weighments/manual`    | Update manual weighment records.                                                          |
-| `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base).                                        |
-| `POST`   | `/api/users`                | Create staff user accounts.                                                               |
+| `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                    |
+| `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                     |
 | `PATCH`  | `/api/users`                | Update staff user accounts.                                                               |
 | `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/tickets).  |
 

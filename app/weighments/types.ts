@@ -5,77 +5,82 @@
 
 import { z } from "zod";
 
-export type WeighmentMode = "automatic" | "manual";
-export type WeighmentType = "pending" | "in" | "out" | "unassigned";
+export const WEIGHMENT_MODES = ["automatic", "manual"] as const;
+export type WeighmentMode = (typeof WEIGHMENT_MODES)[number];
 
-export interface WeighmentCenter {
-  id: number;
-  name: string;
-}
+export const WEIGHMENT_TYPES = ["pending", "in", "out", "unassigned"] as const;
+export type WeighmentType = (typeof WEIGHMENT_TYPES)[number];
+export const weighmentTypeEnum = z.enum(WEIGHMENT_TYPES);
 
-export interface WeighmentUser {
-  id: number;
-  name: string;
-  username: string;
-}
+export const weighmentCenterSchema = z
+  .object({
+    id: z.number().int().positive(),
+    name: z.string().min(1),
+  })
+  .strict();
+export type WeighmentCenter = z.infer<typeof weighmentCenterSchema>;
 
-export interface Weighment {
-  id: number;
-  vehicle_number: string;
-  in_detected_vehicle_number?: string | null;
-  out_detected_vehicle_number?: string | null;
-  in_weight: number;
-  out_weight: number | null;
-  in_time: string;
-  out_time: string | null;
-  in_center_id: number;
-  out_center_id: number | null;
-  in_center: WeighmentCenter;
-  out_center: WeighmentCenter | null;
-  in_creator_id?: number | null;
-  out_creator_id?: number | null;
-  in_creator?: WeighmentUser | null;
-  out_creator?: WeighmentUser | null;
-  images: string[];
-  gross: number;
-  tare: number | null;
-  net: number | null;
-  type: WeighmentType;
-  created_at: string;
-  updated_at: string;
-}
+export const weighmentUserSchema = z
+  .object({
+    id: z.number().int().positive(),
+    name: z.string().min(1),
+    username: z.string().min(1),
+  })
+  .strict();
+export type WeighmentUser = z.infer<typeof weighmentUserSchema>;
 
-export const ingestAutomaticWeighmentSchema = z.object({
-  vehicle_number: z.string().trim().min(1, "Vehicle number is required"),
-  weight: z.number().positive("Weight must be greater than 0"),
-  center_id: z.number().int().positive("Center ID is required"),
-  detected_vehicle_number: z.string().trim().optional(),
-  images: z.array(z.string()).optional().default([]),
-});
+export const weighmentSchema = z
+  .object({
+    id: z.number().int().positive(),
+    vehicle_number: z.string().min(1),
+    in_detected_vehicle_number: z.string().nullable().optional(),
+    out_detected_vehicle_number: z.string().nullable().optional(),
+    in_weight: z.number().positive(),
+    out_weight: z.number().positive().nullable(),
+    in_time: z.string(),
+    out_time: z.string().nullable(),
+    in_center_id: z.number().int().positive(),
+    out_center_id: z.number().int().positive().nullable(),
+    in_center: weighmentCenterSchema,
+    out_center: weighmentCenterSchema.nullable(),
+    in_creator_id: z.number().int().positive().nullable().optional(),
+    out_creator_id: z.number().int().positive().nullable().optional(),
+    in_creator: weighmentUserSchema.nullable().optional(),
+    out_creator: weighmentUserSchema.nullable().optional(),
+    images: z.array(z.string()),
+    gross: z.number(),
+    tare: z.number().nullable(),
+    net: z.number().nullable(),
+    type: weighmentTypeEnum,
+    created_at: z.string(),
+    updated_at: z.string(),
+  })
+  .strict();
+
+export type Weighment = z.infer<typeof weighmentSchema>;
+
+export const ingestAutomaticWeighmentSchema = z
+  .object({
+    vehicle_number: z.string().trim().min(1, "Vehicle number is required"),
+    weight: z.number().positive("Weight must be greater than 0"),
+    center_id: z.number().int().positive("Center ID is required"),
+    detected_vehicle_number: z.string().trim().optional(),
+    images: z.array(z.string()).optional().default([]),
+  })
+  .strict();
 
 export type IngestAutomaticWeighmentInput = z.infer<typeof ingestAutomaticWeighmentSchema>;
 
-export const createManualWeighmentSchema = z.object({
-  vehicle_number: z.string().trim().min(1, "Vehicle number is required"),
-  in_weight: z.number().positive("In weight must be greater than 0"),
-  in_center_id: z.number().int().positive("In center ID is required"),
-  in_creator_id: z.number().int().positive("In creator ID is required"),
-  out_weight: z.number().positive("Out weight must be greater than 0").optional(),
-  out_center_id: z.number().int().positive().optional(),
-  out_creator_id: z.number().int().positive().optional(),
-  images: z.array(z.string()).optional().default([]),
-});
-
-export type CreateManualWeighmentInput = z.infer<typeof createManualWeighmentSchema>;
-
-export const updateWeighmentSchema = z.object({
-  id: z.number().int().positive(),
-  vehicle_number: z.string().trim().min(1).optional(),
-  in_weight: z.number().positive().optional(),
-  out_weight: z.number().positive().nullable().optional(),
-  in_center_id: z.number().int().positive().optional(),
-  out_center_id: z.number().int().positive().nullable().optional(),
-  images: z.array(z.string()).optional(),
-});
+export const updateWeighmentSchema = z
+  .object({
+    id: z.number().int().positive(),
+    vehicle_number: z.string().trim().min(1).optional(),
+    in_weight: z.number().positive().optional(),
+    out_weight: z.number().positive().nullable().optional(),
+    in_center_id: z.number().int().positive().optional(),
+    out_center_id: z.number().int().positive().nullable().optional(),
+    images: z.array(z.string()).optional(),
+  })
+  .strict();
 
 export type UpdateWeighmentInput = z.infer<typeof updateWeighmentSchema>;
