@@ -109,12 +109,48 @@ async function main() {
   const operatorHash = await argon2.hash("operator123");
 
   const userConfigs = [
-    { username: "admin1", name: "System Administrator", role: "admin", passwordHash: adminHash, factoryId: primaryFactoryId },
-    { username: "manager1", name: "Operations Manager 1", role: "manager", passwordHash: managerHash, factoryId: primaryFactoryId },
-    { username: "operator1", name: "Main Scale Operator", role: "operator", passwordHash: operatorHash, factoryId: primaryFactoryId },
-    { username: "operator2", name: "Inbound Gate Operator", role: "operator", passwordHash: operatorHash, factoryId: primaryFactoryId },
-    { username: "admin2", name: "Admin Apex Logistics", role: "admin", passwordHash: adminHash, factoryId: secondaryFactoryId },
-    { username: "manager2", name: "Apex Logistics Manager", role: "manager", passwordHash: managerHash, factoryId: secondaryFactoryId },
+    {
+      username: "admin1",
+      name: "System Administrator",
+      role: "admin",
+      passwordHash: adminHash,
+      factoryId: primaryFactoryId,
+    },
+    {
+      username: "manager1",
+      name: "Operations Manager 1",
+      role: "manager",
+      passwordHash: managerHash,
+      factoryId: primaryFactoryId,
+    },
+    {
+      username: "operator1",
+      name: "Main Scale Operator",
+      role: "operator",
+      passwordHash: operatorHash,
+      factoryId: primaryFactoryId,
+    },
+    {
+      username: "operator2",
+      name: "Inbound Gate Operator",
+      role: "operator",
+      passwordHash: operatorHash,
+      factoryId: primaryFactoryId,
+    },
+    {
+      username: "admin2",
+      name: "Admin Apex Logistics",
+      role: "admin",
+      passwordHash: adminHash,
+      factoryId: secondaryFactoryId,
+    },
+    {
+      username: "manager2",
+      name: "Apex Logistics Manager",
+      role: "manager",
+      passwordHash: managerHash,
+      factoryId: secondaryFactoryId,
+    },
   ];
 
   const userMap = new Map<string, number>();
@@ -191,9 +227,18 @@ async function main() {
   // 4. AUTOMATIC & MANUAL WEIGHMENTS
   console.log("\n🚛 [4/5] Seeding Automatic and Manual Weighments...");
   const samplePlates = [
-    "MH12AB1234", "MH14CD5678", "KA01EF9012", "KA05GH3456",
-    "DL01AB9999", "HR26BC1111", "GJ01XY4444", "UP32AB7777",
-    "TN09PQ3333", "WB19JK8888", "RJ14MN5555", "MP09ST2222",
+    "MH12AB1234",
+    "MH14CD5678",
+    "KA01EF9012",
+    "KA05GH3456",
+    "DL01AB9999",
+    "HR26BC1111",
+    "GJ01XY4444",
+    "UP32AB7777",
+    "TN09PQ3333",
+    "WB19JK8888",
+    "RJ14MN5555",
+    "MP09ST2222",
   ];
 
   const sampleImages = [
@@ -205,7 +250,7 @@ async function main() {
   for (let i = 0; i < 40; i++) {
     const plate = samplePlates[i % samplePlates.length];
     const isCompleted = i % 5 !== 0; // 80% completed, 20% pending
-    const inWeight = 25000 + (i * 370) % 15000;
+    const inWeight = 25000 + ((i * 370) % 15000);
     const outWeight = isCompleted ? inWeight - 12000 - ((i * 190) % 4000) : null;
     const inCenterId = centerIds[i % centerIds.length];
     const outCenterId = isCompleted ? centerIds[(i + 1) % centerIds.length] : null;
@@ -243,7 +288,7 @@ async function main() {
   for (let i = 0; i < 25; i++) {
     const plate = samplePlates[(i + 3) % samplePlates.length];
     const isCompleted = i % 4 !== 0;
-    const inWeight = 18000 + (i * 450) % 12000;
+    const inWeight = 18000 + ((i * 450) % 12000);
     const outWeight = isCompleted ? inWeight + 9500 + ((i * 120) % 3000) : null;
     const inCenterId = centerIds[(i + 2) % centerIds.length];
     const outCenterId = isCompleted ? centerIds[(i + 3) % centerIds.length] : null;

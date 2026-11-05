@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { executeWeighmentsGetQuery } from "@/lib/weighments-query";
-import {
-  ingestAutomaticWeighmentSchema,
-  updateWeighmentSchema,
-} from "@/app/weighments/types";
+import { ingestAutomaticWeighmentSchema, updateWeighmentSchema } from "@/app/weighments/types";
 
 export async function GET(request: Request) {
   return executeWeighmentsGetQuery(request, "automatic");

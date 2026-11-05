@@ -127,7 +127,9 @@ export async function executeWeighmentsGetQuery(
             filteredQuery = filteredQuery.or(`in_center_id.eq.${id},out_center_id.eq.${id}`);
           } else {
             const idList = `(${parsedIds.data.join(",")})`;
-            filteredQuery = filteredQuery.or(`in_center_id.in.${idList},out_center_id.in.${idList}`);
+            filteredQuery = filteredQuery.or(
+              `in_center_id.in.${idList},out_center_id.in.${idList}`,
+            );
           }
         }
       }

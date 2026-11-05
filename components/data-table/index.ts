@@ -54,9 +54,6 @@ export {
   type DataTableFilterConfig,
 } from "./data-table-toolbar";
 
-export {
-  DataTableErrorState,
-  type DataTableErrorStateProps,
-} from "./data-table-error-state";
+export { DataTableErrorState, type DataTableErrorStateProps } from "./data-table-error-state";
 
 export { useDataTable } from "./use-data-table";

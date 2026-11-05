@@ -307,7 +307,13 @@ export function WeighmentsDataTable() {
   }
 
   if (initialError) {
-    return <DataTableErrorState title="Failed to load weighments" error={initialError} onRetry={loadInitialData} />;
+    return (
+      <DataTableErrorState
+        title="Failed to load weighments"
+        error={initialError}
+        onRetry={loadInitialData}
+      />
+    );
   }
 
   return (

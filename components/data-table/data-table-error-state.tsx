@@ -25,7 +25,12 @@ export function DataTableErrorState({
           <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
           <p className="text-xs text-muted-foreground">{error}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={onRetry} className="mt-2 h-8 text-xs cursor-pointer">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRetry}
+          className="mt-2 h-8 text-xs cursor-pointer"
+        >
           Try again
         </Button>
       </div>

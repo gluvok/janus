@@ -70,7 +70,9 @@ async function seedPhotos() {
         console.warn(`ℹ️ Using direct fallback CDN URL: ${photo.url}`);
         uploadedUrls.push(photo.url);
       } else {
-        const { data: publicUrlData } = supabase.storage.from("mesto").getPublicUrl(`1/${photo.name}`);
+        const { data: publicUrlData } = supabase.storage
+          .from("mesto")
+          .getPublicUrl(`1/${photo.name}`);
         console.log(`✅ Uploaded to bucket 'mesto': ${publicUrlData.publicUrl}`);
         uploadedUrls.push(publicUrlData.publicUrl);
       }
