@@ -117,7 +117,7 @@ export function UserDeleteDialog({ open, onOpenChange, users, onSuccess }: UserD
               </div>
             ) : (
               <span>
-                Accounts cannot be deleted if referenced by existing manual entries or support
+                Accounts cannot be deleted if referenced by existing manual weighments or support
                 tickets.
               </span>
             )}

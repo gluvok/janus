@@ -24,8 +24,6 @@ import {
   PackageOpenIcon,
   ScaleIcon,
   TruckIcon,
-  UserArrowLeftRightIcon,
-  UserCheck01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { Weighment } from "./types";
@@ -45,9 +43,17 @@ export function getWeighmentColumns() {
         <DataTableColumnHeader column={column} title="Vehicle No." icon={TruckIcon} />
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-xs font-semibold text-foreground">
-          {row.original.vehicle_number}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className="font-mono text-xs font-semibold text-foreground">
+            {row.original.vehicle_number}
+          </span>
+          {row.original.in_detected_vehicle_number &&
+            row.original.in_detected_vehicle_number !== row.original.vehicle_number && (
+              <span className="font-mono text-3xs text-muted-foreground">
+                In ANPR: {row.original.in_detected_vehicle_number}
+              </span>
+            )}
+        </div>
       ),
       meta: {
         title: "Vehicle No.",
@@ -64,12 +70,15 @@ export function getWeighmentColumns() {
         icon: Layers01Icon,
       },
     }),
-    columnHelper.accessor("net_weight", {
+    columnHelper.accessor("net", {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Net Weight" icon={ScaleIcon} />
       ),
       cell: ({ row }) => {
-        const net = Number(row.getValue("net_weight"));
+        const net = row.getValue("net") as number | null;
+        if (net === null || net === undefined) {
+          return <span className="text-2xs text-muted-foreground italic">-</span>;
+        }
         return (
           <div className="flex items-baseline gap-1 font-mono text-xs">
             <span className="font-bold text-foreground">{net.toLocaleString()}</span>
@@ -82,12 +91,12 @@ export function getWeighmentColumns() {
         icon: ScaleIcon,
       },
     }),
-    columnHelper.accessor("gross_weight", {
+    columnHelper.accessor("gross", {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Gross" icon={ContainerTruck01Icon} />
       ),
       cell: ({ row }) => {
-        const gross = Number(row.getValue("gross_weight"));
+        const gross = Number(row.getValue("gross"));
         return (
           <div className="flex items-baseline gap-1 font-mono text-xs">
             <span className="font-medium text-foreground">{gross.toLocaleString()}</span>
@@ -100,12 +109,15 @@ export function getWeighmentColumns() {
         icon: ContainerTruck01Icon,
       },
     }),
-    columnHelper.accessor("tare_weight", {
+    columnHelper.accessor("tare", {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Tare" icon={PackageOpenIcon} />
       ),
       cell: ({ row }) => {
-        const tare = Number(row.getValue("tare_weight"));
+        const tare = row.getValue("tare") as number | null;
+        if (tare === null || tare === undefined) {
+          return <span className="text-2xs text-muted-foreground italic">-</span>;
+        }
         return (
           <div className="flex items-baseline gap-1 font-mono text-xs">
             <span className="font-medium text-foreground">{tare.toLocaleString()}</span>
@@ -118,105 +130,70 @@ export function getWeighmentColumns() {
         icon: PackageOpenIcon,
       },
     }),
-    columnHelper.accessor((row) => row.in_entry.center.name, {
+    columnHelper.accessor((row) => row.in_center.name, {
       id: "in_center",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="In Center" icon={Building02Icon} />
       ),
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-xs font-normal">
-          {row.original.in_entry.center.name}
+          {row.original.in_center.name}
         </Badge>
       ),
       meta: {
         title: "In Center",
         icon: Building02Icon,
       },
-      enableSorting: true,
+      enableSorting: false,
     }),
-    columnHelper.accessor((row) => row.out_entry.center.name, {
+    columnHelper.accessor((row) => row.out_center?.name ?? "-", {
       id: "out_center",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Out Center" icon={Building03Icon} />
       ),
-      cell: ({ row }) => (
-        <Badge variant="secondary" className="text-xs font-normal">
-          {row.original.out_entry.center.name}
-        </Badge>
-      ),
+      cell: ({ row }) =>
+        row.original.out_center ? (
+          <Badge variant="secondary" className="text-xs font-normal">
+            {row.original.out_center.name}
+          </Badge>
+        ) : (
+          <span className="text-2xs text-muted-foreground italic">-</span>
+        ),
       meta: {
         title: "Out Center",
         icon: Building03Icon,
       },
-      enableSorting: true,
+      enableSorting: false,
     }),
-    columnHelper.accessor((row) => row.in_entry.customer?.name ?? "", {
-      id: "in_customer",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="In Customer" icon={UserCheck01Icon} />
-      ),
-      cell: ({ row }) => {
-        const name = row.original.in_entry.customer?.name;
-        if (!name) {
-          return <span className="text-2xs text-muted-foreground italic">Unassigned</span>;
-        }
-        return <span className="text-xs font-medium text-foreground">{name}</span>;
-      },
-      meta: {
-        title: "In Customer",
-        icon: UserCheck01Icon,
-      },
-      enableSorting: true,
-    }),
-    columnHelper.accessor((row) => row.out_entry.customer?.name ?? "", {
-      id: "out_customer",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Out Customer" icon={UserArrowLeftRightIcon} />
-      ),
-      cell: ({ row }) => {
-        const name = row.original.out_entry.customer?.name;
-        if (!name) {
-          return <span className="text-2xs text-muted-foreground italic">Unassigned</span>;
-        }
-        return <span className="text-xs font-medium text-foreground">{name}</span>;
-      },
-      meta: {
-        title: "Out Customer",
-        icon: UserArrowLeftRightIcon,
-      },
-      enableSorting: true,
-    }),
-    columnHelper.accessor((row) => row.in_entry.created_at, {
+    columnHelper.accessor("in_time", {
       id: "in_time",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="In Time" icon={ClockArrowDownIcon} />
       ),
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {formatDateTime(row.original.in_entry.created_at)}
+          {formatDateTime(row.original.in_time)}
         </span>
       ),
       meta: {
         title: "In Time",
         icon: ClockArrowDownIcon,
       },
-      enableSorting: true,
     }),
-    columnHelper.accessor((row) => row.out_entry.created_at, {
+    columnHelper.accessor("out_time", {
       id: "out_time",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Out Time" icon={ClockArrowUpIcon} />
       ),
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {formatDateTime(row.original.out_entry.created_at)}
+          {row.original.out_time ? formatDateTime(row.original.out_time) : "-"}
         </span>
       ),
       meta: {
         title: "Out Time",
         icon: ClockArrowUpIcon,
       },
-      enableSorting: true,
     }),
     columnHelper.display({
       id: "photos",
@@ -224,10 +201,8 @@ export function getWeighmentColumns() {
         <DataTableColumnHeader column={column} title="Photos" icon={Image01Icon} />
       ),
       cell: ({ row, table }) => {
-        const inImages = row.original.in_entry.images;
-        const outImages = row.original.out_entry.images;
-        const allImages = [...inImages, ...outImages];
-        const count = allImages.length;
+        const images = row.original.images ?? [];
+        const count = images.length;
 
         if (count === 0) {
           return <span className="text-2xs text-muted-foreground">0</span>;
@@ -242,8 +217,8 @@ export function getWeighmentColumns() {
             onClick={() =>
               meta?.onViewPhotos?.(
                 `Weighment #${row.original.id} Photos`,
-                `${row.original.vehicle_number} • ${row.original.in_entry.center.name} ➔ ${row.original.out_entry.center.name}`,
-                allImages,
+                `${row.original.vehicle_number} • ${row.original.in_center.name}${row.original.out_center ? ` ➔ ${row.original.out_center.name}` : ""}`,
+                images,
               )
             }
             className="h-5 gap-1 rounded-full px-2 py-0 text-2xs text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors cursor-pointer"

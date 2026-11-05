@@ -7,8 +7,11 @@ import {
   DataTableContent,
   DataTablePagination,
   DataTableHydrationCard,
+  DataTableToolbar,
+  DataTableErrorState,
   useDataTable,
   type FacetedFilterOption,
+  type DataTableFilterConfig,
 } from "@/components/data-table";
 import {
   ArrowDownRight01Icon,
@@ -16,24 +19,24 @@ import {
   Building02Icon,
   Building03Icon,
   CircleMinusIcon,
+  Clock01Icon,
   Layers01Icon,
 } from "@hugeicons/core-free-icons";
 import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, getDualModeTableId } from "@/lib/table-cookie";
-import { EntriesToolbar, EntriesErrorState, type EntriesFilterConfig } from "@/components/entries";
 import { PhotosDialog } from "@/components/photos-dialog";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
-import type { Customer } from "@/app/customers/types";
 
 const TYPE_OPTIONS: FacetedFilterOption[] = [
   { label: "All Types", value: "all", icon: Layers01Icon },
+  { label: "PENDING", value: "pending", icon: Clock01Icon },
   { label: "IN", value: "in", icon: ArrowDownRight01Icon },
   { label: "OUT", value: "out", icon: ArrowUpRight01Icon },
-  { label: "N/A", value: "na", icon: CircleMinusIcon },
+  { label: "UNASSIGNED", value: "unassigned", icon: CircleMinusIcon },
 ];
 
 function formatCenterOptions(centers: Center[], title: string): FacetedFilterOption[] {
@@ -47,25 +50,10 @@ function formatCenterOptions(centers: Center[], title: string): FacetedFilterOpt
   ];
 }
 
-function formatCustomerOptions(customers: Customer[], title: string): FacetedFilterOption[] {
-  return [
-    { label: `All ${title}`, value: "all", icon: appIcons.customers },
-    ...customers.map((c) => ({
-      idPrefix: `#${c.id}`,
-      label: c.name,
-      value: String(c.id),
-    })),
-  ];
-}
-
 async function fetchFilterOptions() {
-  const [centersRes, customersRes] = await Promise.all([
-    axios.get<{ data: Center[] }>("/api/centers?all=true&sort=name.asc"),
-    axios.get<{ data: Customer[] }>("/api/customers?all=true&sort=name.asc"),
-  ]);
+  const centersRes = await axios.get<{ data: Center[] }>("/api/centers?all=true&sort=name.asc");
   return {
     centers: centersRes.data.data ?? [],
-    customers: customersRes.data.data ?? [],
   };
 }
 
@@ -84,7 +72,6 @@ function createFilterSanitizerSchema(validIds: Set<string>) {
 function validateAndSanitizeFilters(
   currentFilters: Record<string, string>,
   centers: Center[],
-  customers: Customer[],
   onReset: (key: string) => void,
 ): { sanitizedFilters: Record<string, string>; needsFallback: boolean } {
   let needsFallback = false;
@@ -92,8 +79,6 @@ function validateAndSanitizeFilters(
   const dynamicEntityChecks: Array<{ key: string; validIds: Set<string> }> = [
     { key: "in_center_id", validIds: new Set(centers.map((c) => String(c.id))) },
     { key: "out_center_id", validIds: new Set(centers.map((c) => String(c.id))) },
-    { key: "in_customer_id", validIds: new Set(customers.map((c) => String(c.id))) },
-    { key: "out_customer_id", validIds: new Set(customers.map((c) => String(c.id))) },
   ];
 
   for (const { key, validIds } of dynamicEntityChecks) {
@@ -153,12 +138,6 @@ export function WeighmentsDataTable() {
   ]);
   const [outCenterOptions, setOutCenterOptions] = useState<FacetedFilterOption[]>([
     { label: "All Out Centers", value: "all", icon: Building03Icon },
-  ]);
-  const [inCustomerOptions, setInCustomerOptions] = useState<FacetedFilterOption[]>([
-    { label: "All In Customers", value: "all", icon: appIcons.customers },
-  ]);
-  const [outCustomerOptions, setOutCustomerOptions] = useState<FacetedFilterOption[]>([
-    { label: "All Out Customers", value: "all", icon: appIcons.customers },
   ]);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [initialError, setInitialError] = useState<string | null>(null);
@@ -225,11 +204,10 @@ export function WeighmentsDataTable() {
 
       if (currentLoadId !== activeLoadIdRef.current) return;
 
-      const { centers, customers } = optionsResult;
+      const { centers } = optionsResult;
       const { sanitizedFilters, needsFallback } = validateAndSanitizeFilters(
         currentTableState.filters,
         centers,
-        customers,
         (key) => useDataTableStore.getState().setTableFilter(tableId, key, "all"),
       );
 
@@ -251,8 +229,6 @@ export function WeighmentsDataTable() {
 
       setInCenterOptions(formatCenterOptions(centers, "In Centers"));
       setOutCenterOptions(formatCenterOptions(centers, "Out Centers"));
-      setInCustomerOptions(formatCustomerOptions(customers, "In Customers"));
-      setOutCustomerOptions(formatCustomerOptions(customers, "Out Customers"));
       setInitialData(finalWeighments);
       setIsInitialLoading(false);
     } catch (err) {
@@ -300,7 +276,7 @@ export function WeighmentsDataTable() {
     initialData,
   });
 
-  const filterConfigs = useMemo<EntriesFilterConfig[]>(() => {
+  const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
     return [
       {
         key: "type",
@@ -314,44 +290,30 @@ export function WeighmentsDataTable() {
         title: "In Center",
         options: inCenterOptions,
         variant: "stone",
-        categoryIcon: appIcons.centers,
+        categoryIcon: Building02Icon,
       },
       {
         key: "out_center_id",
         title: "Out Center",
         options: outCenterOptions,
         variant: "stone",
-        categoryIcon: appIcons.centers,
-      },
-      {
-        key: "in_customer_id",
-        title: "In Customer",
-        options: inCustomerOptions,
-        variant: "emerald",
-        categoryIcon: appIcons.customers,
-      },
-      {
-        key: "out_customer_id",
-        title: "Out Customer",
-        options: outCustomerOptions,
-        variant: "emerald",
-        categoryIcon: appIcons.customers,
+        categoryIcon: Building03Icon,
       },
     ];
-  }, [inCenterOptions, outCenterOptions, inCustomerOptions, outCustomerOptions]);
+  }, [inCenterOptions, outCenterOptions]);
 
   if (isInitialLoading || !initialData) {
     return <DataTableHydrationCard />;
   }
 
   if (initialError) {
-    return <EntriesErrorState error={initialError} onRetry={loadInitialData} />;
+    return <DataTableErrorState title="Failed to load weighments" error={initialError} onRetry={loadInitialData} />;
   }
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       {/* Primary Toolbar - 2-Tier Layout with Integrated Multi-Sort */}
-      <EntriesToolbar
+      <DataTableToolbar
         table={table}
         search={search}
         onSearchChange={setSearch}

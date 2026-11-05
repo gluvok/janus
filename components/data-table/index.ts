@@ -48,8 +48,15 @@ export { DatePickerWithRange, type DatePickerWithRangeProps } from "./date-range
 
 export { SortableSortChip } from "./sortable-sort-chip";
 
-export { useDataTable, type UseDataTableOptions } from "./use-data-table";
+export {
+  DataTableToolbar,
+  type DataTableToolbarProps,
+  type DataTableFilterConfig,
+} from "./data-table-toolbar";
 
-export { DataTableRowActions, type DataTableRowActionsProps } from "./data-table-row-actions";
+export {
+  DataTableErrorState,
+  type DataTableErrorStateProps,
+} from "./data-table-error-state";
 
-export { useTableHydrated } from "@/stores/use-data-table-store";
+export { useDataTable } from "./use-data-table";

@@ -14,7 +14,7 @@ import {
 } from "@/components/data-table";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-export interface EntriesFilterConfig {
+export interface DataTableFilterConfig {
   key: string;
   title: string;
   options: FacetedFilterOption[];
@@ -22,7 +22,7 @@ export interface EntriesFilterConfig {
   categoryIcon: React.ComponentProps<typeof HugeiconsIcon>["icon"];
 }
 
-export interface EntriesToolbarProps<TData extends RowData> {
+export interface DataTableToolbarProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;
   search: string;
   onSearchChange: (value: string) => void;
@@ -31,7 +31,7 @@ export interface EntriesToolbarProps<TData extends RowData> {
   loading?: boolean;
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
-  filterConfigs: EntriesFilterConfig[];
+  filterConfigs: DataTableFilterConfig[];
   filters: Record<string, string>;
   onFilterChange: (key: string, value: string) => void;
   hasActiveSorts: boolean;
@@ -42,11 +42,11 @@ export interface EntriesToolbarProps<TData extends RowData> {
   onResetAll?: () => void;
 }
 
-export function EntriesToolbar<TData extends RowData>({
+export function DataTableToolbar<TData extends RowData>({
   table,
   search,
   onSearchChange,
-  searchPlaceholder = "Search entries...",
+  searchPlaceholder = "Search records...",
   onRefresh,
   loading,
   dateRange,
@@ -60,7 +60,7 @@ export function EntriesToolbar<TData extends RowData>({
   onRemoveSort,
   onResetSorts,
   onResetAll,
-}: EntriesToolbarProps<TData>) {
+}: DataTableToolbarProps<TData>) {
   return (
     <div className="flex flex-col gap-2 shrink-0">
       {/* Row 1: Search Box (Left) + Refresh Button, Date Range Picker & Columns (Right) */}

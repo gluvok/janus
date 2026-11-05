@@ -19,7 +19,7 @@ export function HeaderModeToggle({ initialGlobalMode }: HeaderModeToggleProps) {
 
   const globalMode = hasHydrated ? storeGlobalMode : initialGlobalMode;
 
-  // Hide on routes without dual-mode tables (e.g. /centers, /users, /customers)
+  // Hide on routes without dual-mode tables (e.g. /centers, /users)
   if (!isDualModeRoute(pathname)) {
     return null;
   }

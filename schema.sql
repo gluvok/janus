@@ -68,7 +68,7 @@ BEGIN
         CREATE TYPE role_enum AS ENUM ('admin', 'manager', 'operator', 'base');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'weighment_type') THEN
-        CREATE TYPE weighment_type AS ENUM ('in', 'out');
+        CREATE TYPE weighment_type AS ENUM ('pending', 'in', 'out', 'unassigned');
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ticket_status') THEN
         CREATE TYPE ticket_status AS ENUM ('pending', 'approved', 'rejected');
@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS centers (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
+    api_key TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -99,20 +100,9 @@ CREATE TABLE IF NOT EXISTS centers (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_centers_factory_name
 ON centers (factory_id, name);
 
-CREATE TABLE IF NOT EXISTS customers (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_factory_name
-ON customers (factory_id, name);
-
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    username TEXT NOT NULL,
+    username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
     role role_enum NOT NULL DEFAULT 'base',
@@ -123,17 +113,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username 
 ON users (username);
-
-CREATE TABLE IF NOT EXISTS devices (
-    id SERIAL PRIMARY KEY,
-    center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
-    api_key_hash TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_center
-ON devices (center_id);
 
 CREATE TABLE IF NOT EXISTS sessions (
     id SERIAL PRIMARY KEY,
@@ -149,102 +128,140 @@ CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions (token);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at);
 
 -- ------------------------------------------------------------------------------
--- MANUAL ENTRIES (Operator-Created)
+-- AUTOMATIC WEIGHMENTS
 -- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS manual_entries (
+CREATE TABLE IF NOT EXISTS automatic_weighments (
     id SERIAL PRIMARY KEY,
     vehicle_number TEXT NOT NULL,
-    weight NUMERIC(10, 2) NOT NULL,
-    center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
-    customer_id INT REFERENCES customers(id) ON DELETE RESTRICT,
-    creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    images TEXT[] DEFAULT '{}',
+    in_detected_vehicle_number TEXT,
+    out_detected_vehicle_number TEXT,
+    in_weight NUMERIC(10, 2) NOT NULL,
+    out_weight NUMERIC(10, 2),
+    in_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    out_time TIMESTAMPTZ,
+    in_center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
+    out_center_id INT REFERENCES centers(id) ON DELETE RESTRICT,
+    images TEXT[] NOT NULL DEFAULT '{}',
+    gross NUMERIC(10, 2) GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN in_weight
+            ELSE GREATEST(in_weight, out_weight)
+        END
+    ) STORED,
+    tare NUMERIC(10, 2) GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN NULL
+            ELSE LEAST(in_weight, out_weight)
+        END
+    ) STORED,
+    net NUMERIC(10, 2) GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN NULL
+            ELSE ABS(in_weight - out_weight)
+        END
+    ) STORED,
+    type weighment_type GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN 'pending'::weighment_type
+            WHEN in_weight > out_weight THEN 'in'::weighment_type
+            WHEN in_weight < out_weight THEN 'out'::weighment_type
+            ELSE 'unassigned'::weighment_type
+        END
+    ) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_manual_entries_weight_positive CHECK (weight > 0)
+    CONSTRAINT chk_automatic_weighments_in_weight_positive CHECK (in_weight > 0),
+    CONSTRAINT chk_automatic_weighments_out_weight_positive CHECK (out_weight IS NULL OR out_weight > 0)
 );
 
-CREATE INDEX IF NOT EXISTS idx_manual_entries_center_vehicle 
-ON manual_entries (center_id, vehicle_number, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automatic_weighments_vehicle
+ON automatic_weighments (vehicle_number, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_manual_entries_created_at
-ON manual_entries (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automatic_weighments_created
+ON automatic_weighments (created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_manual_entries_creator_id
-ON manual_entries (creator_id);
+CREATE INDEX IF NOT EXISTS idx_automatic_weighments_in_center
+ON automatic_weighments (in_center_id);
 
-CREATE INDEX IF NOT EXISTS idx_manual_entries_center
-ON manual_entries (center_id);
+CREATE INDEX IF NOT EXISTS idx_automatic_weighments_out_center
+ON automatic_weighments (out_center_id);
 
-CREATE INDEX IF NOT EXISTS idx_manual_entries_customer
-ON manual_entries (customer_id);
+CREATE INDEX IF NOT EXISTS idx_automatic_weighments_type
+ON automatic_weighments (type);
 
-CREATE INDEX IF NOT EXISTS idx_manual_entries_vehicle_trgm
-ON manual_entries USING gin (vehicle_number gin_trgm_ops);
-
--- ------------------------------------------------------------------------------
--- AUTOMATIC ENTRIES (Hardware-Captured)
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS automatic_entries (
-    id SERIAL PRIMARY KEY,
-    device_id INT NOT NULL REFERENCES devices(id) ON DELETE RESTRICT,
-    center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
-    customer_id INT REFERENCES customers(id) ON DELETE RESTRICT,
-    detected_vehicle_number TEXT NOT NULL DEFAULT 'NO_PLATE_DETECTED',
-    vehicle_number TEXT NOT NULL DEFAULT 'NO_PLATE_DETECTED',
-    weight NUMERIC(10, 2) NOT NULL,
-    images TEXT[] DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_automatic_entries_weight_positive CHECK (weight > 0)
-);
-
-CREATE INDEX IF NOT EXISTS idx_automatic_entries_device
-ON automatic_entries (device_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_automatic_entries_center_created
-ON automatic_entries (center_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_automatic_entries_vehicle
-ON automatic_entries (vehicle_number, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_automatic_entries_customer
-ON automatic_entries (customer_id);
-
-CREATE INDEX IF NOT EXISTS idx_automatic_entries_vehicle_trgm
-ON automatic_entries USING gin (vehicle_number gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_automatic_weighments_vehicle_trgm
+ON automatic_weighments USING gin (vehicle_number gin_trgm_ops);
 
 -- ------------------------------------------------------------------------------
 -- MANUAL WEIGHMENTS
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS manual_weighments (
     id SERIAL PRIMARY KEY,
-    in_entry_id INT NOT NULL UNIQUE REFERENCES manual_entries(id) ON DELETE RESTRICT,
-    out_entry_id INT NOT NULL UNIQUE REFERENCES manual_entries(id) ON DELETE RESTRICT,
-    type weighment_type NOT NULL DEFAULT 'in',
+    vehicle_number TEXT NOT NULL,
+    in_weight NUMERIC(10, 2) NOT NULL,
+    out_weight NUMERIC(10, 2),
+    in_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    out_time TIMESTAMPTZ,
+    in_center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
+    out_center_id INT REFERENCES centers(id) ON DELETE RESTRICT,
+    in_creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    out_creator_id INT REFERENCES users(id) ON DELETE RESTRICT,
+    images TEXT[] NOT NULL DEFAULT '{}',
+    gross NUMERIC(10, 2) GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN in_weight
+            ELSE GREATEST(in_weight, out_weight)
+        END
+    ) STORED,
+    tare NUMERIC(10, 2) GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN NULL
+            ELSE LEAST(in_weight, out_weight)
+        END
+    ) STORED,
+    net NUMERIC(10, 2) GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN NULL
+            ELSE ABS(in_weight - out_weight)
+        END
+    ) STORED,
+    type weighment_type GENERATED ALWAYS AS (
+        CASE
+            WHEN out_weight IS NULL THEN 'pending'::weighment_type
+            WHEN in_weight > out_weight THEN 'in'::weighment_type
+            WHEN in_weight < out_weight THEN 'out'::weighment_type
+            ELSE 'unassigned'::weighment_type
+        END
+    ) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_manual_weighments_distinct_entries CHECK (in_entry_id <> out_entry_id)
+    CONSTRAINT chk_manual_weighments_in_weight_positive CHECK (in_weight > 0),
+    CONSTRAINT chk_manual_weighments_out_weight_positive CHECK (out_weight IS NULL OR out_weight > 0)
 );
+
+CREATE INDEX IF NOT EXISTS idx_manual_weighments_vehicle
+ON manual_weighments (vehicle_number, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_manual_weighments_created
 ON manual_weighments (created_at DESC);
 
--- ------------------------------------------------------------------------------
--- AUTOMATIC WEIGHMENTS
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS automatic_weighments (
-    id SERIAL PRIMARY KEY,
-    in_entry_id INT NOT NULL UNIQUE REFERENCES automatic_entries(id) ON DELETE RESTRICT,
-    out_entry_id INT NOT NULL UNIQUE REFERENCES automatic_entries(id) ON DELETE RESTRICT,
-    type weighment_type NOT NULL DEFAULT 'in',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_automatic_weighments_distinct_entries CHECK (in_entry_id <> out_entry_id)
-);
+CREATE INDEX IF NOT EXISTS idx_manual_weighments_in_center
+ON manual_weighments (in_center_id);
 
-CREATE INDEX IF NOT EXISTS idx_automatic_weighments_created
-ON automatic_weighments (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_manual_weighments_out_center
+ON manual_weighments (out_center_id);
+
+CREATE INDEX IF NOT EXISTS idx_manual_weighments_in_creator
+ON manual_weighments (in_creator_id);
+
+CREATE INDEX IF NOT EXISTS idx_manual_weighments_out_creator
+ON manual_weighments (out_creator_id);
+
+CREATE INDEX IF NOT EXISTS idx_manual_weighments_type
+ON manual_weighments (type);
+
+CREATE INDEX IF NOT EXISTS idx_manual_weighments_vehicle_trgm
+ON manual_weighments USING gin (vehicle_number gin_trgm_ops);
 
 -- ------------------------------------------------------------------------------
 -- TICKETS
@@ -254,7 +271,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     concern TEXT NOT NULL,
     reply TEXT,
     status ticket_status NOT NULL DEFAULT 'pending',
-    entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE RESTRICT,
+    weighment_id INT NOT NULL REFERENCES automatic_weighments(id) ON DELETE RESTRICT,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -263,8 +280,8 @@ CREATE TABLE IF NOT EXISTS tickets (
 CREATE INDEX IF NOT EXISTS idx_tickets_user_status 
 ON tickets (user_id, status, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_tickets_entry 
-ON tickets (entry_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_weighment 
+ON tickets (weighment_id);
 
 CREATE INDEX IF NOT EXISTS idx_tickets_created_desc
 ON tickets (created_at DESC);
@@ -278,72 +295,6 @@ ON users USING gin (name gin_trgm_ops, username gin_trgm_ops);
 
 CREATE INDEX IF NOT EXISTS idx_centers_factory
 ON centers (factory_id);
-
--- ==============================================================================
--- COMPUTED COLUMNS FOR WEIGHMENTS
--- ==============================================================================
-
--- Manual weighments computed functions
-CREATE OR REPLACE FUNCTION gross_weight(w manual_weighments) 
-RETURNS numeric 
-LANGUAGE sql 
-STABLE PARALLEL SAFE
-AS $$
-    SELECT GREATEST(e1.weight, e2.weight)
-    FROM manual_entries e1, manual_entries e2
-    WHERE e1.id = w.in_entry_id AND e2.id = w.out_entry_id;
-$$;
-
-CREATE OR REPLACE FUNCTION tare_weight(w manual_weighments) 
-RETURNS numeric 
-LANGUAGE sql 
-STABLE PARALLEL SAFE
-AS $$
-    SELECT LEAST(e1.weight, e2.weight)
-    FROM manual_entries e1, manual_entries e2
-    WHERE e1.id = w.in_entry_id AND e2.id = w.out_entry_id;
-$$;
-
-CREATE OR REPLACE FUNCTION net_weight(w manual_weighments) 
-RETURNS numeric 
-LANGUAGE sql 
-STABLE PARALLEL SAFE
-AS $$
-    SELECT ABS(e1.weight - e2.weight)
-    FROM manual_entries e1, manual_entries e2
-    WHERE e1.id = w.in_entry_id AND e2.id = w.out_entry_id;
-$$;
-
--- Automatic weighments computed functions
-CREATE OR REPLACE FUNCTION gross_weight(w automatic_weighments) 
-RETURNS numeric 
-LANGUAGE sql 
-STABLE PARALLEL SAFE
-AS $$
-    SELECT GREATEST(e1.weight, e2.weight)
-    FROM automatic_entries e1, automatic_entries e2
-    WHERE e1.id = w.in_entry_id AND e2.id = w.out_entry_id;
-$$;
-
-CREATE OR REPLACE FUNCTION tare_weight(w automatic_weighments) 
-RETURNS numeric 
-LANGUAGE sql 
-STABLE PARALLEL SAFE
-AS $$
-    SELECT LEAST(e1.weight, e2.weight)
-    FROM automatic_entries e1, automatic_entries e2
-    WHERE e1.id = w.in_entry_id AND e2.id = w.out_entry_id;
-$$;
-
-CREATE OR REPLACE FUNCTION net_weight(w automatic_weighments) 
-RETURNS numeric 
-LANGUAGE sql 
-STABLE PARALLEL SAFE
-AS $$
-    SELECT ABS(e1.weight - e2.weight)
-    FROM automatic_entries e1, automatic_entries e2
-    WHERE e1.id = w.in_entry_id AND e2.id = w.out_entry_id;
-$$;
 
 -- ==============================================================================
 -- UPDATED_AT TRIGGER FUNCTION & TRIGGERS
@@ -364,36 +315,20 @@ CREATE TRIGGER trg_users_updated_at
 BEFORE UPDATE ON users
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
-CREATE TRIGGER trg_devices_updated_at
-BEFORE UPDATE ON devices
-FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-
 CREATE TRIGGER trg_centers_updated_at
 BEFORE UPDATE ON centers
-FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-
-CREATE TRIGGER trg_customers_updated_at
-BEFORE UPDATE ON customers
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 CREATE TRIGGER trg_sessions_updated_at
 BEFORE UPDATE ON sessions
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
-CREATE TRIGGER trg_manual_entries_updated_at
-BEFORE UPDATE ON manual_entries
-FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-
-CREATE TRIGGER trg_automatic_entries_updated_at
-BEFORE UPDATE ON automatic_entries
+CREATE TRIGGER trg_automatic_weighments_updated_at
+BEFORE UPDATE ON automatic_weighments
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 CREATE TRIGGER trg_manual_weighments_updated_at
 BEFORE UPDATE ON manual_weighments
-FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-
-CREATE TRIGGER trg_automatic_weighments_updated_at
-BEFORE UPDATE ON automatic_weighments
 FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 CREATE TRIGGER trg_tickets_updated_at
@@ -405,26 +340,18 @@ FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 -- ==============================================================================
 ALTER TABLE IF EXISTS factories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS devices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS centers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS manual_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS automatic_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS manual_weighments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS automatic_weighments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS manual_weighments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tickets ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow access factories" ON factories FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access users" ON users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access devices" ON devices FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access sessions" ON sessions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access centers" ON centers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access customers" ON customers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access manual_entries" ON manual_entries FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access automatic_entries" ON automatic_entries FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access manual_weighments" ON manual_weighments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access automatic_weighments" ON automatic_weighments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access manual_weighments" ON manual_weighments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow access tickets" ON tickets FOR ALL USING (true) WITH CHECK (true);
 
 -- ==============================================================================
@@ -435,7 +362,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
-DECLARe
+DECLARE
     seq_name text;
 BEGIN
     seq_name := pg_get_serial_sequence(table_name, 'id');
@@ -458,11 +385,7 @@ DECLARE
         'tickets',
         'automatic_weighments',
         'manual_weighments',
-        'automatic_entries',
-        'manual_entries',
-        'devices',
         'sessions',
-        'customers',
         'centers',
         'users',
         'factories'

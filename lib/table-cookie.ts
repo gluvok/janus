@@ -47,37 +47,33 @@ export const dualModeEntitySchema = z.object({
 });
 export type DualModeEntityState = z.infer<typeof dualModeEntitySchema>;
 
-export const DUAL_MODE_ENTITIES = ["entries", "weighments", "tickets"] as const;
-export const SINGLE_MODE_ENTITIES = ["centers", "users", "customers"] as const;
+export const DUAL_MODE_ENTITIES = ["weighments", "tickets"] as const;
+export const SINGLE_MODE_ENTITIES = ["centers", "users"] as const;
 
 export type DualModeEntity = (typeof DUAL_MODE_ENTITIES)[number];
 export type SingleModeEntity = (typeof SINGLE_MODE_ENTITIES)[number];
 
 /**
  * Smart-grouped cookie payload schema.
- * Dual-mode entities (entries, weighments, tickets) have 'automatic' and 'manual' subkeys.
- * Single-mode entities (centers, users, customers) store table preferences directly.
+ * Dual-mode entities (weighments, tickets) have 'automatic' and 'manual' subkeys.
+ * Single-mode entities (centers, users) store table preferences directly.
  * Root 'mode' governs global platform mode and Home ('/').
  */
 export const tablesCookiePayloadSchema = z.object({
   mode: globalModeSchema,
-  entries: dualModeEntitySchema.optional(),
   weighments: dualModeEntitySchema.optional(),
   tickets: dualModeEntitySchema.optional(),
   centers: prunedTableStateSchema.optional(),
   users: prunedTableStateSchema.optional(),
-  customers: prunedTableStateSchema.optional(),
 });
 export type TablesCookiePayload = z.infer<typeof tablesCookiePayloadSchema>;
 
 export const DEFAULT_TABLES_COOKIE: TablesCookiePayload = {
   mode: "automatic",
-  entries: { automatic: {}, manual: {} },
   weighments: { automatic: {}, manual: {} },
   tickets: { automatic: {}, manual: {} },
   centers: {},
   users: {},
-  customers: {},
 };
 
 /**
@@ -92,7 +88,7 @@ export function isDualModeRoute(pathname: string | null | undefined): boolean {
 
 /**
  * Derives the partitioned tableId for any dual-mode entity.
- * e.g., getDualModeTableId("entries", "manual") => "entries_manual"
+ * e.g., getDualModeTableId("weighments", "manual") => "weighments_manual"
  */
 export function getDualModeTableId(baseTableName: string, mode: GlobalMode): string {
   return `${baseTableName}_${mode}`;

@@ -4,8 +4,7 @@
  * Provisions core infrastructure required to onboard a new client:
  * 1. A new Factory
  * 2. A new Admin user (dynamically numbered based on existing admins)
- * 3. Centers for the new factory
- * 4. 1:1 Matching Hardware Devices (provisions devices table entry with API key hash)
+ * 3. Centers for the new factory with dedicated API keys
  */
 
 import crypto from "node:crypto";
@@ -66,8 +65,7 @@ Client Onboarding Seeder (scripts/seed.ts)
 Provisions the minimal required entities to onboard a new client:
   • 1 New Factory
   • 1 New Admin user (username auto-indexed from current admin count)
-  • N New Centers
-  • N New Hardware Devices in 'devices' table (1:1 with centers, API key hash authenticated)
+  • N New Centers with dedicated API keys
 
 Usage:
   pnpm run seed [options]
@@ -183,66 +181,32 @@ async function main() {
     `  ✓ Admin user created (ID: ${createdAdmin.id}, Username: '${createdAdmin.username}')`,
   );
 
-  // 4. CREATE CENTERS & 1:1 HARDWARE DEVICES
-  console.log(`\n⚖️ Provisioning ${args.centersCount} center(s) and matching 1:1 devices...`);
+  // 4. CREATE CENTERS WITH API KEYS
+  console.log(`\n⚖️ Provisioning ${args.centersCount} center(s) with dedicated API keys...`);
 
   const centersToInsert = Array.from({ length: args.centersCount }, (_, i) => {
     const centerIndex = i + 1;
     const centerName =
       args.centerNames && args.centerNames[i] ? args.centerNames[i] : `Center ${centerIndex}`;
+    const apiKey = crypto.randomBytes(16).toString("hex");
     return {
       name: centerName,
       factory_id: createdFactory.id,
+      api_key: apiKey,
     };
   });
 
   const { data: createdCenters, error: centersError } = await supabase
     .from("centers")
     .insert(centersToInsert)
-    .select("id, name");
+    .select("id, name, api_key");
 
   if (centersError || !createdCenters) {
     throw centersError || new Error("Failed to bulk create centers");
   }
 
-  const devicePairs: Array<{
-    centerId: number;
-    centerName: string;
-    deviceId?: number;
-    rawApiKey: string;
-  }> = [];
-
   for (const center of createdCenters) {
-    const rawApiKey = `glv_live_${crypto.randomUUID().replace(/-/g, "")}`;
-    const apiKeyHash = await argon2.hash(rawApiKey);
-
-    const { data: devData, error: devError } = await supabase
-      .from("devices")
-      .insert({
-        center_id: center.id,
-        api_key_hash: apiKeyHash,
-      })
-      .select("id")
-      .single();
-
-    if (devError) {
-      if (devError.code === "PGRST205") {
-        console.warn(
-          `  ⚠️ Note: 'devices' table does not exist in schema cache yet. Skipping device row insertion.`,
-        );
-      } else {
-        console.warn(`  ⚠️ Failed to insert device for center ${center.id}:`, devError.message);
-      }
-    }
-
-    devicePairs.push({
-      centerId: center.id,
-      centerName: center.name,
-      deviceId: devData?.id,
-      rawApiKey,
-    });
-
-    console.log(`  ✓ Center '${center.name}' (ID: ${center.id}) ↔ Device (API Key: ${rawApiKey})`);
+    console.log(`  ✓ Center '${center.name}' (ID: ${center.id}, API Key: ${center.api_key})`);
   }
 
   // 5. SUMMARY
@@ -254,11 +218,9 @@ async function main() {
   console.log(
     `  • Admin:     ${createdAdmin.username} / ${args.adminPassword} (ID: ${createdAdmin.id})`,
   );
-  console.log("  • Centers & Hardware Scale Devices:");
-  for (const pair of devicePairs) {
-    console.log(
-      `    - ${pair.centerName} (Center ID: ${pair.centerId}${pair.deviceId ? `, Device ID: ${pair.deviceId}` : ""}) ➜ Device API Key: ${pair.rawApiKey}`,
-    );
+  console.log("  • Centers & Scale API Keys:");
+  for (const center of createdCenters) {
+    console.log(`    - ${center.name} (ID: ${center.id}) ➜ API Key: ${center.api_key}`);
   }
   console.log("=================================================");
 }

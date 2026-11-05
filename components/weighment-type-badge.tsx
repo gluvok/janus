@@ -4,6 +4,7 @@ import {
   ArrowDownRight01Icon,
   ArrowUpRight01Icon,
   CircleMinusIcon,
+  Clock01Icon,
 } from "@hugeicons/core-free-icons";
 import type { WeighmentType } from "@/app/weighments/types";
 
@@ -13,6 +14,16 @@ interface WeighmentTypeBadgeProps {
 
 export function WeighmentTypeBadge({ type }: WeighmentTypeBadgeProps) {
   switch (type) {
+    case "pending":
+      return (
+        <Badge
+          variant="outline"
+          className="gap-1 text-2xs font-normal text-amber-900 border-amber-300/80 bg-amber-600/10 dark:text-amber-200 dark:border-amber-800/50 dark:bg-amber-950/30"
+        >
+          <HugeiconsIcon icon={Clock01Icon} className="size-3" />
+          PENDING
+        </Badge>
+      );
     case "in":
       return (
         <Badge
@@ -33,14 +44,14 @@ export function WeighmentTypeBadge({ type }: WeighmentTypeBadgeProps) {
           OUT
         </Badge>
       );
-    case "na":
+    case "unassigned":
       return (
         <Badge
           variant="outline"
           className="gap-1 text-2xs font-normal text-stone-700 border-stone-300/80 bg-stone-500/10 dark:text-stone-300 dark:border-stone-700/80 dark:bg-stone-900/30"
         >
           <HugeiconsIcon icon={CircleMinusIcon} className="size-3" />
-          N/A
+          UNASSIGNED
         </Badge>
       );
   }

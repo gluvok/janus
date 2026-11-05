@@ -1,7 +1,7 @@
 /**
  * @file scripts/seed-entry-photos.ts
- * @description Uploads sample transport photos to the 'test' Supabase storage bucket
- * and links their public URLs to entries in the database.
+ * @description Uploads sample transport photos to the 'mesto' Supabase storage bucket
+ * and links their public URLs to weighments in the database.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -41,7 +41,7 @@ const SAMPLE_PHOTOS = [
 ];
 
 async function seedPhotos() {
-  console.log("🚚 Starting Entry Photos Seeding...");
+  console.log("🚚 Starting Weighment Photos Seeding...");
   console.log(`📡 Supabase Endpoint: ${supabaseUrl}`);
 
   // 1. Fetch images as buffers
@@ -59,8 +59,8 @@ async function seedPhotos() {
       const arrayBuffer = await res.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      console.log(`⬆️ Uploading to Supabase Storage bucket 'test': ${photo.name}...`);
-      const uploadRes = await supabase.storage.from("test").upload(photo.name, buffer, {
+      console.log(`⬆️ Uploading to Supabase Storage bucket 'mesto': ${photo.name}...`);
+      const uploadRes = await supabase.storage.from("mesto").upload(`1/${photo.name}`, buffer, {
         contentType: "image/jpeg",
         upsert: true,
       });
@@ -70,8 +70,8 @@ async function seedPhotos() {
         console.warn(`ℹ️ Using direct fallback CDN URL: ${photo.url}`);
         uploadedUrls.push(photo.url);
       } else {
-        const { data: publicUrlData } = supabase.storage.from("test").getPublicUrl(photo.name);
-        console.log(`✅ Uploaded to bucket 'test': ${publicUrlData.publicUrl}`);
+        const { data: publicUrlData } = supabase.storage.from("mesto").getPublicUrl(`1/${photo.name}`);
+        console.log(`✅ Uploaded to bucket 'mesto': ${publicUrlData.publicUrl}`);
         uploadedUrls.push(publicUrlData.publicUrl);
       }
     } catch (err) {
@@ -80,49 +80,44 @@ async function seedPhotos() {
     }
   }
 
-  // 2. Link photos to recent entries
-  console.log("📝 Querying recent entries to update with photos...");
-  const { data: entries, error: entriesError } = await supabase
-    .from("entries")
+  // 2. Link photos to recent weighments
+  console.log("📝 Querying recent weighments to update with photos...");
+  const { data: weighments, error: weighmentsError } = await supabase
+    .from("automatic_weighments")
     .select("id, vehicle_number")
     .order("id", { ascending: true })
     .limit(10);
 
-  if (entriesError || !entries || entries.length === 0) {
-    console.error("❌ Could not fetch entries to link photos:", entriesError);
+  if (weighmentsError || !weighments || weighments.length === 0) {
+    console.error("❌ Could not fetch weighments to link photos:", weighmentsError);
     return;
   }
 
-  // Assign photo groups:
-  // Entry 1: 3 photos (Front, Scale, Cargo)
-  // Entry 2: 2 photos (Front, Scale)
-  // Entry 3: 4 photos (All 4)
-  // Entry 4: 1 photo (Front)
   const assignments = [
     {
-      id: entries[0]?.id,
+      id: weighments[0]?.id,
       images: [uploadedUrls[0], uploadedUrls[1], uploadedUrls[2]].filter(Boolean),
     },
-    { id: entries[1]?.id, images: [uploadedUrls[0], uploadedUrls[1]].filter(Boolean) },
-    { id: entries[2]?.id, images: uploadedUrls.filter(Boolean) },
-    { id: entries[3]?.id, images: [uploadedUrls[0]].filter(Boolean) },
+    { id: weighments[1]?.id, images: [uploadedUrls[0], uploadedUrls[1]].filter(Boolean) },
+    { id: weighments[2]?.id, images: uploadedUrls.filter(Boolean) },
+    { id: weighments[3]?.id, images: [uploadedUrls[0]].filter(Boolean) },
   ];
 
   for (const item of assignments) {
     if (!item.id || item.images.length === 0) continue;
     const { error: updateError } = await supabase
-      .from("entries")
+      .from("automatic_weighments")
       .update({ images: item.images })
       .eq("id", item.id);
 
     if (updateError) {
-      console.error(`❌ Failed to update Entry #${item.id}:`, updateError.message);
+      console.error(`❌ Failed to update Weighment #${item.id}:`, updateError.message);
     } else {
-      console.log(`📸 Updated Entry #${item.id} with ${item.images.length} photo(s).`);
+      console.log(`📸 Updated Weighment #${item.id} with ${item.images.length} photo(s).`);
     }
   }
 
-  console.log("🎉 Entry photos successfully seeded!");
+  console.log("🎉 Weighment photos successfully seeded!");
 }
 
 seedPhotos();

@@ -11,28 +11,16 @@ export interface NavItem {
 
 export const mainNavItems: NavItem[] = [
   {
-    title: "Centers",
-    url: "/centers",
-    icon: appIcons.centers,
-    description: "Manage processing facilities and operational locations.",
-  },
-  {
-    title: "Entries",
-    url: "/entries",
-    icon: appIcons.entries,
-    description: "View and record incoming and outgoing transport entries.",
-  },
-  {
     title: "Weighments",
     url: "/weighments",
     icon: appIcons.weighments,
     description: "Track weighbridge measurements, gross, tare, and net weights.",
   },
   {
-    title: "Customers",
-    url: "/customers",
-    icon: appIcons.customers,
-    description: "Maintain client profiles, billing contacts, and contracts.",
+    title: "Centers",
+    url: "/centers",
+    icon: appIcons.centers,
+    description: "Manage processing facilities and operational locations.",
   },
   {
     title: "Users",
