@@ -37,7 +37,6 @@ A centralized operational platform and automation management system for weighbri
 | Method   | Endpoint                    | Description                                                                               |
 | :------- | :-------------------------- | :---------------------------------------------------------------------------------------- |
 | `GET`    | `/api/centers`              | List centers (omits `api_key`). Supports pagination & sorting.                            |
-| `POST`   | `/api/centers`              | Create a center. Generates and returns a 32-character `api_key`.                          |
 | `PATCH`  | `/api/centers`              | Update center details.                                                                    |
 | `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).  |
 | `POST`   | `/api/weighments/automatic` | Ingest vehicle weighing. Auto-matches open pending weighments or creates inbound records. |

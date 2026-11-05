@@ -94,11 +94,9 @@ CREATE TABLE IF NOT EXISTS centers (
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
     api_key TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_centers_factory_name UNIQUE (factory_id, name)
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_centers_factory_name
-ON centers (factory_id, name);
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,

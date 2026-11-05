@@ -15,13 +15,6 @@ export const centerNameSchema = z
   .min(1, "Center name is required")
   .max(100, "Center name must not exceed 100 characters");
 
-export const createCenterSchema = z.object({
-  name: centerNameSchema,
-  factory_id: z.number().int().positive().optional(),
-});
-
-export type CreateCenterInput = z.infer<typeof createCenterSchema>;
-
 export const updateCenterSchema = z.object({
   id: z.number().int().positive(),
   name: centerNameSchema,
