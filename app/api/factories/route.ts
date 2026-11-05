@@ -15,13 +15,17 @@ export async function GET() {
       .from("factories")
       .select("id, name, receipt_images_per_row, created_at, updated_at")
       .eq("id", HARDCODED_FACTORY_ID)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
       return NextResponse.json(
-        { error: error?.message || "Factory not found" },
-        { status: StatusCodes.NOT_FOUND },
+        { error: error.message },
+        { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: "Factory not found" }, { status: StatusCodes.NOT_FOUND });
     }
 
     return NextResponse.json({ data });
@@ -43,23 +47,22 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const updates = {
-      ...parseResult.data,
-      updated_at: new Date().toISOString(),
-    };
-
     const { data, error } = await supabase
       .from("factories")
-      .update(updates)
+      .update(parseResult.data)
       .eq("id", HARDCODED_FACTORY_ID)
       .select("id, name, receipt_images_per_row, created_at, updated_at")
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
       return NextResponse.json(
-        { error: error?.message || "Failed to update factory" },
+        { error: error.message },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: "Factory not found" }, { status: StatusCodes.NOT_FOUND });
     }
 
     return NextResponse.json({ data });

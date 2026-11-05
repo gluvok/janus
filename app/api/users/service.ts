@@ -159,7 +159,6 @@ export async function updateUserAccount(data: UpdateUserInput) {
     username: cleanUsername,
     name: name.trim(),
     role,
-    updated_at: new Date().toISOString(),
   };
 
   if (password && password.trim()) {
@@ -171,10 +170,14 @@ export async function updateUserAccount(data: UpdateUserInput) {
     .update(updates)
     .eq("id", id)
     .select(USER_SELECT_PROJECTION)
-    .single();
+    .maybeSingle();
 
   if (updateError) {
     throw new ServiceError(updateError.message, StatusCodes.INTERNAL_SERVER_ERROR);
+  }
+
+  if (!updated) {
+    throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
   }
 
   return updated;

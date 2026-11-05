@@ -32,10 +32,10 @@ export async function PATCH(request: Request) {
 
     const { data, error } = await supabase
       .from("centers")
-      .update({ name, updated_at: new Date().toISOString() })
+      .update({ name })
       .eq("id", id)
       .select("id, name, created_at, updated_at")
-      .single();
+      .maybeSingle();
 
     if (error) {
       if (error.code === "23505") {

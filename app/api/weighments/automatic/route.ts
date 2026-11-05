@@ -58,7 +58,6 @@ export async function POST(request: Request) {
           out_center_id: center_id,
           out_detected_vehicle_number: detected_vehicle_number ?? null,
           images: updatedImages,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", openWeighment.id)
         .select()
@@ -128,9 +127,7 @@ export async function PATCH(request: Request) {
     const { id, vehicle_number, in_weight, out_weight, in_center_id, out_center_id, images } =
       validation.data;
 
-    const updates: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
+    const updates: Record<string, unknown> = {};
 
     if (vehicle_number !== undefined) {
       updates.vehicle_number = vehicle_number.toUpperCase().trim();
@@ -146,12 +143,19 @@ export async function PATCH(request: Request) {
       .update(updates)
       .eq("id", id)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (updateError || !updated) {
+    if (updateError) {
       return NextResponse.json(
-        { error: updateError?.message ?? "Failed to update weighment" },
+        { error: updateError.message ?? "Failed to update weighment" },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
+      );
+    }
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Weighment not found or has been deleted." },
+        { status: StatusCodes.NOT_FOUND },
       );
     }
 
