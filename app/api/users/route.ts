@@ -60,7 +60,7 @@ export const POST = handleApiRoute(async (request: Request, context: ApiContext)
     );
   }
 
-  const created = await createUserAccount(validation.data, context.factoryId);
+  const created = await createUserAccount(validation.data, context.factory.id);
   const label = ROLE_ENTITY_LABELS[validation.data.role];
 
   return NextResponse.json(
@@ -85,7 +85,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     );
   }
 
-  const updated = await updateUserAccount(validation.data, context.factoryId);
+  const updated = await updateUserAccount(validation.data, context.factory.id);
 
   return NextResponse.json({
     data: updated,
@@ -106,7 +106,7 @@ export const DELETE = handleApiRoute(async (request: Request, context: ApiContex
     );
   }
 
-  const { deletedCount } = await deleteUserAccounts(validation.data.ids, context.factoryId);
+  const { deletedCount } = await deleteUserAccounts(validation.data.ids, context.factory.id);
 
   return NextResponse.json({
     success: true,

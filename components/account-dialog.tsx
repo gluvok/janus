@@ -37,6 +37,7 @@ import {
 import { nameSchema, usernameSchema, passwordSchema, type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 import { useUserStore } from "@/stores/use-user-store";
+import { useFactoryStore } from "@/stores/use-factory-store";
 
 const accountFormSchema = z.object({
   name: nameSchema,
@@ -94,7 +95,8 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
           setCurrentUser(freshUser);
           reset(getInitialAccountValues(freshUser));
           onUserUpdated(freshUser);
-          useUserStore.getState().setSession({ user: freshUser, factory: freshFactory });
+          useUserStore.getState().setUser(freshUser);
+          useFactoryStore.getState().setFactory(freshFactory);
         })
         .catch((err: unknown) => {
           const msg = getErrorMessage(err, "Failed to load account details.");

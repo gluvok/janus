@@ -1,25 +1,60 @@
 import { cookies, headers } from "next/headers";
 import { StatusCodes } from "http-status-codes";
+import { LRUCache } from "lru-cache";
 import { supabase } from "@/lib/supabase";
 import { type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 
 export const SESSION_COOKIE_NAME = "mesto_session";
-export const SESSION_TTL_SECONDS = 400 * 24 * 60 * 60; // 400 days (RFC 6265bis browser maximum)
-export const ROLLING_REFRESH_THRESHOLD_SECONDS = 24 * 60 * 60; // 1 day
+export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 export interface SessionData {
   user: User;
   factory: Factory;
 }
 
+const sessionCache = new LRUCache<string, SessionData>({
+  max: 5000,
+});
+
+export function invalidateSessionCache(token: string): void {
+  sessionCache.delete(token);
+}
+
+export function invalidateAllUserSessionCache(userId: number): void {
+  for (const [token, session] of sessionCache.entries()) {
+    if (session.user.id === userId) {
+      sessionCache.delete(token);
+    }
+  }
+}
+
+export function updateUserSessionCache(userId: number, updatedUser: User): void {
+  for (const [_token, session] of sessionCache.entries()) {
+    if (session.user.id === userId) {
+      session.user = updatedUser;
+    }
+  }
+}
+
+export function updateFactorySessionCache(factoryId: number, updatedFactory: Factory): void {
+  for (const [_token, session] of sessionCache.entries()) {
+    if (session.factory.id === factoryId) {
+      session.factory = updatedFactory;
+    }
+  }
+}
+
 export class AuthError extends Error {
+  statusCode: number;
+
   constructor(
     message: string,
-    public statusCode: number = StatusCodes.UNAUTHORIZED,
+    statusCode: number = StatusCodes.UNAUTHORIZED,
   ) {
     super(message);
     this.name = "AuthError";
+    this.statusCode = statusCode;
   }
 }
 
@@ -47,11 +82,16 @@ export async function createSession(userId: number): Promise<{ token: string; ex
 }
 
 /**
- * Validates a session token, performing rolling expiration updates on active use.
+ * Validates a session token using in-memory LRU cache and read-only database query.
  * Returns both the current authenticated user and their factory configuration.
  */
 export async function getSessionUser(token: string): Promise<SessionData | null> {
   if (!token) return null;
+
+  const cached = sessionCache.get(token);
+  if (cached) {
+    return cached;
+  }
 
   const nowIso = new Date().toISOString();
 
@@ -86,16 +126,6 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
     return null;
   }
 
-  // Rolling Refresh: If more than 1 day has passed, extend session by 400 days
-  const remainingMs = new Date(data.expires_at).getTime() - Date.now();
-  const maxMs = SESSION_TTL_SECONDS * 1000;
-  const thresholdMs = ROLLING_REFRESH_THRESHOLD_SECONDS * 1000;
-
-  if (maxMs - remainingMs > thresholdMs) {
-    const rolledExpiresAt = new Date(Date.now() + maxMs).toISOString();
-    await supabase.from("sessions").update({ expires_at: rolledExpiresAt }).eq("id", data.id);
-  }
-
   const rawUser = data.user as unknown as {
     id: number;
     username: string;
@@ -117,7 +147,11 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
     updated_at: rawUser.updated_at,
   };
 
-  return { user, factory: rawUser.factory };
+  const sessionData: SessionData = { user, factory: rawUser.factory };
+  const remainingMs = Math.max(0, new Date(data.expires_at).getTime() - Date.now());
+  sessionCache.set(token, sessionData, { ttl: remainingMs });
+
+  return sessionData;
 }
 
 export const SESSION_HEADER_KEYS = [

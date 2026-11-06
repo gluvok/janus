@@ -60,7 +60,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     .from("tickets")
     .select("id, status, user:users!user_id!inner(factory_id)")
     .eq("id", id)
-    .eq("user.factory_id", context.factoryId)
+    .eq("user.factory_id", context.factory.id)
     .maybeSingle();
 
   if (findError) {
@@ -121,7 +121,7 @@ export const DELETE = handleApiRoute(async (request: Request, context: ApiContex
     .from("tickets")
     .select("id, status, user:users!user_id!inner(factory_id)")
     .eq("id", id)
-    .eq("user.factory_id", context.factoryId)
+    .eq("user.factory_id", context.factory.id)
     .maybeSingle();
 
   if (findError) {

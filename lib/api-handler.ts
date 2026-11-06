@@ -7,7 +7,6 @@ import type { Factory } from "@/app/settings/types";
 
 export interface ApiContext {
   user: User;
-  factoryId: number;
   factory: Factory;
 }
 
@@ -22,12 +21,8 @@ export function handleApiRoute(
 ): (request: Request) => Promise<NextResponse> {
   return async (request: Request) => {
     try {
-      const isPublic = new URL(request.url).pathname === "/api/auth/login";
-      const session = isPublic ? null : getAuthSession(request);
-      const context: ApiContext = session
-        ? { user: session.user, factoryId: session.user.factory_id, factory: session.factory }
-        : ({} as ApiContext);
-      return await handler(request, context);
+      const session = getAuthSession(request);
+      return await handler(request, { user: session.user, factory: session.factory });
     } catch (err: unknown) {
       if (err instanceof AuthError) {
         return NextResponse.json({ error: err.message }, { status: err.statusCode });

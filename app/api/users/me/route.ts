@@ -44,7 +44,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
       role: context.user.role,
       ...(password && password.trim() ? { password: password.trim() } : {}),
     },
-    context.factoryId,
+    context.factory.id,
   );
 
   return NextResponse.json({

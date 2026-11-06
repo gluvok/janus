@@ -12,7 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { mainNavItems, type NavItem } from "@/lib/navigation";
 import { ArrowRight01Icon, Factory01Icon } from "@hugeicons/core-free-icons";
-import { useUserStore } from "@/stores/use-user-store";
+import { useFactoryStore } from "@/stores/use-factory-store";
 import { cn } from "@/lib/utils";
 
 interface ModuleConfig {
@@ -48,7 +48,7 @@ const MODULE_CONFIGS: Record<string, ModuleConfig> = {
 };
 
 export default function Home() {
-  const factory = useUserStore((state) => state.factory);
+  const factory = useFactoryStore((state) => state.factory);
 
   if (!factory) {
     return null;

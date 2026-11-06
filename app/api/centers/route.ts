@@ -34,7 +34,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     .from("centers")
     .update({ name })
     .eq("id", id)
-    .eq("factory_id", context.factoryId)
+    .eq("factory_id", context.factory.id)
     .select("id, name, factory_id, api_key, created_at, updated_at")
     .maybeSingle();
 

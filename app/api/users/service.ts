@@ -2,6 +2,7 @@ import { z } from "zod";
 import argon2 from "argon2";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
+import { updateUserSessionCache, invalidateAllUserSessionCache } from "@/lib/auth";
 import {
   userRoleEnum,
   type UserRole,
@@ -118,6 +119,8 @@ export async function updateUserAccount(data: UpdateUserInput, factoryId: number
     throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
   }
 
+  updateUserSessionCache(updated.id, updated);
+
   return updated;
 }
 
@@ -144,6 +147,10 @@ export async function deleteUserAccounts(targetIds: number[], factoryId: number)
 
   if (!data || data.length === 0) {
     throw new ServiceError("No users found matching the specified ID(s).", StatusCodes.NOT_FOUND);
+  }
+
+  for (const id of targetIds) {
+    invalidateAllUserSessionCache(id);
   }
 
   return { deletedCount: data.length };
