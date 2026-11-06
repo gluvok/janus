@@ -139,10 +139,12 @@ export function TicketEditDialog({ open, onOpenChange, ticket, onSuccess }: Tick
               <div>
                 <span className="font-medium text-foreground">Weighment:</span> #
                 {ticket.automatic_weighment_id}
+                <span className="ml-1.5 font-mono font-semibold text-foreground">
+                  ({ticket.weighment.vehicle_number})
+                </span>
               </div>
               <div>
-                <span className="font-medium text-foreground">User:</span>{" "}
-                {ticket.user?.name ?? `User #${ticket.user_id}`}
+                <span className="font-medium text-foreground">User:</span> {ticket.user.name}
               </div>
               <div className="col-span-2">
                 <span className="font-medium text-foreground">Created:</span>{" "}

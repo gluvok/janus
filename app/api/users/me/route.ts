@@ -13,6 +13,15 @@ const updateMeSchema = z
   })
   .strict();
 
+export const GET = handleApiRoute(async (_request: Request, context: ApiContext) => {
+  return NextResponse.json({
+    data: {
+      user: context.user,
+      factory: context.factory,
+    },
+  });
+});
+
 export const PATCH = handleApiRoute(async (request: Request, context: ApiContext) => {
   const validation = updateMeSchema.safeParse(await request.json());
 

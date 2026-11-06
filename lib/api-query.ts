@@ -50,6 +50,15 @@ export function applySortingAndPagination<
   );
 }
 
+const TABLE_FACTORY_COLUMNS: Record<string, string> = {
+  centers: "factory_id",
+  users: "factory_id",
+  factories: "id",
+  automatic_weighments: "in_center.factory_id",
+  manual_weighments: "in_center.factory_id",
+  tickets: "user.factory_id",
+};
+
 export interface PaginatedEntityQueryOptions<TCol extends string> {
   request: Request;
   table: string;
@@ -58,7 +67,6 @@ export interface PaginatedEntityQueryOptions<TCol extends string> {
   defaultSort?: SortRule<TCol>;
   searchColumns?: readonly string[];
   applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
-  factoryId?: number;
 }
 
 /**
@@ -76,6 +84,7 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   factoryId,
 }: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
   searchParams: URLSearchParams;
+  factoryId: number;
 }): Promise<PaginatedResult<TData>> {
   const isAll = searchParams.get("all") === "true";
   const pagination = parsePagination(searchParams);
@@ -83,16 +92,9 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
 
   let query: any = supabase.from(table).select(select, { count: "exact" });
 
-  if (factoryId) {
-    if (table === "centers" || table === "users") {
-      query = query.eq("factory_id", factoryId);
-    } else if (table === "factories") {
-      query = query.eq("id", factoryId);
-    } else if (table === "automatic_weighments" || table === "manual_weighments") {
-      query = query.eq("in_center.factory_id", factoryId);
-    } else if (table === "tickets") {
-      query = query.eq("user.factory_id", factoryId);
-    }
+  const factoryColumn = TABLE_FACTORY_COLUMNS[table];
+  if (factoryColumn) {
+    query = query.eq(factoryColumn, factoryId);
   }
 
   const search = searchParams.get("search")?.trim();
@@ -145,8 +147,7 @@ export async function executePaginatedEntityQuery<TCol extends string, TData = u
 ): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(options.request.url);
-    const factoryIdHeader = options.request.headers.get("x-factory-id");
-    const factoryId = options.factoryId ?? (factoryIdHeader ? Number(factoryIdHeader) : undefined);
+    const factoryId = Number(options.request.headers.get("x-factory-id"));
 
     const result = await buildPaginatedEntityResult<TCol, TData>({
       ...options,

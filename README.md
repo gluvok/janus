@@ -35,13 +35,13 @@ A centralized operational platform and automation management system for weighbri
 
 ## Authentication & Session Management
 
-- **Session Architecture**: Next.js route protection via `proxy.ts` verifying the `mesto_session` cookie against PostgreSQL `sessions` table. Injects validated user headers (`x-user-id`, `x-factory-id`, `x-user-role`, `x-user-name`, `x-user-username`, `x-user-created-at`, `x-user-updated-at`) into downstream requests with zero DB fallback queries.
-- **Auto-Guarded API Routes**: All protected route handlers wrapped with `handleApiRoute` automatically verify session headers and inject authenticated `{ user, factoryId }` context.
+- **Session Architecture**: Next.js route protection via `proxy.ts` verifying the `mesto_session` cookie against PostgreSQL `sessions` table (joining `users` and `factories`). Injects validated user and factory headers (`x-user-id`, `x-factory-id`, `x-user-role`, `x-user-name`, `x-user-username`, `x-user-created-at`, `x-user-updated-at`, `x-factory-name`, `x-factory-receipt-images`, `x-factory-created-at`, `x-factory-updated-at`) into downstream requests with zero DB fallback queries.
+- **Auto-Guarded API Routes**: All protected route handlers wrapped with `handleApiRoute` automatically verify session headers and inject authenticated `{ user, factoryId, factory }` context.
 - **Automatic Factory Scoping**: All paginated queries (`executePaginatedEntityQuery` and `buildPaginatedEntityResult`) automatically enforce tenant isolation by `factory_id` across `centers`, `users`, `factories`, `weighments`, and `tickets` beforehand.
 - **Session Duration**: 400-day persistent server-set HTTP-only cookie with rolling refresh upon active use (bypassing client-side Safari ITP limits).
 - **Credentials**: Standard username and password (argon2 hashed). No external emails or sign-up workflows.
 - **Dynamic Factory Tenancy**: All operations, center filtering, and user creation are dynamically scoped to the authenticated user's `factory_id`.
-- **Client State**: RootLayout initializes `useUserStore` directly from the validated session. `AppSidebar` and `AccountDialog` read and update this store reactively without redundant `GET /api/users/me` requests.
+- **Client State**: RootLayout initializes `useUserStore` with both user and factory directly from the validated session. `AppSidebar` and `AccountDialog` read and update this store reactively, performing live session checks on Account access.
 - **Mode Persistence**: Automatic/Manual weighment mode is persisted per-table inside the `mesto_tables_state` cookie (`tables.weighments.mode`) without global state pollution.
 
 ---
@@ -52,6 +52,7 @@ A centralized operational platform and automation management system for weighbri
 | :------- | :-------------------------- | :--------------------------------------------------------------------------------------- |
 | `POST`   | `/api/auth/login`           | Authenticate via username & password, issue rolling session cookie.                      |
 | `POST`   | `/api/auth/logout`          | Invalidate session in database and delete session cookie.                                |
+| `GET`    | `/api/users/me`             | Retrieve live profile details and factory configuration for authenticated user.          |
 | `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                    |
 | `GET`    | `/api/factories`            | Retrieve factory configuration for the authenticated user's factory.                     |
 | `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                       |

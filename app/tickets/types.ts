@@ -14,6 +14,14 @@ export const ticketUserSchema = z
   .strict();
 export type TicketUser = z.infer<typeof ticketUserSchema>;
 
+export const ticketWeighmentSchema = z
+  .object({
+    id: z.number().int().positive(),
+    vehicle_number: z.string().min(1),
+  })
+  .strict();
+export type TicketWeighment = z.infer<typeof ticketWeighmentSchema>;
+
 export const ticketSchema = z
   .object({
     id: z.number().int().positive(),
@@ -24,7 +32,8 @@ export const ticketSchema = z
     user_id: z.number().int().positive(),
     created_at: z.string(),
     updated_at: z.string(),
-    user: ticketUserSchema.optional(),
+    user: ticketUserSchema,
+    weighment: ticketWeighmentSchema,
   })
   .strict();
 
@@ -58,4 +67,4 @@ export const ticketFormSchema = z
 export type TicketFormInput = z.infer<typeof ticketFormSchema>;
 
 export const TICKET_SELECT_PROJECTION =
-  "id, concern, reply, status, automatic_weighment_id, user_id, created_at, updated_at, user:users!user_id!inner(id, name, username, factory_id)";
+  "id, concern, reply, status, automatic_weighment_id, user_id, created_at, updated_at, user:users!user_id!inner(id, name, username, factory_id), weighment:automatic_weighments!automatic_weighment_id!inner(id, vehicle_number)";

@@ -7,6 +7,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { Separator } from "@/components/ui/separator";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { AppHeaderControls } from "@/components/app-header-controls";
 import { Toaster } from "@/components/ui/toast";
 import { parseTablesCookie, TABLES_COOKIE_NAME } from "@/lib/table-cookie";
 import { DataTableStoreInitializer } from "@/components/data-table";
@@ -34,7 +35,10 @@ export const metadata: Metadata = {
   title: "Mesto",
   description: "Mesto Automations Platform",
   icons: {
-    icon: "/logo.png",
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
     apple: "/logo.png",
   },
 };
@@ -48,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
   const tablesStateRaw = cookieStore.get(TABLES_COOKIE_NAME)?.value;
   const initialTables = parseTablesCookie(tablesStateRaw);
-  const sessionUser = await getServerSession();
+  const session = await getServerSession();
 
   return (
     <html
@@ -65,7 +69,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <BootingScreen isLoginPage={isLoginPage} />
         <DataTableStoreInitializer initialTables={initialTables} />
-        <UserStoreInitializer initialUser={sessionUser} />
+        <UserStoreInitializer
+          initialUser={session?.user ?? null}
+          initialFactory={session?.factory ?? null}
+        />
         <AxiosInterceptor />
 
         {isLoginPage ? (
@@ -80,6 +87,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <Separator orientation="vertical" className="mr-2 my-auto data-vertical:h-4" />
                   <AppBreadcrumb />
                 </div>
+                <AppHeaderControls />
               </header>
               <div className="flex flex-1 flex-col gap-3 p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">
                 {children}

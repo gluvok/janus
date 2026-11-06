@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +12,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
-import { FormErrorBanner } from "@/components/form-primitives";
+import { toast } from "@/components/ui/toast";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
 
 const loginFormSchema = z
@@ -29,7 +28,6 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -46,16 +44,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
-      setServerError(null);
       await axios.post("/api/auth/login", {
-        username: values.username.toLowerCase().trim(),
+        username: values.username,
         password: values.password,
       });
 
       router.replace(nextUrl);
       router.refresh();
     } catch (err: unknown) {
-      setServerError(getErrorMessage(err, "Invalid username or password."));
+      toast.add({
+        type: "error",
+        title: "Login failed",
+        description: getErrorMessage(err, "Invalid username or password."),
+      });
     }
   };
 
@@ -70,8 +71,6 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <FormErrorBanner error={serverError} />
-
             <Field data-invalid={Boolean(errors.username)}>
               <FieldLabel htmlFor="login-username">
                 <span>Username</span>

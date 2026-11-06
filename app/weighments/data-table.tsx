@@ -28,7 +28,6 @@ import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-cookie";
 import { PhotosDialog } from "@/components/photos-dialog";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
-import { WeighmentModeToggle } from "./weighment-mode-toggle";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
 
@@ -251,10 +250,6 @@ export function WeighmentsDataTable() {
     useDataTableStore((state) => state.tables["weighments"]) ?? DEFAULT_TABLE_ITEM_STATE;
   const mode = (currentTableState.mode ?? "automatic") as WeighmentMode;
 
-  const handleModeChange = useCallback((newMode: WeighmentMode) => {
-    useDataTableStore.getState().setTableMode("weighments", newMode);
-  }, []);
-
   const columns = useMemo(() => getWeighmentColumns(), []);
   const extraParams = useMemo(() => ({ mode }), [mode]);
 
@@ -330,7 +325,6 @@ export function WeighmentsDataTable() {
       {/* Primary Toolbar - 2-Tier Layout with Integrated Multi-Sort */}
       <DataTableToolbar
         table={table}
-        leadingControl={<WeighmentModeToggle mode={mode} onModeChange={handleModeChange} />}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search weighments..."

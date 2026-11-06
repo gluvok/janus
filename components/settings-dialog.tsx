@@ -30,6 +30,7 @@ import {
   type FactoryFormInput,
 } from "@/app/settings/types";
 import { FactoryForm } from "@/app/settings/factory-form";
+import { useUserStore } from "@/stores/use-user-store";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -92,6 +93,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       const response = await axios.patch<FactoryApiResponse>("/api/factories", values);
       const updated = response.data.data;
       setFactory(updated);
+      useUserStore.getState().setFactory(updated);
       reset(getFactoryFormValues(updated));
 
       toast.add({

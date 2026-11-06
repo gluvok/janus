@@ -91,9 +91,18 @@ export function TicketDeleteDialog({
           </div>
         )}
 
-        <div className="rounded-lg border bg-muted/20 p-3 space-y-1 text-xs">
-          <span className="font-medium text-foreground">Concern:</span>
-          <p className="text-muted-foreground truncate">{ticket.concern}</p>
+        <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5 text-xs">
+          <div>
+            <span className="font-medium text-foreground">Weighment:</span> #
+            {ticket.automatic_weighment_id}
+            <span className="ml-1.5 font-mono font-semibold text-foreground">
+              ({ticket.weighment.vehicle_number})
+            </span>
+          </div>
+          <div>
+            <span className="font-medium text-foreground">Concern:</span>
+            <p className="text-muted-foreground truncate">{ticket.concern}</p>
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">

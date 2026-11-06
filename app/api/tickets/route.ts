@@ -165,4 +165,3 @@ export const DELETE = handleApiRoute(async (request: Request, context: ApiContex
     message: "Ticket deleted successfully.",
   });
 });
-

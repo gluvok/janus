@@ -13,7 +13,7 @@ import {
   useDataTable,
 } from "@/components/data-table";
 import { columns } from "./columns";
-import { CenterEditDialog } from "./center-edit-dialog";
+import { CenterEditDialog } from "./edit-dialog";
 import { type Center } from "./types";
 
 const TABLE_ID = "centers";

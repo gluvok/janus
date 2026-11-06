@@ -75,25 +75,32 @@ export const columns = columnHelper.columns([
     },
   }),
   columnHelper.accessor("automatic_weighment_id", {
+    id: "weighment",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Weighment ID" icon={WeightScale01Icon} />
+      <DataTableColumnHeader column={column} title="Weighment" icon={WeightScale01Icon} />
     ),
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.automatic_weighment_id}</span>
-    ),
+    cell: ({ row }) => {
+      const ticket = row.original;
+      return (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-mono text-xs font-semibold text-foreground">
+            {ticket.weighment.vehicle_number}
+          </span>
+          <span className="font-mono text-2xs text-muted-foreground">
+            #{ticket.automatic_weighment_id}
+          </span>
+        </div>
+      );
+    },
     meta: {
-      title: "Weighment ID",
+      title: "Weighment",
       icon: WeightScale01Icon,
     },
   }),
-  columnHelper.accessor((row) => row.user?.name ?? String(row.user_id), {
+  columnHelper.accessor((row) => row.user.name, {
     id: "user",
     header: ({ column }) => <DataTableColumnHeader column={column} title="User" icon={UserIcon} />,
-    cell: ({ row }) => (
-      <span className="text-xs font-medium">
-        {row.original.user?.name ?? `User #${row.original.user_id}`}
-      </span>
-    ),
+    cell: ({ row }) => <span className="text-xs font-medium">{row.original.user.name}</span>,
     meta: {
       title: "User",
       icon: UserIcon,

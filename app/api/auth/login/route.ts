@@ -40,10 +40,7 @@ export const POST = handleApiRoute(async (request: Request) => {
   }
 
   if (!user) {
-    return NextResponse.json(
-      { error: "User not found." },
-      { status: StatusCodes.UNAUTHORIZED },
-    );
+    return NextResponse.json({ error: "User not found." }, { status: StatusCodes.UNAUTHORIZED });
   }
 
   const isValidPassword = await argon2.verify(user.password_hash, password);

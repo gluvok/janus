@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { AuthError, getAuthUser } from "@/lib/auth";
+import { AuthError, getAuthSession } from "@/lib/auth";
 import { ServiceError } from "@/app/api/users/service";
 import type { User } from "@/app/users/types";
+import type { Factory } from "@/app/settings/types";
 
 export interface ApiContext {
   user: User;
   factoryId: number;
+  factory: Factory;
 }
 
 /**
@@ -21,14 +23,10 @@ export function handleApiRoute(
   return async (request: Request) => {
     try {
       const isPublic = new URL(request.url).pathname === "/api/auth/login";
-      if (!isPublic && !request.headers.get("x-user-id")) {
-        throw new AuthError(
-          "Unauthorized: Missing or invalid authentication session",
-          StatusCodes.UNAUTHORIZED,
-        );
-      }
-      const user = isPublic ? (null as unknown as User) : getAuthUser(request);
-      const context = user ? { user, factoryId: user.factory_id } : ({} as ApiContext);
+      const session = isPublic ? null : getAuthSession(request);
+      const context: ApiContext = session
+        ? { user: session.user, factoryId: session.user.factory_id, factory: session.factory }
+        : ({} as ApiContext);
       return await handler(request, context);
     } catch (err: unknown) {
       if (err instanceof AuthError) {

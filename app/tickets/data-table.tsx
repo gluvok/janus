@@ -173,4 +173,3 @@ export function TicketsDataTable() {
     </div>
   );
 }
-

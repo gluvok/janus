@@ -95,9 +95,9 @@ export type CentersPrunedState = z.infer<typeof centersPrunedSchema>;
 
 export const centersStrategy: TableStrategy<CentersTableState, CentersPrunedState> = {
   schema: centersPrunedSchema,
-  defaultState: hydrateBaseState(undefined, [{ id: "name", desc: false }]),
+  defaultState: hydrateBaseState(undefined, [{ id: "id", desc: true }]),
   prune: (state) => pruneBaseState(state),
-  hydrate: (pruned) => hydrateBaseState(pruned, [{ id: "name", desc: false }]),
+  hydrate: (pruned) => hydrateBaseState(pruned, [{ id: "id", desc: true }]),
 };
 
 /* -------------------------------------------------------------------------- */

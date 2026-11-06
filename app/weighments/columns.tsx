@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   DataTableColumnHeader,
   createCreatedAtColumn,
+  createUpdatedAtColumn,
   createIdColumn,
   createSelectColumn,
   createActionsColumn,
@@ -72,7 +73,7 @@ export function getWeighmentColumns() {
     }),
     columnHelper.accessor("net", {
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Net Weight" icon={ScaleIcon} />
+        <DataTableColumnHeader column={column} title="Net" icon={ScaleIcon} />
       ),
       cell: ({ row }) => {
         const net = row.getValue("net") as number | null;
@@ -87,7 +88,7 @@ export function getWeighmentColumns() {
         );
       },
       meta: {
-        title: "Net Weight",
+        title: "Net",
         icon: ScaleIcon,
       },
     }),
@@ -236,6 +237,7 @@ export function getWeighmentColumns() {
       enableSorting: false,
     }),
     createCreatedAtColumn(columnHelper),
+    createUpdatedAtColumn(columnHelper),
     createActionsColumn(columnHelper, ({ row }) => ({
       copyText: row.original.vehicle_number,
       copyLabel: "Copy Vehicle No.",

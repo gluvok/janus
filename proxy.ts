@@ -23,10 +23,10 @@ export async function proxy(request: NextRequest) {
   const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
   // Validate session against database
-  const user = sessionToken ? await getSessionUser(sessionToken) : null;
+  const session = sessionToken ? await getSessionUser(sessionToken) : null;
 
   // Unauthenticated or invalid/expired session
-  if (!user) {
+  if (!session) {
     if (isLoginPage) {
       const requestHeaders = new Headers(request.headers);
       requestHeaders.set("x-pathname", pathname);
@@ -71,16 +71,26 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(nextUrl, request.url));
   }
 
-  // Authenticated request: inject user headers for downstream consumption
+  // Authenticated request: inject user and factory headers for downstream consumption
+  const sessionHeaders: Record<string, string> = {
+    "x-user-id": String(session.user.id),
+    "x-factory-id": String(session.user.factory_id),
+    "x-user-role": session.user.role,
+    "x-user-name": encodeURIComponent(session.user.name),
+    "x-user-username": session.user.username,
+    "x-user-created-at": session.user.created_at,
+    "x-user-updated-at": session.user.updated_at,
+    "x-factory-name": encodeURIComponent(session.factory.name),
+    "x-factory-receipt-images": String(session.factory.receipt_images_per_row),
+    "x-factory-created-at": session.factory.created_at,
+    "x-factory-updated-at": session.factory.updated_at,
+    "x-pathname": pathname,
+  };
+
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-user-id", String(user.id));
-  requestHeaders.set("x-factory-id", String(user.factory_id));
-  requestHeaders.set("x-user-role", user.role);
-  requestHeaders.set("x-user-name", encodeURIComponent(user.name));
-  requestHeaders.set("x-user-username", user.username);
-  requestHeaders.set("x-user-created-at", user.created_at);
-  requestHeaders.set("x-user-updated-at", user.updated_at);
-  requestHeaders.set("x-pathname", pathname);
+  for (const [key, value] of Object.entries(sessionHeaders)) {
+    requestHeaders.set(key, value);
+  }
 
   return NextResponse.next({
     request: {

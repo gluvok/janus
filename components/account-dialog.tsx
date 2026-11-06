@@ -35,6 +35,8 @@ import {
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import { nameSchema, usernameSchema, passwordSchema, type User } from "@/app/users/types";
+import { type Factory } from "@/app/settings/types";
+import { useUserStore } from "@/stores/use-user-store";
 
 const accountFormSchema = z.object({
   name: nameSchema,
@@ -60,6 +62,7 @@ function getInitialAccountValues(user: User): AccountFormInput {
 }
 
 export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: AccountDialogProps) {
+  const [currentUser, setCurrentUser] = useState<User>(user);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -72,7 +75,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   } = useForm<AccountFormInput>({
     resolver: zodResolver(accountFormSchema),
     mode: "onChange",
-    defaultValues: getInitialAccountValues(user),
+    defaultValues: getInitialAccountValues(currentUser),
   });
 
   const name = watch("name");
@@ -81,10 +84,32 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
 
   useEffect(() => {
     if (open) {
-      reset(getInitialAccountValues(user));
       setFormError(null);
+      setLoading(true);
+      axios
+        .get<{ data: { user: User; factory: Factory } }>("/api/users/me")
+        .then((res) => {
+          const freshUser = res.data.data.user;
+          const freshFactory = res.data.data.factory;
+          setCurrentUser(freshUser);
+          reset(getInitialAccountValues(freshUser));
+          onUserUpdated(freshUser);
+          useUserStore.getState().setSession({ user: freshUser, factory: freshFactory });
+        })
+        .catch((err: unknown) => {
+          const msg = getErrorMessage(err, "Failed to load account details.");
+          setFormError(msg);
+          toast.add({
+            type: "error",
+            title: "Session Error",
+            description: msg,
+          });
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-  }, [open, user, reset]);
+  }, [open, reset, onUserUpdated]);
 
   const onSubmit = async (values: AccountFormInput) => {
     try {
@@ -97,6 +122,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
       };
 
       const response = await axios.patch<{ data: User; message: string }>("/api/users/me", payload);
+      const updatedUser = response.data.data;
 
       toast.add({
         type: "success",
@@ -104,7 +130,9 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
         description: response.data.message || "Your profile has been saved successfully.",
       });
 
-      onUserUpdated(response.data.data);
+      setCurrentUser(updatedUser);
+      onUserUpdated(updatedUser);
+      useUserStore.getState().setUser(updatedUser);
       onOpenChange(false);
     } catch (err: unknown) {
       setFormError(getErrorMessage(err, "Failed to update account profile."));
@@ -140,21 +168,21 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
             <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-xs">
               <div className="flex items-center justify-between min-h-5">
                 <span className="text-muted-foreground">Assigned Role</span>
-                <RoleBadge role={user.role} />
+                <RoleBadge role={currentUser.role} />
               </div>
               <div className="flex items-center justify-between min-h-5">
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <HugeiconsIcon icon={Calendar01Icon} className="size-3" />
                   <span>Member Since</span>
                 </span>
-                <span className="text-foreground">{formatDateTime(user.created_at)}</span>
+                <span className="text-foreground">{formatDateTime(currentUser.created_at)}</span>
               </div>
               <div className="flex items-center justify-between min-h-5">
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <HugeiconsIcon icon={Clock01Icon} className="size-3" />
                   <span>Last Updated</span>
                 </span>
-                <span className="text-foreground">{formatDateTime(user.updated_at)}</span>
+                <span className="text-foreground">{formatDateTime(currentUser.updated_at)}</span>
               </div>
             </div>
 

@@ -11,9 +11,9 @@ export const GET = handleApiRoute(async (request: Request) => {
   return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Center>({
     request,
     table: "centers",
-    select: "id, name, factory_id, api_key, created_at, updated_at",
+    select: "id, name, api_key, created_at, updated_at",
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
-    defaultSort: { col: "name", ascending: true },
+    defaultSort: { col: "id", ascending: false },
     searchColumns: ["name"],
   });
 });
