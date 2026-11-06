@@ -1,5 +1,7 @@
 "use client";
 
+export { DataTableClearButton, type DataTableClearButtonProps } from "./data-table-clear-button";
+
 export { DataTableColumnHeader } from "./data-table-column-header";
 
 export {

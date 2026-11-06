@@ -12,7 +12,12 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowDown01Icon,
+  Cancel01Icon,
+  Search01Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
 
 const Combobox = ComboboxPrimitive.Root;
 
@@ -79,6 +84,33 @@ function ComboboxInput({
       </InputGroupAddon>
       {children}
     </InputGroup>
+  );
+}
+
+function ComboboxSearchInput({
+  className,
+  disabled = false,
+  placeholder = "Search...",
+  ...props
+}: ComboboxPrimitive.Input.Props) {
+  return (
+    <div className="p-1 pb-0 w-full" data-slot="combobox-search-wrapper">
+      <InputGroup className="h-7 w-full bg-input/20 dark:bg-input/30">
+        <InputGroupAddon align="inline-start">
+          <HugeiconsIcon icon={Search01Icon} className="size-3 text-muted-foreground" />
+        </InputGroupAddon>
+        <ComboboxPrimitive.Input
+          render={
+            <InputGroupInput
+              disabled={disabled}
+              placeholder={placeholder}
+              className={cn("text-xs", className)}
+            />
+          }
+          {...props}
+        />
+      </InputGroup>
+    </div>
   );
 }
 
@@ -261,6 +293,7 @@ function useComboboxAnchor() {
 export {
   Combobox,
   ComboboxInput,
+  ComboboxSearchInput,
   ComboboxContent,
   ComboboxList,
   ComboboxItem,

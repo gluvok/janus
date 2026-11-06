@@ -7,6 +7,7 @@ import {
   ComboboxChips,
   ComboboxChipsInput,
   ComboboxContent,
+  ComboboxSearchInput,
   ComboboxEmpty,
   ComboboxItem,
   ComboboxList,
@@ -147,6 +148,7 @@ export function DataTableFacetedFilter({
           anchor={anchor}
           className="w-max min-w-(--anchor-width) max-w-xs sm:max-w-sm"
         >
+          <ComboboxSearchInput placeholder={`Search ${title.toLowerCase()}...`} />
           <ComboboxEmpty className="py-2 text-center text-xs text-muted-foreground">
             No {title.toLowerCase()} found.
           </ComboboxEmpty>

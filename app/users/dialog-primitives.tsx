@@ -16,7 +16,7 @@ import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
-  ComboboxInput,
+  ComboboxSearchInput,
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
@@ -312,7 +312,7 @@ export function SystemRoleSelect({ value, onChange, error }: SystemRoleSelectPro
           </span>
         </ComboboxTrigger>
         <ComboboxContent className="w-max min-w-(--anchor-width) max-w-xs sm:max-w-sm">
-          <ComboboxInput showTrigger={false} placeholder="Search role..." className="h-8 text-xs" />
+          <ComboboxSearchInput placeholder="Search role..." />
           <ComboboxEmpty className="py-2 text-center text-xs text-muted-foreground">
             No role found.
           </ComboboxEmpty>

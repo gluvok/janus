@@ -17,7 +17,7 @@ import {
   UserIcon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
-import { TicketStatusBadge } from "./ticket-status-badge";
+import { TicketStatusBadge } from "./status-badge";
 import type { Ticket } from "./types";
 
 export interface TicketsTableMeta {

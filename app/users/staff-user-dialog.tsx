@@ -12,7 +12,7 @@ import {
   FullNameField,
   SystemRoleSelect,
   UserDialogShell,
-} from "./user-dialog-primitives";
+} from "./dialog-primitives";
 import {
   USER_FORM_SCHEMAS,
   type CreateUserInput,

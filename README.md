@@ -84,6 +84,8 @@ pnpm fmt
 pnpm run build
 
 # Seed database
-pnpm run seed
-pnpm run seed:test
+pnpm run seed              # Onboard factory & admin (--factory, --receipt-images-per-row, --centers)
+pnpm run seed:test         # High-volume tenant-isolated test seeding
+pnpm run seed:test:clean   # Clean reset & seed high-volume test data
+pnpm run seed:photos       # Seed weighment transport photos
 ```

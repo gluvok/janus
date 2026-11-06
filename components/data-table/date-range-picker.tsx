@@ -109,7 +109,7 @@ export function DatePickerWithRange({
   };
 
   return (
-    <Field className={cn("w-auto", className)}>
+    <Field className={cn("w-full sm:w-auto", className)}>
       <FieldLabel htmlFor="date-picker-range" className="sr-only">
         Date Picker Range
       </FieldLabel>
@@ -120,7 +120,7 @@ export function DatePickerWithRange({
               variant="outline"
               id="date-picker-range"
               className={cn(
-                "h-7 max-w-full justify-start gap-1 px-2 text-2xs font-normal",
+                "h-7 w-full sm:w-auto max-w-full justify-start gap-1 px-2 text-2xs font-normal",
                 !date?.from && "text-muted-foreground",
               )}
             >

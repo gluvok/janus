@@ -20,11 +20,11 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Sorting05Icon } from "@hugeicons/core-free-icons";
+import { Sorting05Icon } from "@hugeicons/core-free-icons";
 import { SortableSortChip, SortChipOverlay } from "./sortable-sort-chip";
 import { DEFAULT_COLUMN_METADATA } from "./data-table-columns";
+import { DataTableClearButton } from "./data-table-clear-button";
 
 export interface DataTableCriteriaBarProps {
   hasActiveSorts?: boolean;
@@ -139,16 +139,7 @@ export function DataTableCriteriaBar({
             </SortableContext>
 
             {(onResetSorts || onResetAll) && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onResetSorts ?? onResetAll}
-                className="shrink-0 ml-auto h-5 gap-1 px-1.5 text-2xs text-primary/80 hover:bg-primary/15 hover:text-primary"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} className="size-2.5" data-icon="inline-start" />
-                <span>Clear sorts</span>
-              </Button>
+              <DataTableClearButton label="Clear sorts" onClick={onResetSorts ?? onResetAll!} />
             )}
 
             <DragOverlay>

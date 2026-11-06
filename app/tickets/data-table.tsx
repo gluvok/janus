@@ -23,8 +23,8 @@ import {
   SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
 import { columns, type TicketsTableMeta } from "./columns";
-import { TicketEditDialog } from "./ticket-edit-dialog";
-import { TicketDeleteDialog } from "./ticket-delete-dialog";
+import { TicketEditDialog } from "./edit-dialog";
+import { TicketDeleteDialog } from "./delete-dialog";
 import { type Ticket } from "./types";
 
 const STATUS_FILTER_OPTIONS = [

@@ -13,6 +13,7 @@ import { supabase } from "./supabase.ts";
 
 interface ParsedArgs {
   factoryName?: string;
+  receiptImagesPerRow: number;
   centersCount: number;
   centerNames?: string[];
   adminPassword: string;
@@ -48,8 +49,19 @@ function parseCliArgs(args: string[]): ParsedArgs {
       .filter(Boolean);
   }
 
+  let receiptImagesPerRow = 3;
+  if (typeof options["receipt-images-per-row"] === "string") {
+    const val = parseInt(options["receipt-images-per-row"], 10);
+    if (val >= 1 && val <= 6) {
+      receiptImagesPerRow = val;
+    } else {
+      console.warn("⚠️ --receipt-images-per-row must be between 1 and 6. Using default: 3.");
+    }
+  }
+
   return {
     factoryName: typeof options.factory === "string" ? options.factory.trim() : undefined,
+    receiptImagesPerRow,
     centersCount,
     centerNames,
     adminPassword:
@@ -72,6 +84,7 @@ Usage:
 
 Options:
   --factory <name>            Custom name for the factory (default: 'Factory <N>')
+  --receipt-images-per-row <N> Images per row on receipts between 1 and 6 (default: 3)
   --centers <count>           Number of centers to create (default: 1)
   --center-names <names>      Comma-separated center names (e.g. 'Terminal A,Terminal B')
   --admin-password <pass>     Admin password (default: 'admin123')
@@ -147,15 +160,17 @@ async function main() {
   );
 
   // 2. CREATE FACTORY
-  console.log(`\n🏭 Creating factory '${factoryName}'...`);
+  console.log(
+    `\n🏭 Creating factory '${factoryName}' (receipt images per row: ${args.receiptImagesPerRow})...`,
+  );
   const { data: createdFactory, error: factoryError } = await supabase
     .from("factories")
-    .insert({ name: factoryName })
+    .insert({ name: factoryName, receipt_images_per_row: args.receiptImagesPerRow })
     .select("id, name")
     .single();
 
   if (factoryError || !createdFactory) {
-    throw factoryError || new Error(`Failed to create factory ${factoryName}`);
+    throw factoryError;
   }
   console.log(`  ✓ Factory created (ID: ${createdFactory.id}, Name: '${createdFactory.name}')`);
 

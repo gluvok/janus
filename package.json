@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit",
     "seed": "node scripts/seed.ts",
     "seed:test": "node scripts/test-seed.ts",
-    "seed:test:clean": "node scripts/test-seed.ts --clean"
+    "seed:test:clean": "node scripts/test-seed.ts --clean",
+    "seed:photos": "node scripts/seed-weighment-photos.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

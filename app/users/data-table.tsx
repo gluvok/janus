@@ -28,7 +28,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { getColumns, type UsersTableMeta } from "./columns";
 import { type User } from "./types";
-import { UserDeleteDialog } from "./user-delete-dialog";
+import { UserDeleteDialog } from "./delete-dialog";
 import { StaffUserDialog } from "./staff-user-dialog";
 
 const ROLE_OPTIONS: FacetedFilterOption[] = [

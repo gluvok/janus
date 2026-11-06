@@ -120,14 +120,6 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
   return { user, factory: rawUser.factory };
 }
 
-/**
- * Hard-deletes a session record from the database.
- */
-export async function deleteSession(token: string): Promise<void> {
-  if (!token) return;
-  await supabase.from("sessions").delete().eq("token", token);
-}
-
 export const SESSION_HEADER_KEYS = [
   "x-user-id",
   "x-factory-id",
