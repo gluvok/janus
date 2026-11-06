@@ -103,17 +103,17 @@ export function applyDateRange<
   },
 >(query: TQuery, searchParams: URLSearchParams): TQuery {
   let updated = query;
-  const rawFrom = searchParams.get("from");
-  if (rawFrom) {
-    const parsed = dateQuerySchema.safeParse(rawFrom);
+  const fromParam = searchParams.get("from");
+  if (fromParam) {
+    const parsed = dateQuerySchema.safeParse(fromParam);
     if (parsed.success) {
       updated = updated.gte("created_at", parsed.data.toISOString());
     }
   }
 
-  const rawTo = searchParams.get("to");
-  if (rawTo) {
-    const parsed = dateQuerySchema.safeParse(rawTo);
+  const toParam = searchParams.get("to");
+  if (toParam) {
+    const parsed = dateQuerySchema.safeParse(toParam);
     if (parsed.success) {
       const toDate = new Date(parsed.data);
       toDate.setHours(23, 59, 59, 999);

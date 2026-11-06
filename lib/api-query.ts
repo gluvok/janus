@@ -58,10 +58,12 @@ export interface PaginatedEntityQueryOptions<TCol extends string> {
   defaultSort?: SortRule<TCol>;
   searchColumns?: readonly string[];
   applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
+  factoryId?: number;
 }
 
 /**
  * Builds and executes a standard Supabase entity query, returning raw PaginatedResult<TData>.
+ * Automatically scopes queries by factory_id across all tables without requiring caller filters.
  */
 export async function buildPaginatedEntityResult<TCol extends string, TData = unknown>({
   searchParams,
@@ -71,6 +73,7 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   defaultSort,
   searchColumns = [],
   applyCustomFilters,
+  factoryId,
 }: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
   searchParams: URLSearchParams;
 }): Promise<PaginatedResult<TData>> {
@@ -79,6 +82,18 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   const sortRules = parseSorting(searchParams, allowedSortColumns, defaultSort);
 
   let query: any = supabase.from(table).select(select, { count: "exact" });
+
+  if (factoryId) {
+    if (table === "centers" || table === "users") {
+      query = query.eq("factory_id", factoryId);
+    } else if (table === "factories") {
+      query = query.eq("id", factoryId);
+    } else if (table === "automatic_weighments" || table === "manual_weighments") {
+      query = query.eq("in_center.factory_id", factoryId);
+    } else if (table === "tickets") {
+      query = query.eq("user.factory_id", factoryId);
+    }
+  }
 
   const search = searchParams.get("search")?.trim();
   if (search && searchColumns.length > 0) {
@@ -123,14 +138,19 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
 
 /**
  * Executes a standardized paginated entity query for Next.js route handlers, returning a NextResponse envelope.
+ * Automatically injects factoryId from request headers for tenant isolation.
  */
 export async function executePaginatedEntityQuery<TCol extends string, TData = unknown>(
   options: PaginatedEntityQueryOptions<TCol>,
 ): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(options.request.url);
+    const factoryIdHeader = options.request.headers.get("x-factory-id");
+    const factoryId = options.factoryId ?? (factoryIdHeader ? Number(factoryIdHeader) : undefined);
+
     const result = await buildPaginatedEntityResult<TCol, TData>({
       ...options,
+      factoryId,
       searchParams,
     });
     return NextResponse.json(result);

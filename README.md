@@ -35,7 +35,9 @@ A centralized operational platform and automation management system for weighbri
 
 ## Authentication & Session Management
 
-- **Session Architecture**: Next.js route protection via `proxy.ts` verifying the `mesto_session` cookie against PostgreSQL `sessions` table. Injects validated user headers (`x-user-id`, `x-factory-id`, `x-user-role`, `x-user-name`, `x-user-username`) into downstream requests with zero DB fallback queries.
+- **Session Architecture**: Next.js route protection via `proxy.ts` verifying the `mesto_session` cookie against PostgreSQL `sessions` table. Injects validated user headers (`x-user-id`, `x-factory-id`, `x-user-role`, `x-user-name`, `x-user-username`, `x-user-created-at`, `x-user-updated-at`) into downstream requests with zero DB fallback queries.
+- **Auto-Guarded API Routes**: All protected route handlers wrapped with `handleApiRoute` automatically verify session headers and inject authenticated `{ user, factoryId }` context.
+- **Automatic Factory Scoping**: All paginated queries (`executePaginatedEntityQuery` and `buildPaginatedEntityResult`) automatically enforce tenant isolation by `factory_id` across `centers`, `users`, `factories`, `weighments`, and `tickets` beforehand.
 - **Session Duration**: 400-day persistent server-set HTTP-only cookie with rolling refresh upon active use (bypassing client-side Safari ITP limits).
 - **Credentials**: Standard username and password (argon2 hashed). No external emails or sign-up workflows.
 - **Dynamic Factory Tenancy**: All operations, center filtering, and user creation are dynamically scoped to the authenticated user's `factory_id`.
@@ -46,23 +48,24 @@ A centralized operational platform and automation management system for weighbri
 
 ## API Routes
 
-| Method   | Endpoint                    | Description                                                                               |
-| :------- | :-------------------------- | :---------------------------------------------------------------------------------------- |
-| `POST`   | `/api/auth/login`           | Authenticate via username & password, issue rolling session cookie.                       |
-| `POST`   | `/api/auth/logout`          | Invalidate session in database and delete session cookie.                                 |
-| `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                     |
-| `GET`    | `/api/factories`            | Retrieve factory configuration for the authenticated user's factory.                      |
-| `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                        |
-| `GET`    | `/api/centers`              | List centers for authenticated factory. Supports pagination & sorting.                    |
-| `PATCH`  | `/api/centers`              | Update center details.                                                                    |
-| `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).  |
-| `POST`   | `/api/weighments/automatic` | Ingest vehicle weighing. Auto-matches open pending weighments or creates inbound records. |
-| `PATCH`  | `/api/weighments/automatic` | Manually correct automatic weighment plates, weights, or centers.                         |
-| `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                            |
-| `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                    |
-| `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                     |
-| `PATCH`  | `/api/users`                | Update staff user accounts.                                                               |
-| `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/tickets).  |
+| Method   | Endpoint                    | Description                                                                              |
+| :------- | :-------------------------- | :--------------------------------------------------------------------------------------- |
+| `POST`   | `/api/auth/login`           | Authenticate via username & password, issue rolling session cookie.                      |
+| `POST`   | `/api/auth/logout`          | Invalidate session in database and delete session cookie.                                |
+| `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                    |
+| `GET`    | `/api/factories`            | Retrieve factory configuration for the authenticated user's factory.                     |
+| `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                       |
+| `GET`    | `/api/centers`              | List centers for authenticated factory. Supports pagination & sorting.                   |
+| `PATCH`  | `/api/centers`              | Update center details.                                                                   |
+| `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`). |
+| `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                           |
+| `GET`    | `/api/tickets`              | List tickets for current factory. Supports status filter, search, sorting & pagination.  |
+| `PATCH`  | `/api/tickets`              | Update ticket resolution status and reply.                                               |
+| `DELETE` | `/api/tickets`              | Permanently delete a ticket (strictly permitted only when `status === 'pending'`).       |
+| `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                   |
+| `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                    |
+| `PATCH`  | `/api/users`                | Update staff user accounts.                                                              |
+| `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/tickets). |
 
 ---
 

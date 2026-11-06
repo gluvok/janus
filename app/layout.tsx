@@ -53,7 +53,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
-      suppressHydrationWarning
       className={cn(
         "h-full",
         "antialiased",
@@ -63,7 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         "smooth-scroll",
       )}
     >
-      <body suppressHydrationWarning>
+      <body>
         <BootingScreen isLoginPage={isLoginPage} />
         <DataTableStoreInitializer initialTables={initialTables} />
         <UserStoreInitializer initialUser={sessionUser} />

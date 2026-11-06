@@ -3,14 +3,11 @@ import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
 import { updateCenterSchema, type Center } from "@/app/centers/types";
-import { getAuthUser } from "@/lib/auth";
-import { handleApiRoute } from "@/lib/api-handler";
+import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
 
 const ALLOWED_SORT_COLUMNS = ["id", "name", "created_at", "updated_at"] as const;
 
 export const GET = handleApiRoute(async (request: Request) => {
-  const user = getAuthUser(request);
-
   return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Center>({
     request,
     table: "centers",
@@ -18,14 +15,10 @@ export const GET = handleApiRoute(async (request: Request) => {
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
     defaultSort: { col: "name", ascending: true },
     searchColumns: ["name"],
-    applyCustomFilters: (query) => {
-      return query.eq("factory_id", user.factory_id);
-    },
   });
 });
 
-export const PATCH = handleApiRoute(async (request: Request) => {
-  const user = getAuthUser(request);
+export const PATCH = handleApiRoute(async (request: Request, context: ApiContext) => {
   const validation = updateCenterSchema.safeParse(await request.json());
 
   if (!validation.success) {
@@ -41,7 +34,7 @@ export const PATCH = handleApiRoute(async (request: Request) => {
     .from("centers")
     .update({ name })
     .eq("id", id)
-    .eq("factory_id", user.factory_id)
+    .eq("factory_id", context.factoryId)
     .select("id, name, factory_id, api_key, created_at, updated_at")
     .maybeSingle();
 

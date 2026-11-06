@@ -43,7 +43,7 @@ const AUTOMATIC_PROJECTION = `
   type,
   created_at,
   updated_at,
-  in_center:centers!in_center_id(id, name),
+  in_center:centers!in_center_id!inner(id, name, factory_id),
   out_center:centers!out_center_id(id, name)
 ` as const;
 
@@ -63,7 +63,7 @@ const MANUAL_PROJECTION = `
   type,
   created_at,
   updated_at,
-  in_center:centers!in_center_id(id, name),
+  in_center:centers!in_center_id!inner(id, name, factory_id),
   out_center:centers!out_center_id(id, name),
   in_creator:users!in_creator_id(id, name, username),
   out_creator:users!out_creator_id(id, name, username)
@@ -109,9 +109,9 @@ export async function executeWeighmentsGetQuery(
       let filteredQuery = query;
 
       // Filter by type ('pending' | 'in' | 'out' | 'unassigned')
-      const rawType = searchParams.get("type")?.trim();
-      if (rawType && rawType !== "all") {
-        const parsedType = weighmentTypeFilterSchema.safeParse(rawType);
+      const typeParam = searchParams.get("type")?.trim();
+      if (typeParam && typeParam !== "all") {
+        const parsedType = weighmentTypeFilterSchema.safeParse(typeParam);
         if (parsedType.success) {
           filteredQuery = filteredQuery.eq("type", parsedType.data);
         }
@@ -124,9 +124,9 @@ export async function executeWeighmentsGetQuery(
       ];
 
       for (const { param, column } of centerFilters) {
-        const rawVal = searchParams.get(param)?.trim();
-        if (rawVal && rawVal !== "all") {
-          const parsed = commaSeparatedIdsSchema.safeParse(rawVal);
+        const idParam = searchParams.get(param)?.trim();
+        if (idParam && idParam !== "all") {
+          const parsed = commaSeparatedIdsSchema.safeParse(idParam);
           if (parsed.success && parsed.data.length > 0) {
             filteredQuery = filteredQuery.in(column, parsed.data);
           }
@@ -134,9 +134,9 @@ export async function executeWeighmentsGetQuery(
       }
 
       // Filter by combined centers (in_center or out_center)
-      const rawCenters = searchParams.get("center_ids") || searchParams.get("center_id");
-      if (rawCenters && rawCenters !== "all") {
-        const parsedIds = commaSeparatedIdsSchema.safeParse(rawCenters);
+      const centerParam = searchParams.get("center_ids") || searchParams.get("center_id");
+      if (centerParam && centerParam !== "all") {
+        const parsedIds = commaSeparatedIdsSchema.safeParse(centerParam);
         if (parsedIds.success && parsedIds.data.length > 0) {
           if (parsedIds.data.length === 1) {
             const id = parsedIds.data[0];

@@ -169,6 +169,35 @@ export const weighmentsStrategy: TableStrategy<WeighmentsTableState, WeighmentsP
 };
 
 /* -------------------------------------------------------------------------- */
+/* Tickets Table Strategy: Base capabilities + dateRange + filters. No mode   */
+/* -------------------------------------------------------------------------- */
+
+export type TicketsTableState = BaseTableState;
+export const ticketsPrunedSchema = basePrunedStateSchema
+  .extend({
+    filters: z.record(z.string(), z.string()).optional(),
+  })
+  .strict();
+export type TicketsPrunedState = z.infer<typeof ticketsPrunedSchema>;
+
+export const ticketsStrategy: TableStrategy<TicketsTableState, TicketsPrunedState> = {
+  schema: ticketsPrunedSchema,
+  defaultState: hydrateBaseState(undefined, [{ id: "created_at", desc: true }]),
+  prune: (state) => {
+    const base = pruneBaseState(state);
+    const pruned: TicketsPrunedState = { ...base };
+    if (state.filters && Object.keys(state.filters).length > 0) {
+      pruned.filters = state.filters;
+    }
+    return pruned;
+  },
+  hydrate: (pruned) => ({
+    ...hydrateBaseState(pruned, [{ id: "created_at", desc: true }]),
+    filters: pruned?.filters ?? {},
+  }),
+};
+
+/* -------------------------------------------------------------------------- */
 /* Declarative Table Registry                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -176,6 +205,7 @@ export const TABLE_STRATEGIES = {
   centers: centersStrategy,
   users: usersStrategy,
   weighments: weighmentsStrategy,
+  tickets: ticketsStrategy,
 } as const;
 
 export type TableId = keyof typeof TABLE_STRATEGIES;

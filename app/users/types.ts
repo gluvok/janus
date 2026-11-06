@@ -9,6 +9,7 @@ export const userRoleEnum = z.enum(USER_ROLES);
 export const usernameSchema = z
   .string()
   .trim()
+  .toLowerCase()
   .min(3, "Username must be at least 3 characters")
   .max(50, "Username must not exceed 50 characters")
   .regex(

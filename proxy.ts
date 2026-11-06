@@ -66,8 +66,8 @@ export async function proxy(request: NextRequest) {
 
   // Authenticated user attempting to visit login page
   if (isLoginPage) {
-    const rawNext = request.nextUrl.searchParams.get("next");
-    const nextUrl = rawNext?.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+    const nextParam = request.nextUrl.searchParams.get("next");
+    const nextUrl = nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
     return NextResponse.redirect(new URL(nextUrl, request.url));
   }
 

@@ -15,8 +15,7 @@ const loginSchema = z
   .strict();
 
 export const POST = handleApiRoute(async (request: Request) => {
-  const rawBody = await request.json();
-  const validation = loginSchema.safeParse(rawBody);
+  const validation = loginSchema.safeParse(await request.json());
 
   if (!validation.success) {
     return NextResponse.json(
@@ -26,24 +25,23 @@ export const POST = handleApiRoute(async (request: Request) => {
   }
 
   const { username, password } = validation.data;
-  const cleanUsername = username.toLowerCase().trim();
 
-  const { data: user, error: fetchErr } = await supabase
+  const { data: user, error } = await supabase
     .from("users")
     .select("id, username, password_hash, name, role, factory_id, created_at, updated_at")
-    .eq("username", cleanUsername)
+    .eq("username", username)
     .maybeSingle();
 
-  if (fetchErr) {
+  if (error) {
     return NextResponse.json(
-      { error: fetchErr.message },
+      { error: error.message },
       { status: StatusCodes.INTERNAL_SERVER_ERROR },
     );
   }
 
   if (!user) {
     return NextResponse.json(
-      { error: "Invalid username or password" },
+      { error: "User not found." },
       { status: StatusCodes.UNAUTHORIZED },
     );
   }
@@ -51,7 +49,7 @@ export const POST = handleApiRoute(async (request: Request) => {
   const isValidPassword = await argon2.verify(user.password_hash, password);
   if (!isValidPassword) {
     return NextResponse.json(
-      { error: "Invalid username or password" },
+      { error: "Incorrect password." },
       { status: StatusCodes.UNAUTHORIZED },
     );
   }

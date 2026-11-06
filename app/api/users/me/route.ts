@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { StatusCodes } from "http-status-codes";
-import { getAuthUser } from "@/lib/auth";
-import { handleApiRoute } from "@/lib/api-handler";
+import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
 import { updateUserAccount } from "@/app/api/users/service";
 import { nameSchema, usernameSchema, passwordSchema } from "@/app/users/types";
 
@@ -14,10 +13,8 @@ const updateMeSchema = z
   })
   .strict();
 
-export const PATCH = handleApiRoute(async (request: Request) => {
-  const currentUser = getAuthUser(request);
-  const rawBody = await request.json();
-  const validation = updateMeSchema.safeParse(rawBody);
+export const PATCH = handleApiRoute(async (request: Request, context: ApiContext) => {
+  const validation = updateMeSchema.safeParse(await request.json());
 
   if (!validation.success) {
     return NextResponse.json(
@@ -32,13 +29,13 @@ export const PATCH = handleApiRoute(async (request: Request) => {
   const { name, username, password } = validation.data;
   const updated = await updateUserAccount(
     {
-      id: currentUser.id,
+      id: context.user.id,
       name,
       username,
-      role: currentUser.role,
+      role: context.user.role,
       ...(password && password.trim() ? { password: password.trim() } : {}),
     },
-    currentUser.factory_id,
+    context.factoryId,
   );
 
   return NextResponse.json({

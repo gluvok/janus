@@ -88,12 +88,12 @@ function validateAndSanitizeFilters(
   ];
 
   for (const { key, validIds } of dynamicEntityChecks) {
-    const rawVal = sanitizedFilters[key];
-    if (rawVal && rawVal !== "all") {
+    const filterVal = sanitizedFilters[key];
+    if (filterVal && filterVal !== "all") {
       const schema = createFilterSanitizerSchema(validIds);
-      const parsed = schema.safeParse(rawVal);
+      const parsed = schema.safeParse(filterVal);
       if (parsed.success) {
-        if (parsed.data !== rawVal) {
+        if (parsed.data !== filterVal) {
           sanitizedFilters[key] = parsed.data;
           needsFallback = true;
           if (parsed.data === "all") {
