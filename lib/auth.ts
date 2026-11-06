@@ -103,20 +103,26 @@ export function getAuthUser(req: Request): User {
   const role = req.headers.get("x-user-role");
   const encodedName = req.headers.get("x-user-name");
   const username = req.headers.get("x-user-username");
-  const createdAt = req.headers.get("x-user-created-at") || "";
-  const updatedAt = req.headers.get("x-user-updated-at") || "";
+  const createdAt = req.headers.get("x-user-created-at");
+  const updatedAt = req.headers.get("x-user-updated-at");
 
-  if (!userIdStr || !factoryIdStr || !role || !username) {
+  if (
+    !userIdStr ||
+    !factoryIdStr ||
+    !role ||
+    !encodedName ||
+    !username ||
+    !createdAt ||
+    !updatedAt
+  ) {
     throw new AuthError("Unauthorized", StatusCodes.UNAUTHORIZED);
   }
-
-  const name = encodedName ? decodeURIComponent(encodedName) : "";
 
   return {
     id: parseInt(userIdStr, 10),
     factory_id: parseInt(factoryIdStr, 10),
     role: role as User["role"],
-    name,
+    name: decodeURIComponent(encodedName),
     username,
     created_at: createdAt,
     updated_at: updatedAt,
@@ -142,25 +148,23 @@ export async function getServerSession(req?: Request): Promise<User | null> {
   try {
     const headerList = await headers();
     const userIdStr = headerList.get("x-user-id");
-    if (userIdStr) {
-      const factoryIdStr = headerList.get("x-factory-id");
-      const role = headerList.get("x-user-role");
-      const encodedName = headerList.get("x-user-name");
-      const username = headerList.get("x-user-username");
-      const createdAt = headerList.get("x-user-created-at") || "";
-      const updatedAt = headerList.get("x-user-updated-at") || "";
+    const factoryIdStr = headerList.get("x-factory-id");
+    const role = headerList.get("x-user-role");
+    const encodedName = headerList.get("x-user-name");
+    const username = headerList.get("x-user-username");
+    const createdAt = headerList.get("x-user-created-at");
+    const updatedAt = headerList.get("x-user-updated-at");
 
-      if (userIdStr && factoryIdStr && role && username) {
-        return {
-          id: parseInt(userIdStr, 10),
-          factory_id: parseInt(factoryIdStr, 10),
-          role: role as User["role"],
-          name: encodedName ? decodeURIComponent(encodedName) : "",
-          username,
-          created_at: createdAt,
-          updated_at: updatedAt,
-        };
-      }
+    if (userIdStr && factoryIdStr && role && encodedName && username && createdAt && updatedAt) {
+      return {
+        id: parseInt(userIdStr, 10),
+        factory_id: parseInt(factoryIdStr, 10),
+        role: role as User["role"],
+        name: decodeURIComponent(encodedName),
+        username,
+        created_at: createdAt,
+        updated_at: updatedAt,
+      };
     }
   } catch {
     // headers() might not be available

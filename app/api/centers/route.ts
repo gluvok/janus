@@ -25,7 +25,7 @@ export const GET = handleApiRoute(async (request: Request) => {
 });
 
 export const PATCH = handleApiRoute(async (request: Request) => {
-  getAuthUser(request);
+  const user = getAuthUser(request);
   const validation = updateCenterSchema.safeParse(await request.json());
 
   if (!validation.success) {
@@ -41,6 +41,7 @@ export const PATCH = handleApiRoute(async (request: Request) => {
     .from("centers")
     .update({ name })
     .eq("id", id)
+    .eq("factory_id", user.factory_id)
     .select("id, name, factory_id, api_key, created_at, updated_at")
     .maybeSingle();
 

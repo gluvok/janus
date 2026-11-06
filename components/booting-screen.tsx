@@ -5,7 +5,11 @@ import Image from "next/image";
 import { useTableHydrated } from "@/stores/use-data-table-store";
 import { Spinner } from "@/components/ui/spinner";
 
-export function BootingScreen() {
+export interface BootingScreenProps {
+  isLoginPage: boolean;
+}
+
+export function BootingScreen({ isLoginPage }: BootingScreenProps) {
   const hasHydrated = useTableHydrated();
   const [mounted, setMounted] = useState(false);
 
@@ -13,7 +17,10 @@ export function BootingScreen() {
     setMounted(true);
   }, []);
 
-  if (mounted && hasHydrated) return null;
+  if (mounted) {
+    if (isLoginPage) return null;
+    if (hasHydrated) return null;
+  }
 
   return (
     <div

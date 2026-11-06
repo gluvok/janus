@@ -53,6 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cn(
         "h-full",
         "antialiased",
@@ -62,32 +63,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         "smooth-scroll",
       )}
     >
-      <body>
-        <BootingScreen />
+      <body suppressHydrationWarning>
+        <BootingScreen isLoginPage={isLoginPage} />
+        <DataTableStoreInitializer initialTables={initialTables} />
         <UserStoreInitializer initialUser={sessionUser} />
         <AxiosInterceptor />
 
         {isLoginPage ? (
           <main className="h-full w-full">{children}</main>
         ) : (
-          <>
-            <DataTableStoreInitializer initialTables={initialTables} />
-            <SidebarProvider defaultOpen={defaultOpen} className="h-full">
-              <AppSidebar />
-              <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">
-                <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
-                  <div className="flex items-center gap-2">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator orientation="vertical" className="mr-2 my-auto data-vertical:h-4" />
-                    <AppBreadcrumb />
-                  </div>
-                </header>
-                <div className="flex flex-1 flex-col gap-3 p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">
-                  {children}
+          <SidebarProvider defaultOpen={defaultOpen} className="h-full">
+            <AppSidebar />
+            <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">
+              <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger className="-ml-1" />
+                  <Separator orientation="vertical" className="mr-2 my-auto data-vertical:h-4" />
+                  <AppBreadcrumb />
                 </div>
-              </SidebarInset>
-            </SidebarProvider>
-          </>
+              </header>
+              <div className="flex flex-1 flex-col gap-3 p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">
+                {children}
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
         )}
 
         <Toaster />

@@ -5,7 +5,6 @@ import axios from "axios";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useUserStore } from "@/stores/use-user-store";
 import {
   Dialog,
   DialogContent,
@@ -48,21 +47,19 @@ type AccountFormInput = z.infer<typeof accountFormSchema>;
 interface AccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  user: User | null;
+  user: User;
   onUserUpdated: (user: User) => void;
 }
 
-function getInitialAccountValues(user: User | null): AccountFormInput {
+function getInitialAccountValues(user: User): AccountFormInput {
   return {
-    name: user?.name ?? "",
-    username: user?.username ?? "",
+    name: user.name,
+    username: user.username,
     password: "",
   };
 }
 
 export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: AccountDialogProps) {
-  const storeUser = useUserStore((state) => state.user);
-  const displayUser = user ?? storeUser;
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -75,7 +72,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   } = useForm<AccountFormInput>({
     resolver: zodResolver(accountFormSchema),
     mode: "onChange",
-    defaultValues: getInitialAccountValues(displayUser),
+    defaultValues: getInitialAccountValues(user),
   });
 
   const name = watch("name");
@@ -83,11 +80,11 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   const password = watch("password");
 
   useEffect(() => {
-    if (open && displayUser) {
-      reset(getInitialAccountValues(displayUser));
+    if (open) {
+      reset(getInitialAccountValues(user));
       setFormError(null);
     }
-  }, [open, displayUser, reset]);
+  }, [open, user, reset]);
 
   const onSubmit = async (values: AccountFormInput) => {
     try {
@@ -107,7 +104,6 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
         description: response.data.message || "Your profile has been saved successfully.",
       });
 
-      useUserStore.getState().setUser(response.data.data);
       onUserUpdated(response.data.data);
       onOpenChange(false);
     } catch (err: unknown) {
@@ -144,29 +140,21 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
             <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-xs">
               <div className="flex items-center justify-between min-h-5">
                 <span className="text-muted-foreground">Assigned Role</span>
-                {displayUser ? (
-                  <RoleBadge role={displayUser.role} />
-                ) : (
-                  <span className="text-muted-foreground font-mono">—</span>
-                )}
+                <RoleBadge role={user.role} />
               </div>
               <div className="flex items-center justify-between min-h-5">
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <HugeiconsIcon icon={Calendar01Icon} className="size-3" />
                   <span>Member Since</span>
                 </span>
-                <span className="text-foreground">
-                  {displayUser ? formatDateTime(displayUser.created_at) : "—"}
-                </span>
+                <span className="text-foreground">{formatDateTime(user.created_at)}</span>
               </div>
               <div className="flex items-center justify-between min-h-5">
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <HugeiconsIcon icon={Clock01Icon} className="size-3" />
                   <span>Last Updated</span>
                 </span>
-                <span className="text-foreground">
-                  {displayUser ? formatDateTime(displayUser.updated_at) : "—"}
-                </span>
+                <span className="text-foreground">{formatDateTime(user.updated_at)}</span>
               </div>
             </div>
 

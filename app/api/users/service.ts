@@ -85,7 +85,7 @@ export async function createUserAccount(data: CreateUserInput, factoryId: number
  * Updates an existing user account.
  * Atomically enforces uniqueness via PostgreSQL unique constraints.
  */
-export async function updateUserAccount(data: UpdateUserInput) {
+export async function updateUserAccount(data: UpdateUserInput, factoryId: number) {
   const { id, username, name, role, password } = data;
   const cleanUsername = username.trim().toLowerCase();
 
@@ -103,6 +103,7 @@ export async function updateUserAccount(data: UpdateUserInput) {
     .from("users")
     .update(updates)
     .eq("id", id)
+    .eq("factory_id", factoryId)
     .select(USER_SELECT_PROJECTION)
     .maybeSingle();
 
@@ -123,11 +124,12 @@ export async function updateUserAccount(data: UpdateUserInput) {
 /**
  * Hard-deletes user accounts in a single batch operation with ON DELETE RESTRICT protection.
  */
-export async function deleteUserAccounts(targetIds: number[]) {
+export async function deleteUserAccounts(targetIds: number[], factoryId: number) {
   const { data, error: deleteErr } = await supabase
     .from("users")
     .delete()
     .in("id", targetIds)
+    .eq("factory_id", factoryId)
     .select("id");
 
   if (deleteErr) {

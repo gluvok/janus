@@ -27,19 +27,13 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase() || "OP";
 }
 
-const DEFAULT_USER_PROPS: UserProps = {
-  name: "Operator",
-  username: "operator",
-  initials: "OP",
-};
-
 export function AppSidebar() {
   const accountUser = useUserStore((state) => state.user);
   const setAccountUser = useUserStore((state) => state.setUser);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
-  const userProps: UserProps = React.useMemo(() => {
-    if (!accountUser) return DEFAULT_USER_PROPS;
+  const userProps: UserProps | null = React.useMemo(() => {
+    if (!accountUser) return null;
     return {
       name: accountUser.name,
       username: accountUser.username,
@@ -83,7 +77,9 @@ export function AppSidebar() {
           />
         </SidebarContent>
         <SidebarFooter>
-          <NavUser user={userProps} accountUser={accountUser} onUserUpdated={setAccountUser} />
+          {accountUser && userProps && (
+            <NavUser user={userProps} accountUser={accountUser} onUserUpdated={setAccountUser} />
+          )}
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>

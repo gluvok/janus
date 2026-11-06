@@ -80,7 +80,7 @@ export const POST = handleApiRoute(async (request: Request) => {
 });
 
 export const PATCH = handleApiRoute(async (request: Request) => {
-  getAuthUser(request);
+  const user = getAuthUser(request);
   const rawBody = await request.json();
   const validation = updateUserSchema.safeParse(rawBody);
 
@@ -94,7 +94,7 @@ export const PATCH = handleApiRoute(async (request: Request) => {
     );
   }
 
-  const updated = await updateUserAccount(validation.data);
+  const updated = await updateUserAccount(validation.data, user.factory_id);
 
   return NextResponse.json({
     data: updated,
@@ -103,7 +103,7 @@ export const PATCH = handleApiRoute(async (request: Request) => {
 });
 
 export const DELETE = handleApiRoute(async (request: Request) => {
-  getAuthUser(request);
+  const user = getAuthUser(request);
   const rawBody = await request.json();
   const validation = deleteUserSchema.safeParse(rawBody);
 
@@ -117,7 +117,7 @@ export const DELETE = handleApiRoute(async (request: Request) => {
     );
   }
 
-  const { deletedCount } = await deleteUserAccounts(validation.data.ids);
+  const { deletedCount } = await deleteUserAccounts(validation.data.ids, user.factory_id);
 
   return NextResponse.json({
     success: true,

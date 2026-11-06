@@ -30,13 +30,16 @@ export const PATCH = handleApiRoute(async (request: Request) => {
   }
 
   const { name, username, password } = validation.data;
-  const updated = await updateUserAccount({
-    id: currentUser.id,
-    name,
-    username,
-    role: currentUser.role,
-    ...(password && password.trim() ? { password: password.trim() } : {}),
-  });
+  const updated = await updateUserAccount(
+    {
+      id: currentUser.id,
+      name,
+      username,
+      role: currentUser.role,
+      ...(password && password.trim() ? { password: password.trim() } : {}),
+    },
+    currentUser.factory_id,
+  );
 
   return NextResponse.json({
     data: updated,

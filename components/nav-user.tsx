@@ -37,7 +37,7 @@ export type UserProps = {
 
 export interface NavUserProps {
   user: UserProps;
-  accountUser: User | null;
+  accountUser: User;
   onUserUpdated: (user: User) => void;
 }
 
