@@ -71,29 +71,33 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 /* Form Schemas                                                               */
 /* -------------------------------------------------------------------------- */
 
-export function getUserFormSchema({ isEdit }: { isEdit: boolean }) {
-  if (isEdit) {
-    return z
-      .object({
-        id: z.number().int().positive().optional(),
-        name: nameSchema,
-        role: userRoleEnum,
-        username: usernameSchema,
-        password: passwordSchema.optional().or(z.literal("")),
-      })
-      .strict();
-  }
-  return z
-    .object({
-      id: z.number().int().positive().optional(),
-      name: nameSchema,
-      role: userRoleEnum,
-      username: usernameSchema,
-      password: passwordSchema,
-    })
-    .strict();
-}
-export type UserFormInput = z.infer<ReturnType<typeof getUserFormSchema>>;
+const baseUserFormFields = {
+  id: z.number().int().positive().optional(),
+  name: nameSchema,
+  role: userRoleEnum,
+  username: usernameSchema,
+};
+
+export const createUserFormSchema = z
+  .object({
+    ...baseUserFormFields,
+    password: passwordSchema,
+  })
+  .strict();
+
+export const editUserFormSchema = z
+  .object({
+    ...baseUserFormFields,
+    password: passwordSchema.optional().or(z.literal("")),
+  })
+  .strict();
+
+export const USER_FORM_SCHEMAS = {
+  create: createUserFormSchema,
+  edit: editUserFormSchema,
+} as const;
+
+export type UserFormInput = z.infer<typeof editUserFormSchema>;
 
 /* -------------------------------------------------------------------------- */
 /* Deletion Schemas                                                           */

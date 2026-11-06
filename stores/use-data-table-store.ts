@@ -7,14 +7,15 @@ import type {
 } from "@tanstack/react-table";
 import {
   type TableItemState,
-  type GlobalMode,
+  type TableId,
+  TABLE_STRATEGIES,
   DEFAULT_TABLE_ITEM_STATE,
   TABLES_COOKIE_NAME,
   parseTablesCookie,
   writeTablesCookie,
 } from "@/lib/table-cookie";
 
-export type { TableItemState, GlobalMode };
+export type { TableItemState };
 export { DEFAULT_TABLE_ITEM_STATE };
 
 function resolveUpdater<T>(updaterOrValue: Updater<T>, previousValue: T): T {
@@ -23,16 +24,16 @@ function resolveUpdater<T>(updaterOrValue: Updater<T>, previousValue: T): T {
     : updaterOrValue;
 }
 
+function getDefaultTableState(tableId: string): TableItemState {
+  return TABLE_STRATEGIES[tableId as TableId]?.defaultState ?? DEFAULT_TABLE_ITEM_STATE;
+}
+
 interface DataTableStoreState {
   tables: Record<string, TableItemState>;
-  globalMode: GlobalMode;
   _hasHydrated: boolean;
   setHasHydrated: (hydrated: boolean) => void;
-  setGlobalMode: (mode: GlobalMode) => void;
-  initFromCookies: (initial: {
-    tables: Record<string, TableItemState>;
-    initialGlobalMode: GlobalMode;
-  }) => void;
+  initFromCookies: (initial: { tables: Record<string, TableItemState> }) => void;
+  setTableMode: (tableId: string, mode: "automatic" | "manual") => void;
 
   getTableState: (tableId: string) => TableItemState;
   setTableSearch: (tableId: string, search: string) => void;
@@ -52,15 +53,12 @@ interface DataTableStoreState {
   resetTableFilters: (tableId: string) => void;
 }
 
-function getInitialClientData(): {
-  tables: Record<string, TableItemState>;
-  globalMode: GlobalMode;
-} {
+function getInitialClientData(): Record<string, TableItemState> {
   if (typeof document === "undefined") {
-    return { tables: {}, globalMode: "automatic" };
+    return {};
   }
   const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${TABLES_COOKIE_NAME}=([^;]*)`));
-  if (!match?.[1]) return { tables: {}, globalMode: "automatic" };
+  if (!match?.[1]) return {};
   return parseTablesCookie(match[1]);
 }
 
@@ -71,7 +69,7 @@ function updateTableState(
   tableId: string,
   updater: (prev: TableItemState) => Partial<TableItemState>,
 ): { tables: Record<string, TableItemState> } {
-  const prev = state.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
+  const prev = state.tables[tableId] ?? getDefaultTableState(tableId);
   const nextTables = {
     ...state.tables,
     [tableId]: {
@@ -79,30 +77,30 @@ function updateTableState(
       ...updater(prev),
     },
   };
-  writeTablesCookie(nextTables, state.globalMode);
+  writeTablesCookie(nextTables);
   return { tables: nextTables };
 }
 
 export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
-  tables: initialClientData.tables,
-  globalMode: initialClientData.globalMode,
+  tables: initialClientData,
   _hasHydrated: false,
   setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
 
-  setGlobalMode: (mode) =>
-    set((state) => {
-      writeTablesCookie(state.tables, mode);
-      return { globalMode: mode };
-    }),
-
-  initFromCookies: ({ tables, initialGlobalMode }) =>
+  initFromCookies: ({ tables }) =>
     set((state) => ({
       tables: { ...tables, ...state.tables },
-      globalMode: initialGlobalMode,
       _hasHydrated: true,
     })),
 
-  getTableState: (tableId) => get().tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE,
+  setTableMode: (tableId, mode) =>
+    set((state) =>
+      updateTableState(state, tableId, (prev) => ({
+        mode,
+        pagination: { ...prev.pagination, pageIndex: 0 },
+      })),
+    ),
+
+  getTableState: (tableId) => get().tables[tableId] ?? getDefaultTableState(tableId),
 
   setTableSearch: (tableId, search) =>
     set((state) =>
@@ -180,7 +178,4 @@ export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
 
 export function useTableHydrated() {
   return useDataTableStore((state) => state._hasHydrated);
-}
-export function useGlobalMode() {
-  return useDataTableStore((state) => state.globalMode);
 }

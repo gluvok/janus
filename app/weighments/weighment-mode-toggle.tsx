@@ -3,37 +3,33 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CpuIcon, UserIcon } from "@hugeicons/core-free-icons";
-import { useDataTableStore } from "@/stores/use-data-table-store";
-import { globalModeSchema } from "@/lib/table-cookie";
-import { cn } from "@/lib/utils";
+import { z } from "zod";
+import type { WeighmentMode } from "./types";
 
-export interface TableModeToggleProps {
-  className?: string;
+const weighmentModeSchema = z.enum(["automatic", "manual"]);
+
+export interface WeighmentModeToggleProps {
+  mode: WeighmentMode;
+  onModeChange: (mode: WeighmentMode) => void;
 }
 
-export function TableModeToggle({ className }: TableModeToggleProps) {
-  const globalMode = useDataTableStore((state) => state.globalMode);
-  const setGlobalMode = useDataTableStore((state) => state.setGlobalMode);
-
+export function WeighmentModeToggle({ mode, onModeChange }: WeighmentModeToggleProps) {
   const handleValueChange = (values: string[]) => {
     if (values.length === 0) return;
-    const parsed = globalModeSchema.safeParse(values[0]);
+    const parsed = weighmentModeSchema.safeParse(values[0]);
     if (parsed.success) {
-      setGlobalMode(parsed.data);
+      onModeChange(parsed.data);
     }
   };
 
   return (
     <ToggleGroup
-      value={[globalMode]}
+      value={[mode]}
       onValueChange={handleValueChange}
       variant="default"
       spacing={0}
       aria-label="Weighment mode"
-      className={cn(
-        "h-7 rounded-md border border-border/70 bg-muted/50 p-0.5 inline-flex items-center shrink-0",
-        className,
-      )}
+      className="h-7 rounded-md border border-border/70 bg-muted/50 p-0.5 inline-flex items-center shrink-0"
     >
       <ToggleGroupItem
         value="automatic"
@@ -54,6 +50,3 @@ export function TableModeToggle({ className }: TableModeToggleProps) {
     </ToggleGroup>
   );
 }
-
-// Re-export as HeaderModeToggle for backwards compatibility
-export { TableModeToggle as HeaderModeToggle };

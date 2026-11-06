@@ -22,9 +22,8 @@ export interface UsersTableMeta {
 
 const columnHelper = createColumnHelper<DataTableFeatures, User>();
 
-export function getColumns(options?: { showRole?: boolean; entityLabel?: string }) {
-  const showRole = options?.showRole ?? true;
-  const entityLabel = options?.entityLabel ?? "User";
+export function getColumns(options: { showRole: boolean; entityLabel: string }) {
+  const { showRole, entityLabel } = options;
 
   const allColumns = [
     createSelectColumn(columnHelper),
@@ -77,5 +76,3 @@ export function getColumns(options?: { showRole?: boolean; entityLabel?: string 
 
   return columnHelper.columns(allColumns);
 }
-
-export const columns = getColumns();

@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     concern TEXT NOT NULL,
     reply TEXT,
     status ticket_status NOT NULL DEFAULT 'pending',
-    weighment_id INT NOT NULL REFERENCES automatic_weighments(id) ON DELETE RESTRICT,
+    automatic_weighment_id INT NOT NULL REFERENCES automatic_weighments(id) ON DELETE RESTRICT,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -278,8 +278,8 @@ CREATE TABLE IF NOT EXISTS tickets (
 CREATE INDEX IF NOT EXISTS idx_tickets_user_status 
 ON tickets (user_id, status, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_tickets_weighment 
-ON tickets (weighment_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_automatic_weighment 
+ON tickets (automatic_weighment_id);
 
 CREATE INDEX IF NOT EXISTS idx_tickets_created_desc
 ON tickets (created_at DESC);

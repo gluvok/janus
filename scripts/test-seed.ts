@@ -334,14 +334,14 @@ async function main() {
         concern: "Gross weight fluctuation detected during windy conditions.",
         reply: "Re-weighed on auxiliary platform.",
         status: "approved",
-        weighment_id: createdAuto[1].id,
+        automatic_weighment_id: createdAuto[1].id,
         user_id: operatorId2,
       },
       {
         concern: "Unmatched outbound weighment query.",
         reply: null,
         status: "pending",
-        weighment_id: createdAuto[2].id,
+        automatic_weighment_id: createdAuto[2].id,
         user_id: operatorId1,
       },
     ];

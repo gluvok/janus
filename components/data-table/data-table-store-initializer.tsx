@@ -2,23 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import { useDataTableStore } from "@/stores/use-data-table-store";
-import type { TableItemState, GlobalMode } from "@/lib/table-cookie";
+import type { TableItemState } from "@/lib/table-cookie";
 
 export interface DataTableStoreInitializerProps {
   initialTables: Record<string, TableItemState>;
-  initialGlobalMode: GlobalMode;
 }
 
-export function DataTableStoreInitializer({
-  initialTables,
-  initialGlobalMode,
-}: DataTableStoreInitializerProps) {
+export function DataTableStoreInitializer({ initialTables }: DataTableStoreInitializerProps) {
   const initialized = useRef(false);
 
   if (!initialized.current) {
     useDataTableStore.getState().initFromCookies({
       tables: initialTables,
-      initialGlobalMode,
     });
     initialized.current = true;
   }

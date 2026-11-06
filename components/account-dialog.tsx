@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useUserStore } from "@/stores/use-user-store";
 import {
   Dialog,
   DialogContent,
@@ -60,11 +61,10 @@ function getInitialAccountValues(user: User | null): AccountFormInput {
 }
 
 export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: AccountDialogProps) {
-  const [accountUser, setAccountUser] = useState<User | null>(user);
+  const storeUser = useUserStore((state) => state.user);
+  const displayUser = user ?? storeUser;
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
-  const displayUser = accountUser ?? user;
 
   const {
     handleSubmit,
@@ -75,37 +75,23 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   } = useForm<AccountFormInput>({
     resolver: zodResolver(accountFormSchema),
     mode: "onChange",
-    defaultValues: getInitialAccountValues(user),
+    defaultValues: getInitialAccountValues(displayUser),
   });
 
   const name = watch("name");
   const username = watch("username");
   const password = watch("password");
 
-  const fetchMe = useCallback(async () => {
-    try {
-      setLoading(true);
-      setFormError(null);
-      const response = await axios.get<{ data: User }>("/api/users/me");
-      const freshUser = response.data.data;
-      setAccountUser(freshUser);
-      reset(getInitialAccountValues(freshUser));
-      onUserUpdated(freshUser);
-    } catch (err: unknown) {
-      setFormError(getErrorMessage(err, "Failed to load account profile."));
-    } finally {
-      setLoading(false);
-    }
-  }, [reset, onUserUpdated]);
-
   useEffect(() => {
-    if (open) {
-      fetchMe();
+    if (open && displayUser) {
+      reset(getInitialAccountValues(displayUser));
+      setFormError(null);
     }
-  }, [open, fetchMe]);
+  }, [open, displayUser, reset]);
 
   const onSubmit = async (values: AccountFormInput) => {
     try {
+      setLoading(true);
       setFormError(null);
       const payload = {
         name: values.name.trim(),
@@ -121,11 +107,13 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
         description: response.data.message || "Your profile has been saved successfully.",
       });
 
-      setAccountUser(response.data.data);
+      useUserStore.getState().setUser(response.data.data);
       onUserUpdated(response.data.data);
       onOpenChange(false);
     } catch (err: unknown) {
       setFormError(getErrorMessage(err, "Failed to update account profile."));
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ export function UserAvatarInfo({ user }: { user: UserProps }) {
 }
 
 export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
+  const router = useRouter();
   const { isMobile } = useSidebar();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
 
@@ -63,7 +65,8 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
     try {
       await axios.post("/api/auth/logout");
     } finally {
-      window.location.href = "/login";
+      router.replace("/login");
+      router.refresh();
     }
   };
 

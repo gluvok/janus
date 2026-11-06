@@ -76,7 +76,7 @@ export function getWeighmentColumns() {
       ),
       cell: ({ row }) => {
         const net = row.getValue("net") as number | null;
-        if (net === null || net === undefined) {
+        if (net === null) {
           return <span className="text-2xs text-muted-foreground italic">-</span>;
         }
         return (
@@ -115,7 +115,7 @@ export function getWeighmentColumns() {
       ),
       cell: ({ row }) => {
         const tare = row.getValue("tare") as number | null;
-        if (tare === null || tare === undefined) {
+        if (tare === null) {
           return <span className="text-2xs text-muted-foreground italic">-</span>;
         }
         return (
@@ -201,7 +201,7 @@ export function getWeighmentColumns() {
         <DataTableColumnHeader column={column} title="Photos" icon={Image01Icon} />
       ),
       cell: ({ row, table }) => {
-        const images = row.original.images ?? [];
+        const images = row.original.images;
         const count = images.length;
 
         if (count === 0) {

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { type User } from "@/app/users/types";
@@ -94,35 +94,87 @@ export async function deleteSession(token: string): Promise<void> {
 }
 
 /**
- * Extracts and verifies the current session user in Next.js Server Components or Route Handlers.
+ * Reads user identity injected into request headers by proxy.ts with zero database queries.
+ * Throws AuthError (401) if headers are missing.
+ */
+export function getAuthUser(req: Request): User {
+  const userIdStr = req.headers.get("x-user-id");
+  const factoryIdStr = req.headers.get("x-factory-id");
+  const role = req.headers.get("x-user-role");
+  const encodedName = req.headers.get("x-user-name");
+  const username = req.headers.get("x-user-username");
+  const createdAt = req.headers.get("x-user-created-at") || "";
+  const updatedAt = req.headers.get("x-user-updated-at") || "";
+
+  if (!userIdStr || !factoryIdStr || !role || !username) {
+    throw new AuthError("Unauthorized", StatusCodes.UNAUTHORIZED);
+  }
+
+  const name = encodedName ? decodeURIComponent(encodedName) : "";
+
+  return {
+    id: parseInt(userIdStr, 10),
+    factory_id: parseInt(factoryIdStr, 10),
+    role: role as User["role"],
+    name,
+    username,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  };
+}
+
+/**
+ * Extracts and verifies the current session user in Next.js Server Components.
+ * Reads request headers set by proxy.ts; falls back to session lookup only if headers are not set.
  */
 export async function getServerSession(req?: Request): Promise<User | null> {
-  let token: string | undefined;
-
   if (req) {
-    const cookieHeader = req.headers.get("cookie");
-    if (cookieHeader) {
-      const match = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${SESSION_COOKIE_NAME}=`));
-      if (match) {
-        token = decodeURIComponent(match.substring(SESSION_COOKIE_NAME.length + 1));
+    const userIdStr = req.headers.get("x-user-id");
+    if (userIdStr) {
+      try {
+        return getAuthUser(req);
+      } catch {
+        return null;
       }
     }
   }
 
-  if (!token) {
-    try {
-      const cookieStore = await cookies();
-      token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    } catch {
-      // Handled outside Server Components/Route Handlers
+  try {
+    const headerList = await headers();
+    const userIdStr = headerList.get("x-user-id");
+    if (userIdStr) {
+      const factoryIdStr = headerList.get("x-factory-id");
+      const role = headerList.get("x-user-role");
+      const encodedName = headerList.get("x-user-name");
+      const username = headerList.get("x-user-username");
+      const createdAt = headerList.get("x-user-created-at") || "";
+      const updatedAt = headerList.get("x-user-updated-at") || "";
+
+      if (userIdStr && factoryIdStr && role && username) {
+        return {
+          id: parseInt(userIdStr, 10),
+          factory_id: parseInt(factoryIdStr, 10),
+          role: role as User["role"],
+          name: encodedName ? decodeURIComponent(encodedName) : "",
+          username,
+          created_at: createdAt,
+          updated_at: updatedAt,
+        };
+      }
     }
+  } catch {
+    // headers() might not be available
+  }
+
+  let token: string | undefined;
+  try {
+    const cookieStore = await cookies();
+    token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  } catch {
+    // Cookie store unavailable
   }
 
   if (!token) return null;
-
   return getSessionUser(token);
 }
 

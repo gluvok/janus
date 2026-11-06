@@ -117,21 +117,19 @@ export async function executeWeighmentsGetQuery(
         }
       }
 
-      // Filter by in_center_id
-      const inCenterRaw = searchParams.get("in_center_id")?.trim();
-      if (inCenterRaw && inCenterRaw !== "all") {
-        const parsed = commaSeparatedIdsSchema.safeParse(inCenterRaw);
-        if (parsed.success && parsed.data.length > 0) {
-          filteredQuery = filteredQuery.in("in_center_id", parsed.data);
-        }
-      }
+      // Filter by in_center_id and out_center_id
+      const centerFilters: readonly { param: string; column: string }[] = [
+        { param: "in_center_id", column: "in_center_id" },
+        { param: "out_center_id", column: "out_center_id" },
+      ];
 
-      // Filter by out_center_id
-      const outCenterRaw = searchParams.get("out_center_id")?.trim();
-      if (outCenterRaw && outCenterRaw !== "all") {
-        const parsed = commaSeparatedIdsSchema.safeParse(outCenterRaw);
-        if (parsed.success && parsed.data.length > 0) {
-          filteredQuery = filteredQuery.in("out_center_id", parsed.data);
+      for (const { param, column } of centerFilters) {
+        const rawVal = searchParams.get(param)?.trim();
+        if (rawVal && rawVal !== "all") {
+          const parsed = commaSeparatedIdsSchema.safeParse(rawVal);
+          if (parsed.success && parsed.data.length > 0) {
+            filteredQuery = filteredQuery.in(column, parsed.data);
+          }
         }
       }
 

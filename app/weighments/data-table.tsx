@@ -25,10 +25,10 @@ import {
 import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
-import { type TableItemState, getDualModeTableId } from "@/lib/table-cookie";
+import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-cookie";
 import { PhotosDialog } from "@/components/photos-dialog";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
-import { TableModeToggle } from "@/components/header-mode-toggle";
+import { WeighmentModeToggle } from "./weighment-mode-toggle";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
 
@@ -39,6 +39,11 @@ const TYPE_OPTIONS: FacetedFilterOption[] = [
   { label: "OUT", value: "out", icon: ArrowUpRight01Icon },
   { label: "UNASSIGNED", value: "unassigned", icon: CircleMinusIcon },
 ];
+
+const WEIGHMENT_ENDPOINTS: Record<WeighmentMode, string> = {
+  automatic: "/api/weighments/automatic",
+  manual: "/api/weighments/manual",
+};
 
 function formatCenterOptions(centers: Center[], title: string): FacetedFilterOption[] {
   return [
@@ -176,8 +181,8 @@ export function WeighmentsDataTable() {
   );
 
   const fetchWeighments = useCallback(async (queryParams: Record<string, unknown>) => {
-    const isManual = queryParams.mode === "manual";
-    const endpoint = isManual ? "/api/weighments/manual" : "/api/weighments/automatic";
+    const mode = (queryParams.mode as WeighmentMode) ?? "automatic";
+    const endpoint = WEIGHMENT_ENDPOINTS[mode];
     const res = await axios.get<{ data: Weighment[]; totalCount: number }>(endpoint, {
       params: queryParams,
     });
@@ -189,12 +194,10 @@ export function WeighmentsDataTable() {
     setIsInitialLoading(true);
     setInitialError(null);
     try {
-      const mode = useDataTableStore.getState().globalMode as WeighmentMode;
-      const tableId = getDualModeTableId("weighments", mode);
-      const currentTableState = useDataTableStore.getState().getTableState(tableId);
-      const initialQueryParams = buildWeighmentsQueryParams(currentTableState, mode);
-      const initialEndpoint =
-        mode === "manual" ? "/api/weighments/manual" : "/api/weighments/automatic";
+      const tableState = useDataTableStore.getState().getTableState("weighments");
+      const mode = (tableState.mode ?? "automatic") as WeighmentMode;
+      const initialQueryParams = buildWeighmentsQueryParams(tableState, mode);
+      const initialEndpoint = WEIGHMENT_ENDPOINTS[mode];
 
       const [optionsResult, weighmentsResult] = await Promise.all([
         fetchFilterOptions(),
@@ -207,15 +210,15 @@ export function WeighmentsDataTable() {
 
       const { centers } = optionsResult;
       const { sanitizedFilters, needsFallback } = validateAndSanitizeFilters(
-        currentTableState.filters,
+        tableState.filters,
         centers,
-        (key) => useDataTableStore.getState().setTableFilter(tableId, key, "all"),
+        (key) => useDataTableStore.getState().setTableFilter("weighments", key, "all"),
       );
 
       let finalWeighments = weighmentsResult.data;
       if (needsFallback) {
         const sanitizedQueryParams = buildWeighmentsQueryParams(
-          currentTableState,
+          tableState,
           mode,
           1,
           sanitizedFilters,
@@ -244,8 +247,13 @@ export function WeighmentsDataTable() {
     loadInitialData();
   }, [loadInitialData]);
 
-  const mode = useDataTableStore((state) => state.globalMode) as WeighmentMode;
-  const tableId = getDualModeTableId("weighments", mode);
+  const currentTableState =
+    useDataTableStore((state) => state.tables["weighments"]) ?? DEFAULT_TABLE_ITEM_STATE;
+  const mode = (currentTableState.mode ?? "automatic") as WeighmentMode;
+
+  const handleModeChange = useCallback((newMode: WeighmentMode) => {
+    useDataTableStore.getState().setTableMode("weighments", newMode);
+  }, []);
 
   const columns = useMemo(() => getWeighmentColumns(), []);
   const extraParams = useMemo(() => ({ mode }), [mode]);
@@ -268,7 +276,7 @@ export function WeighmentsDataTable() {
     refresh,
     tableState,
   } = useDataTable<Weighment>({
-    tableId,
+    tableId: "weighments",
     columns,
     extraParams,
     fetchData: fetchWeighments,
@@ -322,7 +330,7 @@ export function WeighmentsDataTable() {
       {/* Primary Toolbar - 2-Tier Layout with Integrated Multi-Sort */}
       <DataTableToolbar
         table={table}
-        leadingControl={<TableModeToggle />}
+        leadingControl={<WeighmentModeToggle mode={mode} onModeChange={handleModeChange} />}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search weighments..."

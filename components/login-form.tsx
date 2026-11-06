@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,6 +26,7 @@ const loginFormSchema = z
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
   const [serverError, setServerError] = useState<string | null>(null);
@@ -51,8 +52,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         password: values.password,
       });
 
-      // Hard redirect to target destination so full state rehydrates cleanly
-      window.location.href = nextUrl;
+      router.replace(nextUrl);
+      router.refresh();
     } catch (err: unknown) {
       setServerError(getErrorMessage(err, "Invalid username or password."));
     }

@@ -32,6 +32,13 @@ export interface CenterEditDialogProps {
   onSuccess: () => void;
 }
 
+function getCenterInitialValues(center: Center): UpdateCenterInput {
+  return {
+    id: center.id,
+    name: center.name,
+  };
+}
+
 export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: CenterEditDialogProps) {
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -43,19 +50,13 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
   } = useForm<UpdateCenterInput>({
     resolver: zodResolver(updateCenterSchema),
     mode: "onChange",
-    defaultValues: {
-      id: center.id,
-      name: center.name,
-    },
+    defaultValues: getCenterInitialValues(center),
   });
 
   React.useEffect(() => {
     if (open) {
       setServerError(null);
-      reset({
-        id: center.id,
-        name: center.name,
-      });
+      reset(getCenterInitialValues(center));
     }
   }, [open, center, reset]);
 

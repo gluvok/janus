@@ -25,4 +25,3 @@ export async function POST() {
     return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
   }
 }
-

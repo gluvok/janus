@@ -11,6 +11,9 @@ import { Toaster } from "@/components/ui/toast";
 import { parseTablesCookie, TABLES_COOKIE_NAME } from "@/lib/table-cookie";
 import { DataTableStoreInitializer } from "@/components/data-table";
 import { BootingScreen } from "@/components/booting-screen";
+import { UserStoreInitializer } from "@/components/user-store-initializer";
+import { AxiosInterceptor } from "@/components/axios-interceptor";
+import { getServerSession } from "@/lib/auth";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -44,8 +47,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
   const tablesStateRaw = cookieStore.get(TABLES_COOKIE_NAME)?.value;
-  const { tables: initialTables, globalMode: initialGlobalMode } =
-    parseTablesCookie(tablesStateRaw);
+  const initialTables = parseTablesCookie(tablesStateRaw);
+  const sessionUser = await getServerSession();
 
   return (
     <html
@@ -61,15 +64,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body>
         <BootingScreen />
+        <UserStoreInitializer initialUser={sessionUser} />
+        <AxiosInterceptor />
 
         {isLoginPage ? (
           <main className="h-full w-full">{children}</main>
         ) : (
           <>
-            <DataTableStoreInitializer
-              initialTables={initialTables}
-              initialGlobalMode={initialGlobalMode}
-            />
+            <DataTableStoreInitializer initialTables={initialTables} />
             <SidebarProvider defaultOpen={defaultOpen} className="h-full">
               <AppSidebar />
               <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">

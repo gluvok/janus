@@ -39,24 +39,6 @@ export const ALLOWED_SORT_COLUMNS = [
 export const USER_SELECT_PROJECTION =
   "id, username, name, role, factory_id, created_at, updated_at" as const;
 
-async function assertUsernameAvailable(username: string, excludeId?: number): Promise<void> {
-  let query = supabase.from("users").select("id").eq("username", username);
-
-  if (excludeId !== undefined) {
-    query = query.neq("id", excludeId);
-  }
-
-  const { data, error } = await query.maybeSingle();
-
-  if (error) {
-    throw new ServiceError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
-
-  if (data) {
-    throw new ServiceError(`Username "${username}" is already taken.`, StatusCodes.CONFLICT);
-  }
-}
-
 export class ServiceError extends Error {
   constructor(
     message: string,
@@ -70,13 +52,11 @@ export class ServiceError extends Error {
 
 /**
  * Creates a new staff user account with mandatory credentials and dynamic factory_id.
+ * Relies directly on PostgreSQL UNIQUE constraint for atomic concurrency protection.
  */
 export async function createUserAccount(data: CreateUserInput, factoryId: number) {
   const { username, name, role, password } = data;
   const cleanUsername = username.trim().toLowerCase();
-
-  await assertUsernameAvailable(cleanUsername);
-
   const passwordHash = await argon2.hash(password.trim());
 
   const { data: created, error: insertError } = await supabase
@@ -103,29 +83,11 @@ export async function createUserAccount(data: CreateUserInput, factoryId: number
 
 /**
  * Updates an existing user account.
+ * Atomically enforces uniqueness via PostgreSQL unique constraints.
  */
 export async function updateUserAccount(data: UpdateUserInput) {
   const { id, username, name, role, password } = data;
-
-  const { data: existingUser, error: fetchErr } = await supabase
-    .from("users")
-    .select("id, username, role")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (fetchErr) {
-    throw new ServiceError(fetchErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
-
-  if (!existingUser) {
-    throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
-  }
-
   const cleanUsername = username.trim().toLowerCase();
-
-  if (cleanUsername !== existingUser.username) {
-    await assertUsernameAvailable(cleanUsername, id);
-  }
 
   const updates: Record<string, unknown> = {
     username: cleanUsername,
@@ -159,23 +121,14 @@ export async function updateUserAccount(data: UpdateUserInput) {
 }
 
 /**
- * Hard-deletes user accounts, with ON DELETE RESTRICT foreign key protection.
+ * Hard-deletes user accounts in a single batch operation with ON DELETE RESTRICT protection.
  */
 export async function deleteUserAccounts(targetIds: number[]) {
-  const { data: targetUsers, error: fetchErr } = await supabase
+  const { data, error: deleteErr } = await supabase
     .from("users")
-    .select("id, username")
-    .in("id", targetIds);
-
-  if (fetchErr) {
-    throw new ServiceError(fetchErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
-  }
-
-  if (!targetUsers || targetUsers.length === 0) {
-    throw new ServiceError("No users found matching the specified ID(s).", StatusCodes.NOT_FOUND);
-  }
-
-  const { error: deleteErr } = await supabase.from("users").delete().in("id", targetIds);
+    .delete()
+    .in("id", targetIds)
+    .select("id");
 
   if (deleteErr) {
     if (deleteErr.code === "23503") {
@@ -187,5 +140,9 @@ export async function deleteUserAccounts(targetIds: number[]) {
     throw new ServiceError(deleteErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
-  return { deletedCount: targetIds.length };
+  if (!data || data.length === 0) {
+    throw new ServiceError("No users found matching the specified ID(s).", StatusCodes.NOT_FOUND);
+  }
+
+  return { deletedCount: data.length };
 }

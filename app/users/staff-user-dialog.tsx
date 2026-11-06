@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import {
   UserDialogShell,
 } from "./user-dialog-primitives";
 import {
-  getUserFormSchema,
+  USER_FORM_SCHEMAS,
   type CreateUserInput,
   type UserFormInput,
   type UpdateUserInput,
@@ -27,6 +27,43 @@ interface StaffUserDialogProps {
   user?: User | null;
   onSuccess: () => void;
 }
+
+type DialogMode = "edit" | "create";
+
+const DIALOG_CONFIGS: Record<
+  DialogMode,
+  {
+    title: string;
+    description: string;
+    icon: typeof UserEdit01Icon;
+    submitLabel: string;
+    successTitle: string;
+    actionPastTense: string;
+    errorTitle: string;
+    submit: (payload: UpdateUserInput | CreateUserInput) => Promise<unknown>;
+  }
+> = {
+  edit: {
+    title: "Edit Staff User",
+    description: "Modify account credentials and system role.",
+    icon: UserEdit01Icon,
+    submitLabel: "Save Changes",
+    successTitle: "User updated",
+    actionPastTense: "successfully updated",
+    errorTitle: "Failed to update user",
+    submit: (payload) => axios.patch("/api/users", payload),
+  },
+  create: {
+    title: "Add New Staff User",
+    description: "Provision a new system operator or staff account.",
+    icon: UserAdd01Icon,
+    submitLabel: "Create User",
+    successTitle: "User created",
+    actionPastTense: "created successfully",
+    errorTitle: "Failed to create user",
+    submit: (payload) => axios.post("/api/users", payload),
+  },
+};
 
 function getStaffInitialValues(user?: User | null): UserFormInput {
   if (user) {
@@ -48,9 +85,11 @@ function getStaffInitialValues(user?: User | null): UserFormInput {
 
 export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUserDialogProps) {
   const isEdit = Boolean(user);
-  const [formError, setFormError] = useState<string | null>(null);
+  const modeKey: DialogMode = isEdit ? "edit" : "create";
+  const config = DIALOG_CONFIGS[modeKey];
+  const schema = USER_FORM_SCHEMAS[modeKey];
 
-  const schema = useMemo(() => getUserFormSchema({ isEdit }), [isEdit]);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     handleSubmit,
@@ -71,8 +110,8 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
 
   useEffect(() => {
     if (open) {
-      setFormError(null);
       reset(getStaffInitialValues(user));
+      setFormError(null);
     }
   }, [open, user, reset]);
 
@@ -88,16 +127,12 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
     } as UpdateUserInput | CreateUserInput;
 
     try {
-      if (isEdit) {
-        await axios.patch("/api/users", payload);
-      } else {
-        await axios.post("/api/users", payload);
-      }
+      await config.submit(payload);
 
       toast.add({
         type: "success",
-        title: isEdit ? "User updated" : "User created",
-        description: `Account "${payload.username}" has been ${isEdit ? "successfully updated" : "created successfully"}.`,
+        title: config.successTitle,
+        description: `Account "${payload.username}" has been ${config.actionPastTense}.`,
       });
 
       onSuccess();
@@ -107,7 +142,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
       setFormError(msg);
       toast.add({
         type: "error",
-        title: isEdit ? "Failed to update user" : "Failed to create user",
+        title: config.errorTitle,
         description: msg,
       });
     }
@@ -117,19 +152,15 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
     <UserDialogShell
       open={open}
       onOpenChange={onOpenChange}
-      title={isEdit ? "Edit Staff User" : "Add New Staff User"}
-      description={
-        isEdit
-          ? "Modify account credentials and system role."
-          : "Provision a new system operator or staff account."
-      }
-      headerIcon={isEdit ? UserEdit01Icon : UserAdd01Icon}
+      title={config.title}
+      description={config.description}
+      headerIcon={config.icon}
       formError={formError}
       isDirty={isDirty}
       isValid={isValid}
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit(onSubmit)}
-      submitLabel={isEdit ? "Save Changes" : "Create User"}
+      submitLabel={config.submitLabel}
     >
       {/* Row 1: Full Name and System Role side-by-side */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -140,6 +171,7 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
           description="Operator name displayed in audit trails."
           error={errors.name?.message}
         />
+
         <SystemRoleSelect
           value={role}
           onChange={(val) => setValue("role", val, { shouldValidate: true, shouldDirty: true })}

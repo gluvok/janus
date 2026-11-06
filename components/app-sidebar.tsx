@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import axios from "axios";
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +17,7 @@ import { NavGroup } from "@/components/nav-group";
 import { NavUser, type UserProps } from "@/components/nav-user";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { mainNavItems, secondaryNavItems } from "@/lib/navigation";
-import { type User } from "@/app/users/types";
+import { useUserStore } from "@/stores/use-user-store";
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -35,24 +34,9 @@ const DEFAULT_USER_PROPS: UserProps = {
 };
 
 export function AppSidebar() {
-  const [accountUser, setAccountUser] = React.useState<User | null>(null);
+  const accountUser = useUserStore((state) => state.user);
+  const setAccountUser = useUserStore((state) => state.setUser);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    let isMounted = true;
-    axios
-      .get<{ data: User }>("/api/users/me")
-      .then((res) => {
-        if (isMounted && res.data.data) {
-          setAccountUser(res.data.data);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const userProps: UserProps = React.useMemo(() => {
     if (!accountUser) return DEFAULT_USER_PROPS;
