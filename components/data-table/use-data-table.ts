@@ -118,9 +118,13 @@ export function useDataTable<TData extends RowData>({
     (updater: Updater<ColumnVisibilityState>) => store.setTableColumnVisibility(tableId, updater),
     [store, tableId],
   );
-  const resetAllFilters = useCallback(() => store.resetTableFilters(tableId), [store, tableId]);
+  const resetAllFilters = useCallback(() => {
+    store.resetTableFilters(tableId);
+    store.setTableDateRange(tableId, undefined);
+  }, [store, tableId]);
   const resetAllCriteria = useCallback(() => {
     store.resetTableFilters(tableId);
+    store.setTableDateRange(tableId, undefined);
     store.resetTableSorting(tableId);
   }, [store, tableId]);
 

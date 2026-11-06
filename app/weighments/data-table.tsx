@@ -265,7 +265,9 @@ export function WeighmentsDataTable() {
     setSorting,
     removeSort,
     hasActiveSorts,
+    hasActiveFilters,
     resetAllCriteria,
+    resetAllFilters,
     resetSorting,
     setFilter,
     refresh,
@@ -335,6 +337,8 @@ export function WeighmentsDataTable() {
         filterConfigs={filterConfigs}
         filters={tableState.filters}
         onFilterChange={(key, val) => setFilter(key, val)}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetAllFilters}
         hasActiveSorts={hasActiveSorts}
         sorting={sorting}
         onSortingChange={(updater) => setSorting(updater)}

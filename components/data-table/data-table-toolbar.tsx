@@ -12,7 +12,9 @@ import {
   type DataTableFeatures,
   DataTableCriteriaBar,
 } from "@/components/data-table";
+import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 
 export interface DataTableFilterConfig {
   key: string;
@@ -34,6 +36,8 @@ export interface DataTableToolbarProps<TData extends RowData> {
   filterConfigs: DataTableFilterConfig[];
   filters: Record<string, string>;
   onFilterChange: (key: string, value: string) => void;
+  hasActiveFilters?: boolean;
+  onResetFilters?: () => void;
   hasActiveSorts: boolean;
   sorting: SortingState;
   onSortingChange: (updater: Updater<SortingState>) => void;
@@ -54,6 +58,8 @@ export function DataTableToolbar<TData extends RowData>({
   filterConfigs,
   filters,
   onFilterChange,
+  hasActiveFilters,
+  onResetFilters,
   hasActiveSorts,
   sorting,
   onSortingChange,
@@ -84,7 +90,7 @@ export function DataTableToolbar<TData extends RowData>({
         </div>
       </div>
 
-      {/* Row 2: Filter Comboboxes + Multi-Sort Priority Chips */}
+      {/* Row 2: Filter Comboboxes + Clear Filters + Multi-Sort Priority Chips */}
       <div className="flex flex-wrap items-center gap-2">
         {filterConfigs.map((config) => (
           <DataTableFacetedFilter
@@ -96,6 +102,19 @@ export function DataTableToolbar<TData extends RowData>({
             onValueChange={(val: string) => onFilterChange(config.key, val)}
           />
         ))}
+
+        {hasActiveFilters && onResetFilters && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onResetFilters}
+            className="h-7 gap-1 px-2 text-2xs text-muted-foreground hover:bg-stone-500/10 hover:text-foreground shrink-0 cursor-pointer"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} className="size-3" data-icon="inline-start" />
+            <span>Clear filters</span>
+          </Button>
+        )}
 
         <DataTableCriteriaBar
           hasActiveSorts={hasActiveSorts}

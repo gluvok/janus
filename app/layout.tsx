@@ -66,6 +66,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         "smooth-scroll",
       )}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+              const clean = () => {
+                if (document.body && document.body.hasAttribute('location')) {
+                  document.body.removeAttribute('location');
+                }
+              };
+              clean();
+              new MutationObserver(clean).observe(document.documentElement, {
+                attributes: true,
+                subtree: true,
+                attributeFilter: ['location'],
+              });
+            })();`,
+          }}
+        />
+      </head>
       <body>
         <BootingScreen isLoginPage={isLoginPage} />
         <DataTableStoreInitializer initialTables={initialTables} />

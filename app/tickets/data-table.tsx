@@ -13,7 +13,10 @@ import {
   DatePickerWithRange,
   useDataTable,
 } from "@/components/data-table";
+import { Button } from "@/components/ui/button";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Cancel01Icon,
   CancelCircleIcon,
   CheckmarkCircle02Icon,
   Clock01Icon,
@@ -69,7 +72,9 @@ export function TicketsDataTable() {
     removeSort,
     setPagination,
     hasActiveSorts,
+    hasActiveFilters,
     resetAllCriteria,
+    resetAllFilters,
     resetSorting,
     setFilter,
     refresh,
@@ -132,6 +137,19 @@ export function TicketsDataTable() {
             setPagination((prev) => ({ ...prev, pageIndex: 0 }));
           }}
         />
+
+        {hasActiveFilters && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={resetAllFilters}
+            className="h-7 gap-1 px-2 text-2xs text-muted-foreground hover:bg-stone-500/10 hover:text-foreground shrink-0 cursor-pointer"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} className="size-3" data-icon="inline-start" />
+            <span>Clear filters</span>
+          </Button>
+        )}
 
         <DataTableCriteriaBar
           hasActiveSorts={hasActiveSorts}
