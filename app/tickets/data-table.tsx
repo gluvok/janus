@@ -3,20 +3,13 @@
 import { useMemo, useState, useCallback } from "react";
 import {
   DataTableContent,
-  DataTableCriteriaBar,
-  DataTableFacetedFilter,
   DataTableHydrationCard,
   DataTablePagination,
-  DataTableRefreshButton,
-  DataTableSearchInput,
-  DataTableViewOptions,
-  DatePickerWithRange,
+  DataTableToolbar,
+  type DataTableFilterConfig,
   useDataTable,
 } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Cancel01Icon,
   CancelCircleIcon,
   CheckmarkCircle02Icon,
   Clock01Icon,
@@ -88,6 +81,19 @@ export function TicketsDataTable() {
 
   const statusFilter = tableState.filters["status"] ?? "all";
 
+  const filterConfigs: DataTableFilterConfig[] = useMemo(
+    () => [
+      {
+        key: "status",
+        title: "Status",
+        options: STATUS_FILTER_OPTIONS,
+        categoryIcon: SecurityCheckIcon,
+        variant: "stone",
+      },
+    ],
+    [],
+  );
+
   const handleMutationSuccess = () => {
     refresh();
   };
@@ -99,73 +105,41 @@ export function TicketsDataTable() {
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       {/* Primary Toolbar */}
-      <div className="flex flex-col gap-2 shrink-0 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search Input (Left) */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full sm:w-auto">
-          <DataTableSearchInput
-            placeholder="Search tickets by concern or reply..."
-            value={search}
-            onChange={setSearch}
-          />
-        </div>
-
-        {/* Action Controls Group (Right) */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          <DataTableRefreshButton onClick={refresh} loading={loading} />
-          <DatePickerWithRange
-            date={dateRange}
-            onDateChange={(range) => {
-              setDateRange(range);
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-            }}
-            className="flex-1 sm:flex-initial"
-          />
-
-          <DataTableViewOptions table={table} />
-        </div>
-      </div>
-
-      {/* Row 2: Faceted Filter + Active Criteria Bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <DataTableFacetedFilter
-          title="Status"
-          icon={SecurityCheckIcon}
-          options={STATUS_FILTER_OPTIONS}
-          value={statusFilter}
-          onValueChange={(val) => {
+      <DataTableToolbar
+        table={table}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search tickets by concern or reply..."
+        onRefresh={refresh}
+        loading={loading}
+        dateRange={dateRange}
+        onDateRangeChange={(range) => {
+          setDateRange(range);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        filterConfigs={filterConfigs}
+        filters={{ status: statusFilter }}
+        onFilterChange={(key, val) => {
+          if (key === "status") {
             setFilter("status", val);
             setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        />
-
-        {hasActiveFilters && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={resetAllFilters}
-            className="h-7 gap-1 px-2 text-2xs text-muted-foreground hover:bg-stone-500/10 hover:text-foreground shrink-0 cursor-pointer"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3" data-icon="inline-start" />
-            <span>Clear filters</span>
-          </Button>
-        )}
-
-        <DataTableCriteriaBar
-          hasActiveSorts={hasActiveSorts}
-          sorting={sorting}
-          onSortingChange={(updater) => {
-            setSorting(updater);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          onRemoveSort={(columnId) => {
-            removeSort(columnId);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          onResetAll={resetAllCriteria}
-          onResetSorts={resetSorting}
-        />
-      </div>
+          }
+        }}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetAllFilters}
+        hasActiveSorts={hasActiveSorts}
+        sorting={sorting}
+        onSortingChange={(updater) => {
+          setSorting(updater);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        onRemoveSort={(columnId) => {
+          removeSort(columnId);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        onResetAll={resetAllCriteria}
+        onResetSorts={resetSorting}
+      />
 
       {/* Table Content Surface */}
       <DataTableContent table={table} loading={loading} error={error} />

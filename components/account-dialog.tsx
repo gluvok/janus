@@ -63,7 +63,7 @@ function getInitialAccountValues(user: User): AccountFormInput {
 
 export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: AccountDialogProps) {
   const [currentUser, setCurrentUser] = useState<User>(user);
-  const [loading, setLoading] = useState(false);
+  const [isFetchingProfile, setIsFetchingProfile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -85,7 +85,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   useEffect(() => {
     if (open) {
       setFormError(null);
-      setLoading(true);
+      setIsFetchingProfile(true);
       axios
         .get<{ data: { user: User; factory: Factory } }>("/api/users/me")
         .then((res) => {
@@ -106,14 +106,13 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
           });
         })
         .finally(() => {
-          setLoading(false);
+          setIsFetchingProfile(false);
         });
     }
   }, [open, reset, onUserUpdated]);
 
   const onSubmit = async (values: AccountFormInput) => {
     try {
-      setLoading(true);
       setFormError(null);
       const payload = {
         name: values.name.trim(),
@@ -136,8 +135,6 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
       onOpenChange(false);
     } catch (err: unknown) {
       setFormError(getErrorMessage(err, "Failed to update account profile."));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -153,7 +150,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
         </DialogHeader>
 
         <div className="relative">
-          {loading && (
+          {isFetchingProfile && (
             <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur-sm">
               <Spinner className="size-6 text-primary" />
             </div>
@@ -162,7 +159,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
           <div
             className={cn(
               "flex flex-col gap-4 pt-1 pb-0 transition-opacity",
-              loading ? "pointer-events-none opacity-40 select-none" : "opacity-100",
+              isFetchingProfile ? "pointer-events-none opacity-40 select-none" : "opacity-100",
             )}
           >
             <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-xs">

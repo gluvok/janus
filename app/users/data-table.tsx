@@ -3,22 +3,17 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  DataTableSearchInput,
-  DataTableFacetedFilter,
-  type FacetedFilterOption,
-  DataTableCriteriaBar,
   DataTableContent,
-  DataTablePagination,
-  DataTableRefreshButton,
-  DataTableViewOptions,
-  DatePickerWithRange,
   DataTableHydrationCard,
+  DataTablePagination,
+  DataTableToolbar,
+  type DataTableFilterConfig,
+  type FacetedFilterOption,
   useDataTable,
 } from "@/components/data-table";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Briefcase01Icon,
-  Cancel01Icon,
   CrownIcon,
   Delete02Icon,
   HeadsetIcon,
@@ -118,6 +113,19 @@ export function UsersDataTable() {
     refresh();
   };
 
+  const filterConfigs: DataTableFilterConfig[] = useMemo(
+    () => [
+      {
+        key: "role",
+        title: "Role",
+        options: ROLE_OPTIONS,
+        categoryIcon: SecurityCheckIcon,
+        variant: "stone",
+      },
+    ],
+    [],
+  );
+
   if (!hasHydrated) {
     return <DataTableHydrationCard />;
   }
@@ -125,75 +133,47 @@ export function UsersDataTable() {
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       {/* Primary Toolbar */}
-      <div className="flex flex-col gap-2 shrink-0 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search Input (Left) */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center w-full sm:w-auto">
-          <DataTableSearchInput placeholder="Search users..." value={search} onChange={setSearch} />
-        </div>
-
-        {/* Action Controls Group (Right) */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          {/* Add User Button */}
+      <DataTableToolbar
+        table={table}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search users..."
+        actions={
           <Button size="sm" onClick={handleAddUser} className="h-7 gap-1 px-2 text-2xs">
             <HugeiconsIcon icon={UserAdd01Icon} data-icon="inline-start" />
             <span>Add User</span>
           </Button>
-
-          <DataTableRefreshButton onClick={refresh} loading={loading} />
-          <DatePickerWithRange
-            date={dateRange}
-            onDateChange={(range) => {
-              setDateRange(range);
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-            }}
-            className="flex-1 sm:flex-initial"
-          />
-
-          <DataTableViewOptions table={table} />
-        </div>
-      </div>
-
-      {/* Row 2: Faceted Filter + Active Criteria Bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <DataTableFacetedFilter
-          title="Role"
-          icon={SecurityCheckIcon}
-          options={ROLE_OPTIONS}
-          value={roleFilter}
-          onValueChange={(val) => {
+        }
+        onRefresh={refresh}
+        loading={loading}
+        dateRange={dateRange}
+        onDateRangeChange={(range) => {
+          setDateRange(range);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        filterConfigs={filterConfigs}
+        filters={{ role: roleFilter }}
+        onFilterChange={(key, val) => {
+          if (key === "role") {
             setFilter("role", val);
             setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-        />
-
-        {hasActiveFilters && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={resetAllFilters}
-            className="h-7 gap-1 px-2 text-2xs text-muted-foreground hover:bg-stone-500/10 hover:text-foreground shrink-0 cursor-pointer"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3" data-icon="inline-start" />
-            <span>Clear filters</span>
-          </Button>
-        )}
-
-        <DataTableCriteriaBar
-          hasActiveSorts={hasActiveSorts}
-          sorting={sorting}
-          onSortingChange={(updater) => {
-            setSorting(updater);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          onRemoveSort={(columnId) => {
-            removeSort(columnId);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }}
-          onResetAll={resetAllCriteria}
-          onResetSorts={resetSorting}
-        />
-      </div>
+          }
+        }}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetAllFilters}
+        hasActiveSorts={hasActiveSorts}
+        sorting={sorting}
+        onSortingChange={(updater) => {
+          setSorting(updater);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        onRemoveSort={(columnId) => {
+          removeSort(columnId);
+          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        }}
+        onResetSorts={resetSorting}
+        onResetAll={resetAllCriteria}
+      />
 
       {/* Floating Bulk Action Bar */}
       {selectedCount > 0 && (

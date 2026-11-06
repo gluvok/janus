@@ -94,22 +94,20 @@ function ComboboxSearchInput({
   ...props
 }: ComboboxPrimitive.Input.Props) {
   return (
-    <div className="p-1 pb-0 w-full" data-slot="combobox-search-wrapper">
-      <InputGroup className="h-7 w-full bg-input/20 dark:bg-input/30">
-        <InputGroupAddon align="inline-start">
-          <HugeiconsIcon icon={Search01Icon} className="size-3 text-muted-foreground" />
-        </InputGroupAddon>
-        <ComboboxPrimitive.Input
-          render={
-            <InputGroupInput
-              disabled={disabled}
-              placeholder={placeholder}
-              className={cn("text-xs", className)}
-            />
-          }
-          {...props}
-        />
-      </InputGroup>
+    <div
+      data-slot="combobox-search-wrapper"
+      className="flex items-center gap-2 border-b border-border px-3 py-2 w-full"
+    >
+      <HugeiconsIcon icon={Search01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
+      <ComboboxPrimitive.Input
+        disabled={disabled}
+        placeholder={placeholder}
+        className={cn(
+          "w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        {...props}
+      />
     </div>
   );
 }

@@ -28,13 +28,14 @@ export interface DataTableToolbarProps<TData extends RowData> {
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
+  actions?: React.ReactNode;
   onRefresh: () => void;
   loading?: boolean;
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
-  filterConfigs: DataTableFilterConfig[];
-  filters: Record<string, string>;
-  onFilterChange: (key: string, value: string) => void;
+  filterConfigs?: DataTableFilterConfig[];
+  filters?: Record<string, string>;
+  onFilterChange?: (key: string, value: string) => void;
   hasActiveFilters?: boolean;
   onResetFilters?: () => void;
   hasActiveSorts: boolean;
@@ -50,13 +51,14 @@ export function DataTableToolbar<TData extends RowData>({
   search,
   onSearchChange,
   searchPlaceholder = "Search records...",
+  actions,
   onRefresh,
   loading,
   dateRange,
   onDateRangeChange,
-  filterConfigs,
-  filters,
-  onFilterChange,
+  filterConfigs = [],
+  filters = {},
+  onFilterChange = () => {},
   hasActiveFilters,
   onResetFilters,
   hasActiveSorts,
@@ -68,7 +70,7 @@ export function DataTableToolbar<TData extends RowData>({
 }: DataTableToolbarProps<TData>) {
   return (
     <div className="flex flex-col gap-2 shrink-0">
-      {/* Row 1: Search Box (Left) + Refresh Button & Columns (Right) */}
+      {/* Row 1: Search Box (Left) + Actions, Refresh Button & Columns (Right) */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <DataTableSearchInput
@@ -79,6 +81,7 @@ export function DataTableToolbar<TData extends RowData>({
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          {actions}
           <DataTableRefreshButton onClick={onRefresh} loading={loading} />
           <DataTableViewOptions table={table} />
         </div>
