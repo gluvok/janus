@@ -53,16 +53,32 @@ export async function POST(request: Request) {
 
     const { token } = await createSession(user.id);
 
+    const { data: factory, error: factoryError } = await supabase
+      .from("factories")
+      .select("*")
+      .eq("id", user.factory_id)
+      .single();
+
+    if (factoryError || !factory) {
+      return NextResponse.json(
+        { error: "Factory not found for user." },
+        { status: StatusCodes.INTERNAL_SERVER_ERROR },
+      );
+    }
+
     const response = NextResponse.json(
       {
         data: {
-          id: user.id,
-          username: user.username,
-          name: user.name,
-          role: user.role,
-          factory_id: user.factory_id,
-          created_at: user.created_at,
-          updated_at: user.updated_at,
+          user: {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            role: user.role,
+            factory_id: user.factory_id,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+          },
+          factory,
         },
         message: "Logged in successfully",
       },

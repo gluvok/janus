@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +15,8 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
+import { useUserStore } from "@/stores/use-user-store";
+import { useFactoryStore } from "@/stores/use-factory-store";
 
 const loginFormSchema = z
   .object({
@@ -26,6 +28,7 @@ const loginFormSchema = z
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -47,12 +50,15 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
   const onSubmit = async (values: LoginFormValues) => {
     try {
       setIsRedirecting(true);
-      await axios.post("/api/auth/login", {
+      const res = await axios.post("/api/auth/login", {
         username: values.username,
         password: values.password,
       });
 
-      window.location.href = nextUrl;
+      useUserStore.getState().setUser(res.data.data.user);
+      useFactoryStore.getState().setFactory(res.data.data.factory);
+
+      router.push(nextUrl);
     } catch (err: unknown) {
       setIsRedirecting(false);
       toast.add({

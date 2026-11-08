@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useUserStore } from "@/stores/use-user-store";
+import { useFactoryStore } from "@/stores/use-factory-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +61,7 @@ export function UserAvatarInfo({ user }: { user: UserProps }) {
 }
 
 export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
+  const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -75,10 +79,12 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
 
     try {
       await axios.post("/api/auth/logout");
+      useUserStore.getState().setUser(null);
+      useFactoryStore.getState().setFactory(null);
     } catch {
       // Proceed with redirect even if network drops
     } finally {
-      window.location.href = "/login";
+      router.push("/login");
     }
   };
 
