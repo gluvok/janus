@@ -86,10 +86,10 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 For any JavaScript / TypeScript / Node modifications:
 
 1. **Package Manager**: Use `pnpm` explicitly for all package installations and script executions. Do not use `npm`, `yarn`, or `bun`.
-2. **Lint & Code Style**: Run `pnpm lint` (`oxlint --fix`) and `pnpm fmt` (`oxfmt`). Fix any remaining issues cleanly without disabling rules.
-3. **Type Checking**: Run `pnpm type-check` (`tsc --noEmit`). Fix type diagnostics cleanly without using `@ts-ignore` or arbitrary `any`.
-4. **Test Suite**: Run `pnpm test` (`vitest run`) to confirm all tests pass without regression.
-5. **Build Verification**: Run `pnpm run build` (`next build`) to confirm production builds compile cleanly.
+2. **Lint & Code Style**: Run `pnpm lint` and `pnpm fmt`. Fix any remaining issues cleanly without disabling rules.
+3. **Type Checking**: Run `pnpm type-check`. Fix type diagnostics cleanly without using `@ts-ignore` or arbitrary `any`.
+4. **Test Suite**: Run `pnpm test` to confirm all tests pass without regression.
+5. **Build Verification**: Run `pnpm run build` to confirm production builds compile cleanly.
 6. **Iterative Verification**: Keep looping through `pnpm lint`, `pnpm fmt`, `pnpm type-check`, `pnpm test`, and `pnpm run build` until all yield **0 errors, 0 warnings, and clean builds**.
 
 **Mandatory Pre-Completion Audits (Must all yield 0 violations):**
@@ -119,9 +119,9 @@ For any JavaScript / TypeScript / Node modifications:
 
 ## 7. shadcn / UI Components, Design Scale & Theming
 
-**Official shadcn docs are in the `docs/` folder. Never manually create `components/ui/` files. Never introduce off-theme colors or arbitrary bracket values.**
+**Official shadcn docs are in the `docs/shadcn` folder. Never manually create `components/ui/` files. Never introduce off-theme colors or arbitrary bracket values.**
 
-- **Official Documentation**: Canonical shadcn / UI documentation for components in this repository is kept inside the `docs/` folder (e.g., `docs/datatable.md`, `docs/pagination.md`, `docs/spinner.md`, `docs/select.md`). Always consult `docs/` first for canonical component APIs, props, and design guidelines.
+- **Official Documentation**: Canonical shadcn / UI documentation for components in this repository is kept inside the `docs/shadcn` folder (e.g., `docs/shadcn/datatable.md`, `docs/shadcn/pagination.md`, `docs/shadcn/spinner.md`, `docs/shadcn/select.md`). Always consult `docs/shadcn` first for canonical component APIs, props, and design guidelines.
 - **CLI Component Addition**: NEVER create components inside the `components/ui/` directory manually. Always install and scaffold UI components using the `pnpm shadcn` CLI command (e.g., `pnpm dlx shadcn@latest add <component>` or `pnpm shadcn add <component>`). If project-specific adjustments or imports need tuning after installation, edit the CLI-generated file rather than crafting it from scratch.
 - **Strict Zero Raw HTML Tags in Feature Code**: NEVER use raw HTML tags when a shadcn component exists. This strictly includes:
   - `<button>` -> `<Button>` (This applies unconditionally to ALL buttons: search clear crosses, badge dismiss `(x)` buttons, icon toggles, dropdown triggers, and popover buttons must all use `<Button variant="ghost" size="icon-xs" ...>` or `<Button>`).

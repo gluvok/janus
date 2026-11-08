@@ -9,8 +9,6 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { AppHeaderControls } from "@/components/app-header-controls";
 import { Toaster } from "@/components/ui/toast";
-import { parseTablesCookie, TABLES_COOKIE_NAME } from "@/lib/table-cookie";
-import { DataTableStoreInitializer } from "@/components/data-table";
 import { BootingScreen } from "@/components/booting-screen";
 import { UserStoreInitializer } from "@/components/user-store-initializer";
 import { AxiosInterceptor } from "@/components/axios-interceptor";
@@ -50,8 +48,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isLoginPage = pathname === "/login";
 
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
-  const tablesStateRaw = cookieStore.get(TABLES_COOKIE_NAME)?.value;
-  const initialTables = parseTablesCookie(tablesStateRaw);
   const session = await getServerSession();
 
   return (
@@ -86,8 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
-        <BootingScreen isLoginPage={isLoginPage} />
-        <DataTableStoreInitializer initialTables={initialTables} />
+        <BootingScreen />
         <UserStoreInitializer
           initialUser={session?.user ?? null}
           initialFactory={session?.factory ?? null}

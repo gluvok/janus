@@ -40,8 +40,6 @@ export {
 
 export { DataTableSearchInput, type DataTableSearchInputProps } from "./data-table-search-input";
 
-export { DataTableStoreInitializer } from "./data-table-store-initializer";
-
 export { DataTableViewOptions } from "./data-table-view-options";
 
 export { DatePickerWithRange, type DatePickerWithRangeProps } from "./date-range-picker";

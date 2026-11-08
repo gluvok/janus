@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useTableHydrated } from "@/stores/use-data-table-store";
 import { Spinner } from "@/components/ui/spinner";
 
-export interface BootingScreenProps {
-  isLoginPage: boolean;
-}
-
-export function BootingScreen({ isLoginPage }: BootingScreenProps) {
+export function BootingScreen() {
   const hasHydrated = useTableHydrated();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (mounted) {
-    if (isLoginPage) return null;
-    if (hasHydrated) return null;
+  if (hasHydrated) {
+    return null;
   }
 
   return (

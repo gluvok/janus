@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type {
   ColumnVisibilityState,
   SortingState,
@@ -10,8 +11,7 @@ import {
   type TableId,
   TABLE_STRATEGIES,
   DEFAULT_TABLE_ITEM_STATE,
-  writeTablesCookie,
-} from "@/lib/table-cookie";
+} from "@/lib/table-strategy";
 
 export type { TableItemState };
 export { DEFAULT_TABLE_ITEM_STATE };
@@ -30,7 +30,6 @@ interface DataTableStoreState {
   tables: Record<string, TableItemState>;
   _hasHydrated: boolean;
   setHasHydrated: (hydrated: boolean) => void;
-  initFromCookies: (initial: { tables: Record<string, TableItemState> }) => void;
   setTableMode: (tableId: string, mode: "automatic" | "manual") => void;
 
   getTableState: (tableId: string) => TableItemState;
@@ -64,104 +63,111 @@ function updateTableState(
       ...updater(prev),
     },
   };
-  writeTablesCookie(nextTables);
   return { tables: nextTables };
 }
 
-export const useDataTableStore = create<DataTableStoreState>()((set, get) => ({
-  tables: {},
-  _hasHydrated: false,
-  setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
+export const useDataTableStore = create<DataTableStoreState>()(
+  persist(
+    (set, get) => ({
+      tables: {},
+      _hasHydrated: false,
+      setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
 
-  initFromCookies: ({ tables }) =>
-    set((state) => ({
-      tables: { ...tables, ...state.tables },
-      _hasHydrated: true,
-    })),
+      setTableMode: (tableId, mode) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            mode,
+            pagination: { ...prev.pagination, pageIndex: 0 },
+          })),
+        ),
 
-  setTableMode: (tableId, mode) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        mode,
-        pagination: { ...prev.pagination, pageIndex: 0 },
-      })),
-    ),
+      getTableState: (tableId) => get().tables[tableId] ?? getDefaultTableState(tableId),
 
-  getTableState: (tableId) => get().tables[tableId] ?? getDefaultTableState(tableId),
+      setTableSearch: (tableId, search) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            search,
+            pagination: { ...prev.pagination, pageIndex: 0 },
+          })),
+        ),
 
-  setTableSearch: (tableId, search) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        search,
-        pagination: { ...prev.pagination, pageIndex: 0 },
-      })),
-    ),
+      setTableFilter: (tableId, key, value) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => {
+            const updatedFilters = { ...prev.filters };
+            if (value === "all" || !value) {
+              delete updatedFilters[key];
+            } else {
+              updatedFilters[key] = value;
+            }
+            return {
+              filters: updatedFilters,
+              pagination: { ...prev.pagination, pageIndex: 0 },
+            };
+          }),
+        ),
 
-  setTableFilter: (tableId, key, value) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => {
-        const updatedFilters = { ...prev.filters };
-        if (value === "all" || !value) {
-          delete updatedFilters[key];
-        } else {
-          updatedFilters[key] = value;
-        }
-        return {
-          filters: updatedFilters,
-          pagination: { ...prev.pagination, pageIndex: 0 },
+      setTableDateRange: (tableId, dateRange) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            dateRange,
+            pagination: { ...prev.pagination, pageIndex: 0 },
+          })),
+        ),
+
+      setTableSorting: (tableId, updaterOrValue) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            sorting: resolveUpdater(updaterOrValue, prev.sorting),
+          })),
+        ),
+
+      removeTableSort: (tableId, columnId) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            sorting: prev.sorting.filter((s) => s.id !== columnId),
+          })),
+        ),
+
+      resetTableSorting: (tableId) =>
+        set((state) => updateTableState(state, tableId, () => ({ sorting: [] }))),
+
+      setTablePagination: (tableId, updaterOrValue) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            pagination: resolveUpdater(updaterOrValue, prev.pagination),
+          })),
+        ),
+
+      setTableColumnVisibility: (tableId, updaterOrValue) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            columnVisibility: resolveUpdater(updaterOrValue, prev.columnVisibility),
+          })),
+        ),
+
+      resetTableFilters: (tableId) =>
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            search: "",
+            filters: {},
+            dateRange: undefined,
+            pagination: { ...prev.pagination, pageIndex: 0 },
+          })),
+        ),
+    }),
+    {
+      name: "mesto_tables_state",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ tables: state.tables }),
+      onRehydrateStorage: (state) => {
+        return () => {
+          state.setHasHydrated(true);
         };
-      }),
-    ),
-
-  setTableDateRange: (tableId, dateRange) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        dateRange,
-        pagination: { ...prev.pagination, pageIndex: 0 },
-      })),
-    ),
-
-  setTableSorting: (tableId, updaterOrValue) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        sorting: resolveUpdater(updaterOrValue, prev.sorting),
-      })),
-    ),
-
-  removeTableSort: (tableId, columnId) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        sorting: prev.sorting.filter((s) => s.id !== columnId),
-      })),
-    ),
-
-  resetTableSorting: (tableId) =>
-    set((state) => updateTableState(state, tableId, () => ({ sorting: [] }))),
-
-  setTablePagination: (tableId, updaterOrValue) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        pagination: resolveUpdater(updaterOrValue, prev.pagination),
-      })),
-    ),
-
-  setTableColumnVisibility: (tableId, updaterOrValue) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        columnVisibility: resolveUpdater(updaterOrValue, prev.columnVisibility),
-      })),
-    ),
-
-  resetTableFilters: (tableId) =>
-    set((state) =>
-      updateTableState(state, tableId, (prev) => ({
-        search: "",
-        filters: {},
-        dateRange: undefined,
-        pagination: { ...prev.pagination, pageIndex: 0 },
-      })),
-    ),
-}));
+      },
+    },
+  ),
+);
 
 export function useTableHydrated() {
   return useDataTableStore((state) => state._hasHydrated);

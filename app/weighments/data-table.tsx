@@ -24,7 +24,7 @@ import {
 import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
-import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-cookie";
+import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-strategy";
 import { PhotosDialog } from "@/components/photos-dialog";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
 import type { Weighment, WeighmentMode } from "./types";

@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AccountDialog } from "@/components/account-dialog";
+import { toast } from "@/components/ui/toast";
+import { Spinner } from "@/components/ui/spinner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Logout01Icon,
@@ -58,11 +60,26 @@ export function UserAvatarInfo({ user }: { user: UserProps }) {
 export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
     if (isMobile) setOpenMobile(false);
-    void axios.post("/api/auth/logout");
-    window.location.href = "/login";
+
+    toast.add({
+      title: "Logging out...",
+      description: "Ending active session and clearing credentials",
+      type: "info",
+    });
+
+    try {
+      await axios.post("/api/auth/logout");
+    } catch {
+      // Proceed with redirect even if network drops
+    } finally {
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -97,9 +114,17 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={handleLogout}>
-                <HugeiconsIcon icon={Logout01Icon} />
-                <span>Log out</span>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? (
+                  <Spinner className="size-4 animate-spin" />
+                ) : (
+                  <HugeiconsIcon icon={Logout01Icon} />
+                )}
+                <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
