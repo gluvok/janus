@@ -158,7 +158,15 @@ export const useDataTableStore = create<DataTableStoreState>()(
     }),
     {
       name: "mesto_tables_state",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined"
+          ? window.localStorage
+          : {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            },
+      ),
       partialize: (state) => ({ tables: state.tables }),
       onRehydrateStorage: (state) => {
         return () => {

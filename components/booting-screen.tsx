@@ -9,16 +9,27 @@ import { useFactoryStore } from "@/stores/use-factory-store";
 import { useTableHydrated } from "@/stores/use-data-table-store";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { AppHeaderControls } from "@/components/app-header-controls";
 import type { User } from "@/app/users/types";
 import type { Factory } from "@/app/settings/types";
 
 export interface BootingScreenProps {
   initialUser: User | null;
   initialFactory: Factory | null;
+  defaultOpen: boolean;
   children: React.ReactNode;
 }
 
-export function BootingScreen({ initialUser, initialFactory, children }: BootingScreenProps) {
+export function BootingScreen({
+  initialUser,
+  initialFactory,
+  defaultOpen,
+  children,
+}: BootingScreenProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -115,5 +126,26 @@ export function BootingScreen({ initialUser, initialFactory, children }: Booting
     );
   }
 
-  return <>{children}</>;
+  if (pathname === "/login") {
+    return <main className="h-full w-full">{children}</main>;
+  }
+
+  return (
+    <SidebarProvider defaultOpen={defaultOpen} className="h-full">
+      <AppSidebar />
+      <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 my-auto data-vertical:h-4" />
+            <AppBreadcrumb />
+          </div>
+          <AppHeaderControls />
+        </header>
+        <div className="flex flex-1 flex-col gap-2 sm:gap-3 p-2 sm:p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }

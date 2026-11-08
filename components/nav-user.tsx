@@ -71,18 +71,28 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
     setIsLoggingOut(true);
     if (isMobile) setOpenMobile(false);
 
-    toast.add({
+    const toastId = toast.add({
       title: "Logging out...",
       description: "Ending active session and clearing credentials",
-      type: "info",
+      type: "loading",
     });
 
     try {
       await axios.post("/api/auth/logout");
       useUserStore.getState().setUser(null);
       useFactoryStore.getState().setFactory(null);
+
+      if (toastId) {
+        toast.update(toastId, {
+          title: "Logged out successfully",
+          description: "Your session has ended",
+          type: "success",
+        });
+      }
     } catch {
-      // Proceed with redirect even if network drops
+      if (toastId) {
+        toast.close(toastId);
+      }
     } finally {
       router.push("/login");
     }

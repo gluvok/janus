@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Manrope } from "next/font/google";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import { AppSidebar } from "@/components/app-sidebar";
-import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { AppHeaderControls } from "@/components/app-header-controls";
 import { Toaster } from "@/components/ui/toast";
 import { BootingScreen } from "@/components/booting-screen";
 import { getServerSession } from "@/lib/auth";
@@ -41,10 +36,6 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const headerList = await headers();
-  const pathname = headerList.get("x-pathname") || "";
-  const isLoginPage = pathname === "/login";
-
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
   const session = await getServerSession();
 
@@ -65,27 +56,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <BootingScreen
           initialUser={session?.user ?? null}
           initialFactory={session?.factory ?? null}
+          defaultOpen={defaultOpen}
         >
-          {isLoginPage ? (
-            <main className="h-full w-full">{children}</main>
-          ) : (
-            <SidebarProvider defaultOpen={defaultOpen} className="h-full">
-              <AppSidebar />
-              <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">
-                <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
-                  <div className="flex items-center gap-2">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator orientation="vertical" className="mr-2 my-auto data-vertical:h-4" />
-                    <AppBreadcrumb />
-                  </div>
-                  <AppHeaderControls />
-                </header>
-                <div className="flex flex-1 flex-col gap-2 sm:gap-3 p-2 sm:p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">
-                  {children}
-                </div>
-              </SidebarInset>
-            </SidebarProvider>
-          )}
+          {children}
         </BootingScreen>
         <Toaster />
       </body>
