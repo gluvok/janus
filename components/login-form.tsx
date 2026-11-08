@@ -55,8 +55,15 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         password: values.password,
       });
 
-      useUserStore.getState().setUser(res.data.data.user);
+      const user = res.data.data.user;
+      useUserStore.getState().setUser(user);
       useFactoryStore.getState().setFactory(res.data.data.factory);
+
+      toast.add({
+        type: "success",
+        title: `Good to see you, ${user.name}!`,
+        description: "Signed in successfully. Have a wonderful day.",
+      });
 
       router.push(nextUrl);
     } catch (err: unknown) {

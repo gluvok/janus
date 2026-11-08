@@ -70,7 +70,7 @@ export function DataTableToolbar<TData extends RowData>({
 }: DataTableToolbarProps<TData>) {
   return (
     <div className="flex flex-col gap-2 shrink-0">
-      {/* Row 1: Search Box (Left) + Actions, Refresh Button & Columns (Right) */}
+      {/* Row 1: Search Box & Date Range (Left) + Actions, Refresh Button & Columns (Right) */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <DataTableSearchInput
@@ -78,6 +78,7 @@ export function DataTableToolbar<TData extends RowData>({
             value={search}
             onChange={onSearchChange}
           />
+          <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
@@ -87,34 +88,34 @@ export function DataTableToolbar<TData extends RowData>({
         </div>
       </div>
 
-      {/* Row 2: Date Picker (First Filter) + Filter Comboboxes + Clear Filters + Multi-Sort Priority Chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
+      {/* Row 2: Entity Facets + Unified Clear All + Multi-Sort Priority Chips */}
+      {(filterConfigs.length > 0 || hasActiveFilters || hasActiveSorts) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {filterConfigs.map((config) => (
+            <DataTableFacetedFilter
+              key={config.key}
+              title={config.title}
+              icon={config.categoryIcon}
+              options={config.options}
+              value={filters[config.key] ?? "all"}
+              onValueChange={(val: string) => onFilterChange(config.key, val)}
+            />
+          ))}
 
-        {filterConfigs.map((config) => (
-          <DataTableFacetedFilter
-            key={config.key}
-            title={config.title}
-            icon={config.categoryIcon}
-            options={config.options}
-            value={filters[config.key] ?? "all"}
-            onValueChange={(val: string) => onFilterChange(config.key, val)}
+          {hasActiveFilters && onResetFilters && (
+            <DataTableClearButton label="Clear all" onClick={onResetFilters} />
+          )}
+
+          <DataTableCriteriaBar
+            hasActiveSorts={hasActiveSorts}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            onRemoveSort={onRemoveSort}
+            onResetSorts={onResetSorts}
+            onResetAll={onResetAll}
           />
-        ))}
-
-        {hasActiveFilters && onResetFilters && (
-          <DataTableClearButton label="Clear filters" onClick={onResetFilters} />
-        )}
-
-        <DataTableCriteriaBar
-          hasActiveSorts={hasActiveSorts}
-          sorting={sorting}
-          onSortingChange={onSortingChange}
-          onRemoveSort={onRemoveSort}
-          onResetSorts={onResetSorts}
-          onResetAll={onResetAll}
-        />
-      </div>
+        </div>
+      )}
     </div>
   );
 }

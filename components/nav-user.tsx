@@ -72,8 +72,8 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
     if (isMobile) setOpenMobile(false);
 
     const toastId = toast.add({
-      title: "Logging out...",
-      description: "Ending active session and clearing credentials",
+      title: "Signing you out...",
+      description: "Clearing active workspace and securing session",
       type: "loading",
     });
 
@@ -84,8 +84,8 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
 
       if (toastId) {
         toast.update(toastId, {
-          title: "Logged out successfully",
-          description: "Your session has ended",
+          title: `See you soon, ${user.name}!`,
+          description: "You've been signed out safely. Have a great day.",
           type: "success",
         });
       }
