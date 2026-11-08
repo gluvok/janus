@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { NavGroup } from "@/components/nav-group";
 import { NavUser, type UserProps } from "@/components/nav-user";
@@ -31,6 +32,7 @@ export function AppSidebar() {
   const accountUser = useUserStore((state) => state.user);
   const setAccountUser = useUserStore((state) => state.setUser);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const userProps: UserProps | null = React.useMemo(() => {
     if (!accountUser) return null;
@@ -47,7 +49,13 @@ export function AppSidebar() {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" render={<Link href="/" />}>
+              <SidebarMenuButton
+                size="lg"
+                render={<Link href="/" />}
+                onClick={() => {
+                  if (isMobile) setOpenMobile(false);
+                }}
+              >
                 <Image
                   src="/logo.png"
                   alt="Mesto Logo"
@@ -69,6 +77,7 @@ export function AppSidebar() {
             label="Secondary"
             items={secondaryNavItems}
             onItemClick={(item) => {
+              if (isMobile) setOpenMobile(false);
               if (item.url === "#settings" || item.title === "Settings") {
                 setIsSettingsOpen(true);
               }

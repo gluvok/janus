@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DataTableContent,
-  DataTableHydrationCard,
   DataTablePagination,
   DataTableToolbar,
   type DataTableFilterConfig,
@@ -68,7 +67,6 @@ export function UsersDataTable() {
     table,
     loading,
     error,
-    hasHydrated,
     search,
     setSearch,
     dateRange,
@@ -125,10 +123,6 @@ export function UsersDataTable() {
     ],
     [],
   );
-
-  if (!hasHydrated) {
-    return <DataTableHydrationCard />;
-  }
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">

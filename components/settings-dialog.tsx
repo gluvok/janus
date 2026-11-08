@@ -57,7 +57,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     formState: { isDirty, isValid, isSubmitting, errors },
   } = useForm<FactoryFormInput>({
     resolver: zodResolver(factoryFormSchema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       receipt_images_per_row: 3,

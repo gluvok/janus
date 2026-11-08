@@ -49,7 +49,8 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
     formState: { errors, isDirty, isValid, isSubmitting },
   } = useForm<UpdateCenterInput>({
     resolver: zodResolver(updateCenterSchema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: getCenterInitialValues(center),
   });
 

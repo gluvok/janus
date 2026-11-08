@@ -48,10 +48,7 @@ export function updateFactorySessionCache(factoryId: number, updatedFactory: Fac
 export class AuthError extends Error {
   statusCode: number;
 
-  constructor(
-    message: string,
-    statusCode: number = StatusCodes.UNAUTHORIZED,
-  ) {
+  constructor(message: string, statusCode: number = StatusCodes.UNAUTHORIZED) {
     super(message);
     this.name = "AuthError";
     this.statusCode = statusCode;

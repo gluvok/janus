@@ -129,7 +129,7 @@ export function DatePickerWithRange({
                 data-icon="inline-start"
                 className="size-3.5 shrink-0"
               />
-              <span className="truncate">
+              <span className="truncate max-w-44 sm:max-w-none">
                 {date?.from ? (
                   date.to ? (
                     <>

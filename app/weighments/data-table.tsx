@@ -6,7 +6,6 @@ import axios from "axios";
 import {
   DataTableContent,
   DataTablePagination,
-  DataTableHydrationCard,
   DataTableToolbar,
   DataTableErrorState,
   useDataTable,
@@ -308,10 +307,6 @@ export function WeighmentsDataTable() {
     ];
   }, [inCenterOptions, outCenterOptions]);
 
-  if (isInitialLoading || !initialData) {
-    return <DataTableHydrationCard />;
-  }
-
   if (initialError) {
     return (
       <DataTableErrorState
@@ -331,7 +326,7 @@ export function WeighmentsDataTable() {
         onSearchChange={setSearch}
         searchPlaceholder="Search weighments..."
         onRefresh={refresh}
-        loading={loading}
+        loading={loading || isInitialLoading}
         dateRange={dateRange}
         onDateRangeChange={(range) => setDateRange(range)}
         filterConfigs={filterConfigs}
@@ -348,10 +343,15 @@ export function WeighmentsDataTable() {
       />
 
       {/* Reusable Data Table Content */}
-      <DataTableContent table={table} loading={loading} error={error} onRetry={refresh} />
+      <DataTableContent
+        table={table}
+        loading={loading || isInitialLoading}
+        error={error}
+        onRetry={refresh}
+      />
 
       {/* Permanently Anchored Bottom Pagination Bar */}
-      <DataTablePagination table={table} loading={loading} />
+      <DataTablePagination table={table} loading={loading || isInitialLoading} />
 
       {/* Consolidated Photo Carousel Modal */}
       <PhotosDialog

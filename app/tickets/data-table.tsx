@@ -3,7 +3,6 @@
 import { useMemo, useState, useCallback } from "react";
 import {
   DataTableContent,
-  DataTableHydrationCard,
   DataTablePagination,
   DataTableToolbar,
   type DataTableFilterConfig,
@@ -55,7 +54,6 @@ export function TicketsDataTable() {
     table,
     loading,
     error,
-    hasHydrated,
     search,
     setSearch,
     dateRange,
@@ -97,10 +95,6 @@ export function TicketsDataTable() {
   const handleMutationSuccess = () => {
     refresh();
   };
-
-  if (!hasHydrated) {
-    return <DataTableHydrationCard />;
-  }
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">

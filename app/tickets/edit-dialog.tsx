@@ -77,7 +77,8 @@ export function TicketEditDialog({ open, onOpenChange, ticket, onSuccess }: Tick
     formState: { errors, isDirty, isValid, isSubmitting },
   } = useForm<TicketFormInput>({
     resolver: zodResolver(ticketFormSchema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: ticket ? getTicketInitialValues(ticket) : undefined,
   });
 

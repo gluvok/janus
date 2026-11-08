@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { type NavItem } from "@/lib/navigation";
 
@@ -23,6 +24,7 @@ export interface NavGroupProps {
 
 export function NavGroup({ label, items, onItemClick, className }: NavGroupProps) {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
     <SidebarGroup className={className}>
@@ -35,9 +37,11 @@ export function NavGroup({ label, items, onItemClick, className }: NavGroupProps
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
-                  {...(isAction
-                    ? { onClick: () => onItemClick?.(item) }
-                    : { render: <Link href={item.url} /> })}
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false);
+                    if (isAction) onItemClick?.(item);
+                  }}
+                  {...(!isAction && { render: <Link href={item.url} /> })}
                   isActive={isActive}
                   tooltip={item.title}
                   className={cn(

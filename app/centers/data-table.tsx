@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   DataTableContent,
-  DataTableHydrationCard,
   DataTablePagination,
   DataTableToolbar,
   useDataTable,
@@ -21,7 +20,6 @@ export function CentersDataTable() {
     table,
     loading,
     error,
-    hasHydrated,
     search,
     setSearch,
     dateRange,
@@ -44,10 +42,6 @@ export function CentersDataTable() {
       onEditCenter: setEditingCenter,
     },
   });
-
-  if (!hasHydrated) {
-    return <DataTableHydrationCard />;
-  }
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">

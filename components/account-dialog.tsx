@@ -75,7 +75,8 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
     formState: { isDirty, isValid, isSubmitting, errors },
   } = useForm<AccountFormInput>({
     resolver: zodResolver(accountFormSchema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: getInitialAccountValues(currentUser),
   });
 

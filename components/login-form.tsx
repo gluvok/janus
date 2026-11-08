@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,17 +26,18 @@ const loginFormSchema = z
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: {
       username: "",
       password: "",
@@ -44,14 +46,15 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
+      setIsRedirecting(true);
       await axios.post("/api/auth/login", {
         username: values.username,
         password: values.password,
       });
 
-      router.replace(nextUrl);
-      router.refresh();
+      window.location.href = nextUrl;
     } catch (err: unknown) {
+      setIsRedirecting(false);
       toast.add({
         type: "error",
         title: "Login failed",
@@ -116,10 +119,10 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
             <Button
               type="submit"
-              disabled={isSubmitting || !isValid}
+              disabled={isSubmitting || isRedirecting}
               className="w-full h-8 text-xs font-medium cursor-pointer"
             >
-              {isSubmitting ? (
+              {isSubmitting || isRedirecting ? (
                 <div className="flex items-center gap-1.5">
                   <Spinner className="size-3.5" />
                   <span>Logging in...</span>

@@ -99,7 +99,8 @@ export function StaffUserDialog({ open, onOpenChange, user, onSuccess }: StaffUs
     formState: { isDirty, isValid, isSubmitting, errors },
   } = useForm<UserFormInput>({
     resolver: zodResolver(schema),
-    mode: "onChange",
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: getStaffInitialValues(user),
   });
 

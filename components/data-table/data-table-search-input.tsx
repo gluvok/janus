@@ -25,7 +25,7 @@ export function DataTableSearchInput({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-full pl-8 pr-2.5 text-xs"
+        className="h-8 w-full pl-8 pr-2.5 text-sm sm:text-xs"
       />
     </div>
   );

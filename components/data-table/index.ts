@@ -31,8 +31,6 @@ export { features, type DataTableFeatures } from "./data-table-features";
 
 export { DataTableFilterChip, type FilterChipVariant } from "./data-table-filter-chip";
 
-export { DataTableHydrationCard } from "./data-table-hydration-card";
-
 export { DataTablePagination } from "./data-table-pagination";
 
 export {

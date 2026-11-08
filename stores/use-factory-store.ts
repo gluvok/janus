@@ -10,4 +10,3 @@ export const useFactoryStore = create<FactoryState>((set) => ({
   factory: null,
   setFactory: (factory) => set({ factory }),
 }));
-

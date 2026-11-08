@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
   DropdownMenu,
@@ -57,17 +56,13 @@ export function UserAvatarInfo({ user }: { user: UserProps }) {
 }
 
 export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
-  const router = useRouter();
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
 
-  const handleLogout = async () => {
-    try {
-      await axios.post("/api/auth/logout");
-    } finally {
-      router.replace("/login");
-      router.refresh();
-    }
+  const handleLogout = () => {
+    if (isMobile) setOpenMobile(false);
+    void axios.post("/api/auth/logout");
+    window.location.href = "/login";
   };
 
   return (
@@ -87,7 +82,12 @@ export function NavUser({ user, accountUser, onUserUpdated }: NavUserProps) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setIsAccountOpen(true)}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false);
+                    setIsAccountOpen(true);
+                  }}
+                >
                   <HugeiconsIcon icon={UserCircleIcon} />
                   <span>Account</span>
                 </DropdownMenuItem>

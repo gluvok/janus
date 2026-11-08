@@ -196,7 +196,7 @@ For any JavaScript / TypeScript / Node modifications:
 
 **Standardize on `react-hook-form` + `zodResolver`. Across the entire codebase outside `components/ui/`, all validation must strictly use Zod schemas.**
 
-- **Form State Management**: Use `react-hook-form` with `@hookform/resolvers/zod` (`useForm({ resolver: zodResolver(schema), mode: "onChange" })`) for all interactive forms. Never manage multiple input states via scattered `useState` or ad-hoc dirty checking.
+- **Form State Management**: Use `react-hook-form` with `@hookform/resolvers/zod` (`useForm({ resolver: zodResolver(schema), mode: "onSubmit", reValidateMode: "onChange" })`) for all interactive forms. Never manage multiple input states via scattered `useState` or ad-hoc dirty checking. Errors must only display after submit attempt, never while initially typing.
 - **Zod Schema Boundary Delegation**:
   - Delegate field requirements, optionality, dependent logic (e.g. credentials required only when portal access is toggled on via discriminated unions), and regexes strictly to Zod schemas.
   - Never duplicate validation checks in UI components if Zod already enforces them.
