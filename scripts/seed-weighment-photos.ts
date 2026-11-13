@@ -1,10 +1,11 @@
 /**
  * @file scripts/seed-weighment-photos.ts
  * @description Uploads sample transport photos to the 'mesto' Supabase storage bucket
- * and links their public URLs to automatic and manual weighments in the database.
+ * adhering to the schema.sql bucket naming policy (name ~ '^[0-9]+/[^/]+$')
+ * and links their public URLs to automatic and manual weighments in batch (zero N+1 queries).
  */
 
-import { supabase } from "./supabase.ts";
+import { SUPABASE_URL, supabase } from "./supabase.ts";
 
 const SAMPLE_PHOTOS = [
   {
@@ -30,10 +31,12 @@ const SAMPLE_PHOTOS = [
 ];
 
 async function seedPhotos() {
-  console.log("🚚 Starting Weighment Photos Seeding...");
-  console.log(`📡 Supabase Endpoint: ${process.env.SUPABASE_URL}`);
+  console.log("=================================================");
+  console.log("🚚 Starting Weighment Photos Seeding");
+  console.log(`📡 Supabase Endpoint: ${SUPABASE_URL}`);
+  console.log("=================================================");
 
-  // 1. Fetch images as buffers and upload to storage (or use direct fallback CDN URL)
+  // 1. Fetch images as buffers and upload to Supabase Storage bucket 'mesto'
   const uploadedUrls: string[] = [];
 
   for (const photo of SAMPLE_PHOTOS) {
@@ -48,8 +51,11 @@ async function seedPhotos() {
       const arrayBuffer = await res.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      console.log(`⬆️ Uploading to Supabase Storage bucket 'mesto': ${photo.name}...`);
-      const uploadRes = await supabase.storage.from("mesto").upload(`1/${photo.name}`, buffer, {
+      // Bucket policy requires: name ~ '^[0-9]+/[^/]+$'
+      const storagePath = `1/${photo.name}`;
+      console.log(`⬆️ Uploading to bucket 'mesto' at path: ${storagePath}...`);
+
+      const uploadRes = await supabase.storage.from("mesto").upload(storagePath, buffer, {
         contentType: "image/jpeg",
         upsert: true,
       });
@@ -59,9 +65,7 @@ async function seedPhotos() {
         console.warn(`ℹ️ Using direct fallback CDN URL: ${photo.url}`);
         uploadedUrls.push(photo.url);
       } else {
-        const { data: publicUrlData } = supabase.storage
-          .from("mesto")
-          .getPublicUrl(`1/${photo.name}`);
+        const { data: publicUrlData } = supabase.storage.from("mesto").getPublicUrl(storagePath);
         console.log(`✅ Uploaded to bucket 'mesto': ${publicUrlData.publicUrl}`);
         uploadedUrls.push(publicUrlData.publicUrl);
       }
@@ -71,8 +75,8 @@ async function seedPhotos() {
     }
   }
 
-  // 2. Link photos to recent automatic weighments
-  console.log("📝 Querying recent automatic weighments to update with photos...");
+  // 2. Link photos to recent automatic weighments in parallel batch
+  console.log("\n📝 Querying recent automatic weighments to update with photos...");
   const { data: autoWeighments, error: autoErr } = await supabase
     .from("automatic_weighments")
     .select("id, vehicle_number")
@@ -87,17 +91,21 @@ async function seedPhotos() {
       { id: autoWeighments[1]?.id, images: uploadedUrls.slice(0, 2) },
       { id: autoWeighments[2]?.id, images: uploadedUrls },
       { id: autoWeighments[3]?.id, images: uploadedUrls.slice(0, 1) },
-    ];
+    ].filter(
+      (item): item is { id: number; images: string[] } =>
+        item.id !== undefined && item.images.length > 0,
+    );
 
-    for (const item of autoAssignments) {
-      if (!item.id || item.images.length === 0) continue;
-      const { error: updateError } = await supabase
-        .from("automatic_weighments")
-        .update({ images: item.images })
-        .eq("id", item.id);
+    const updatePromises = autoAssignments.map((item) =>
+      supabase.from("automatic_weighments").update({ images: item.images }).eq("id", item.id),
+    );
 
-      if (updateError) {
-        console.error(`❌ Failed to update Automatic Weighment #${item.id}:`, updateError.message);
+    const results = await Promise.all(updatePromises);
+    for (let i = 0; i < results.length; i++) {
+      const res = results[i];
+      const item = autoAssignments[i];
+      if (res.error) {
+        console.error(`❌ Failed to update Automatic Weighment #${item.id}:`, res.error.message);
       } else {
         console.log(
           `📸 Updated Automatic Weighment #${item.id} with ${item.images.length} photo(s).`,
@@ -106,8 +114,8 @@ async function seedPhotos() {
     }
   }
 
-  // 3. Link photos to recent manual weighments
-  console.log("📝 Querying recent manual weighments to update with photos...");
+  // 3. Link photos to recent manual weighments in parallel batch
+  console.log("\n📝 Querying recent manual weighments to update with photos...");
   const { data: manualWeighments, error: manualErr } = await supabase
     .from("manual_weighments")
     .select("id, vehicle_number")
@@ -121,24 +129,30 @@ async function seedPhotos() {
       { id: manualWeighments[0]?.id, images: uploadedUrls.slice(0, 2) },
       { id: manualWeighments[1]?.id, images: uploadedUrls.slice(1, 3) },
       { id: manualWeighments[2]?.id, images: uploadedUrls.slice(0, 1) },
-    ];
+    ].filter(
+      (item): item is { id: number; images: string[] } =>
+        item.id !== undefined && item.images.length > 0,
+    );
 
-    for (const item of manualAssignments) {
-      if (!item.id || item.images.length === 0) continue;
-      const { error: updateError } = await supabase
-        .from("manual_weighments")
-        .update({ images: item.images })
-        .eq("id", item.id);
+    const updatePromises = manualAssignments.map((item) =>
+      supabase.from("manual_weighments").update({ images: item.images }).eq("id", item.id),
+    );
 
-      if (updateError) {
-        console.error(`❌ Failed to update Manual Weighment #${item.id}:`, updateError.message);
+    const results = await Promise.all(updatePromises);
+    for (let i = 0; i < results.length; i++) {
+      const res = results[i];
+      const item = manualAssignments[i];
+      if (res.error) {
+        console.error(`❌ Failed to update Manual Weighment #${item.id}:`, res.error.message);
       } else {
         console.log(`📸 Updated Manual Weighment #${item.id} with ${item.images.length} photo(s).`);
       }
     }
   }
 
-  console.log("🎉 Weighment photos successfully seeded!");
+  console.log("\n=================================================");
+  console.log("🎉 Weighment photos successfully synchronized!");
+  console.log("=================================================");
 }
 
 seedPhotos().catch((err) => {

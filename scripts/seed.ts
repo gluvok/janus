@@ -1,99 +1,103 @@
 /**
  * @file scripts/seed.ts
- * @description Client onboarding seed script for GluVok.
+ * @description Client onboarding seed script for GluVok strictly adhering to schema.sql.
  * Provisions core infrastructure required to onboard a new client:
- * 1. A new Factory
+ * 1. A new Factory (with receipt_images_per_row constraint validation: 1-6)
  * 2. A new Admin user (dynamically numbered based on existing admins)
  * 3. Centers for the new factory with dedicated API keys
  */
 
 import crypto from "node:crypto";
 import argon2 from "argon2";
-import { supabase } from "./supabase.ts";
+import { z } from "zod";
+import { SUPABASE_URL, supabase } from "./supabase.ts";
 
-interface ParsedArgs {
-  factoryName?: string;
-  receiptImagesPerRow: number;
-  centersCount: number;
-  centerNames?: string[];
-  adminPassword: string;
-  help?: boolean;
-}
+const cliOptionsSchema = z.object({
+  factory: z.string().trim().min(1).optional(),
+  receipt_images_per_row: z.coerce
+    .number()
+    .int("Images per row must be an integer")
+    .min(1, "Images per row must be at least 1")
+    .max(6, "Images per row must be at most 6")
+    .default(3),
+  centers: z.coerce
+    .number()
+    .int("Centers count must be an integer")
+    .min(1, "Centers count must be at least 1")
+    .default(1),
+  center_names: z
+    .string()
+    .transform((val) =>
+      val
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    )
+    .optional(),
+  admin_password: z
+    .string()
+    .min(4, "Admin password must be at least 4 characters")
+    .default("admin123"),
+  help: z.boolean().default(false),
+});
 
-function parseCliArgs(args: string[]): ParsedArgs {
-  const options: Record<string, string | boolean> = {};
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+type CliOptions = z.infer<typeof cliOptionsSchema>;
+
+function parseCliArgs(argv: string[]): CliOptions {
+  const raw: Record<string, unknown> = {};
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
     if (arg === "-h" || arg === "--help") {
-      options.help = true;
+      raw.help = true;
     } else if (arg.startsWith("--")) {
-      const key = arg.slice(2);
-      const next = args[i + 1];
+      const key = arg.slice(2).replace(/-/g, "_");
+      const next = argv[i + 1];
       if (next && !next.startsWith("--")) {
-        options[key] = next;
+        raw[key] = next;
         i++;
       } else {
-        options[key] = true;
+        raw[key] = true;
       }
     }
   }
 
-  const centersCount =
-    typeof options.centers === "string" ? Math.max(1, parseInt(options.centers, 10) || 1) : 1;
-
-  let centerNames: string[] | undefined;
-  if (typeof options["center-names"] === "string") {
-    centerNames = options["center-names"]
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-
-  let receiptImagesPerRow = 3;
-  if (typeof options["receipt-images-per-row"] === "string") {
-    const val = parseInt(options["receipt-images-per-row"], 10);
-    if (val >= 1 && val <= 6) {
-      receiptImagesPerRow = val;
-    } else {
-      console.warn("⚠️ --receipt-images-per-row must be between 1 and 6. Using default: 3.");
+  const result = cliOptionsSchema.safeParse(raw);
+  if (!result.success) {
+    console.error("❌ Invalid CLI arguments:");
+    for (const issue of result.error.issues) {
+      console.error(`   • --${issue.path.join(".")}: ${issue.message}`);
     }
+    process.exit(1);
   }
 
-  return {
-    factoryName: typeof options.factory === "string" ? options.factory.trim() : undefined,
-    receiptImagesPerRow,
-    centersCount,
-    centerNames,
-    adminPassword:
-      typeof options["admin-password"] === "string" ? options["admin-password"] : "admin123",
-    help: !!options.help,
-  };
+  return result.data;
 }
 
 function printHelp() {
   console.log(`
 Client Onboarding Seeder (scripts/seed.ts)
 
-Provisions the minimal required entities to onboard a new client:
-  • 1 New Factory
+Provisions the minimal required entities to onboard a new client strictly adhering to schema.sql:
+  • 1 New Factory (receipt_images_per_row: 1 to 6)
   • 1 New Admin user (username auto-indexed from current admin count)
-  • N New Centers with dedicated API keys
+  • N New Centers with dedicated API keys and unique factory constraints
 
 Usage:
   pnpm run seed [options]
 
 Options:
-  --factory <name>            Custom name for the factory (default: 'Factory <N>')
-  --receipt-images-per-row <N> Images per row on receipts between 1 and 6 (default: 3)
-  --centers <count>           Number of centers to create (default: 1)
-  --center-names <names>      Comma-separated center names (e.g. 'Terminal A,Terminal B')
-  --admin-password <pass>     Admin password (default: 'admin123')
-  -h, --help                  Show this help guide
+  --factory <name>                 Custom name for the factory (default: 'Factory <N>')
+  --receipt-images-per-row <1-6>   Images per row on receipts between 1 and 6 (default: 3)
+  --centers <count>                Number of centers to create (default: 1)
+  --center-names <names>           Comma-separated center names (e.g. 'Terminal A,Terminal B')
+  --admin-password <pass>          Admin password (default: 'admin123')
+  -h, --help                       Show this help guide
 
 Examples:
   pnpm run seed
   pnpm run seed --factory "Apex Agro" --centers 2
-  pnpm run seed --factory "Delta Grain" --center-names "Main Weighbridge,North Scale"
+  pnpm run seed --factory "Delta Grain" --center-names "Main Weighbridge,North Scale" --receipt-images-per-row 4
 `);
 }
 
@@ -119,10 +123,10 @@ async function main() {
 
   console.log("=================================================");
   console.log("🚀 Mesto Client Onboarding Seeder");
-  console.log(`📡 Supabase Endpoint: ${process.env.SUPABASE_URL}`);
+  console.log(`📡 Supabase Endpoint: ${SUPABASE_URL}`);
   console.log("=================================================");
 
-  // 1. QUERY EXISTING DATA COUNTS & SUFFIXES
+  // 1. QUERY EXISTING DATA COUNTS & SUFFIXES IN SINGLE BATCH
   console.log("\n🔍 Inspecting existing database state...");
 
   const [factoriesRes, adminsRes] = await Promise.all([
@@ -148,7 +152,7 @@ async function main() {
     existingAdmins.length,
   );
 
-  const factoryName = args.factoryName || `Factory ${nextFactoryNum}`;
+  const factoryName = args.factory ?? `Factory ${nextFactoryNum}`;
   const adminUsername = `admin${nextAdminNum}`;
   const adminName = `Admin ${factoryName}`;
 
@@ -161,11 +165,14 @@ async function main() {
 
   // 2. CREATE FACTORY
   console.log(
-    `\n🏭 Creating factory '${factoryName}' (receipt images per row: ${args.receiptImagesPerRow})...`,
+    `\n🏭 Creating factory '${factoryName}' (receipt images per row: ${args.receipt_images_per_row})...`,
   );
   const { data: createdFactory, error: factoryError } = await supabase
     .from("factories")
-    .insert({ name: factoryName, receipt_images_per_row: args.receiptImagesPerRow })
+    .insert({
+      name: factoryName,
+      receipt_images_per_row: args.receipt_images_per_row,
+    })
     .select("id, name")
     .single();
 
@@ -176,7 +183,7 @@ async function main() {
 
   // 3. CREATE ADMIN USER
   console.log(`\n👤 Provisioning admin user '${adminUsername}'...`);
-  const adminHash = await argon2.hash(args.adminPassword);
+  const adminHash = await argon2.hash(args.admin_password);
   const { data: createdAdmin, error: adminError } = await supabase
     .from("users")
     .insert({
@@ -196,13 +203,13 @@ async function main() {
     `  ✓ Admin user created (ID: ${createdAdmin.id}, Username: '${createdAdmin.username}')`,
   );
 
-  // 4. CREATE CENTERS WITH API KEYS
-  console.log(`\n⚖️ Provisioning ${args.centersCount} center(s) with dedicated API keys...`);
+  // 4. CREATE CENTERS WITH API KEYS IN O(1) BULK INSERT
+  console.log(`\n⚖️ Provisioning ${args.centers} center(s) with dedicated API keys...`);
 
-  const centersToInsert = Array.from({ length: args.centersCount }, (_, i) => {
+  const centersToInsert = Array.from({ length: args.centers }, (_, i) => {
     const centerIndex = i + 1;
     const centerName =
-      args.centerNames && args.centerNames[i] ? args.centerNames[i] : `Center ${centerIndex}`;
+      args.center_names && args.center_names[i] ? args.center_names[i] : `Center ${centerIndex}`;
     const apiKey = crypto.randomBytes(16).toString("hex");
     return {
       name: centerName,
@@ -231,7 +238,7 @@ async function main() {
   console.log("📋 Summary of Provisioned Resources:");
   console.log(`  • Factory:   ${createdFactory.name} (ID: ${createdFactory.id})`);
   console.log(
-    `  • Admin:     ${createdAdmin.username} / ${args.adminPassword} (ID: ${createdAdmin.id})`,
+    `  • Admin:     ${createdAdmin.username} / ${args.admin_password} (ID: ${createdAdmin.id})`,
   );
   console.log("  • Centers & Scale API Keys:");
   for (const center of createdCenters) {

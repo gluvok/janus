@@ -10,6 +10,7 @@
     "lint": "oxlint --fix",
     "fmt": "oxfmt",
     "type-check": "tsc --noEmit",
+    "test": "node scripts/test-validation.ts",
     "seed": "node scripts/seed.ts",
     "seed:test": "node scripts/test-seed.ts",
     "seed:test:clean": "node scripts/test-seed.ts --clean",

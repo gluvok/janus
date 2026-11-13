@@ -80,12 +80,15 @@ pnpm type-check
 pnpm lint
 pnpm fmt
 
+# Run validation & schema invariant test suite
+pnpm test
+
 # Production build
 pnpm run build
 
 # Seed database
 pnpm run seed              # Onboard factory & admin (--factory, --receipt-images-per-row, --centers)
-pnpm run seed:test         # High-volume tenant-isolated test seeding
-pnpm run seed:test:clean   # Clean reset & seed high-volume test data
-pnpm run seed:photos       # Seed weighment transport photos
+pnpm run seed:test         # High-volume tenant-isolated test seeding (0 N+1 queries, full enum coverage)
+pnpm run seed:test:clean   # Clean reset & seed high-volume test data (resets sequences)
+pnpm run seed:photos       # Seed weighment transport photos to 'mesto' storage bucket
 ```
