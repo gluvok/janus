@@ -30,6 +30,8 @@ A centralized operational platform and automation management system for weighbri
       ELSE 'unassigned'::weighment_type
   END
   ```
+- **UI Invariant**: In the UI data table, `gross`, `net`, and `tare` display dashes (`-`) whenever either `in_weight` or `out_weight` is null; formatted kg values render only when both scale weights are present.
+- **Mode-Specific Layout**: Automatic weighments omit the Operator column and show In/Out ANPR camera badges. Manual weighments include the Operator column (`in_creator` / `out_creator`). The table defaults to `updated_at DESC`.
 
 ---
 

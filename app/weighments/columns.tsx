@@ -26,9 +26,10 @@ import {
   ScaleIcon,
   TruckIcon,
   UserIcon,
+  WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
-import type { Weighment } from "./types";
+import type { Weighment, WeighmentMode } from "./types";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Weighment>();
 
@@ -36,7 +37,7 @@ export interface WeighmentsTableMeta {
   onViewPhotos?: (title: string, subtitle: string, images: string[]) => void;
 }
 
-export function getWeighmentColumns() {
+export function getWeighmentColumns(mode: WeighmentMode) {
   const allColumns = [
     createSelectColumn(columnHelper),
     createIdColumn(columnHelper),
@@ -49,18 +50,22 @@ export function getWeighmentColumns() {
           <span className="font-mono text-xs font-semibold text-foreground">
             {row.original.vehicle_number}
           </span>
-          {row.original.in_detected_vehicle_number &&
-            row.original.in_detected_vehicle_number !== row.original.vehicle_number && (
-              <span className="font-mono text-3xs text-muted-foreground">
-                In ANPR: {row.original.in_detected_vehicle_number}
-              </span>
-            )}
-          {row.original.out_detected_vehicle_number &&
-            row.original.out_detected_vehicle_number !== row.original.vehicle_number && (
-              <span className="font-mono text-3xs text-muted-foreground">
-                Out ANPR: {row.original.out_detected_vehicle_number}
-              </span>
-            )}
+          {mode === "automatic" && (
+            <>
+              {row.original.in_detected_vehicle_number &&
+                row.original.in_detected_vehicle_number !== row.original.vehicle_number && (
+                  <span className="font-mono text-3xs text-muted-foreground">
+                    In ANPR: {row.original.in_detected_vehicle_number}
+                  </span>
+                )}
+              {row.original.out_detected_vehicle_number &&
+                row.original.out_detected_vehicle_number !== row.original.vehicle_number && (
+                  <span className="font-mono text-3xs text-muted-foreground">
+                    Out ANPR: {row.original.out_detected_vehicle_number}
+                  </span>
+                )}
+            </>
+          )}
         </div>
       ),
       meta: {
@@ -83,6 +88,11 @@ export function getWeighmentColumns() {
         <DataTableColumnHeader column={column} title="Net" icon={ScaleIcon} />
       ),
       cell: ({ row }) => {
+        const hasBothWeights = row.original.in_weight !== null && row.original.out_weight !== null;
+        if (!hasBothWeights) {
+          return <span className="text-2xs text-muted-foreground italic">-</span>;
+        }
+
         const net = row.getValue("net") as number | null;
         if (net === null) {
           return <span className="text-2xs text-muted-foreground italic">-</span>;
@@ -104,6 +114,11 @@ export function getWeighmentColumns() {
         <DataTableColumnHeader column={column} title="Gross" icon={ContainerTruck01Icon} />
       ),
       cell: ({ row }) => {
+        const hasBothWeights = row.original.in_weight !== null && row.original.out_weight !== null;
+        if (!hasBothWeights) {
+          return <span className="text-2xs text-muted-foreground italic">-</span>;
+        }
+
         const gross = Number(row.getValue("gross"));
         return (
           <div className="flex items-baseline gap-1 font-mono text-xs">
@@ -122,6 +137,11 @@ export function getWeighmentColumns() {
         <DataTableColumnHeader column={column} title="Tare" icon={PackageOpenIcon} />
       ),
       cell: ({ row }) => {
+        const hasBothWeights = row.original.in_weight !== null && row.original.out_weight !== null;
+        if (!hasBothWeights) {
+          return <span className="text-2xs text-muted-foreground italic">-</span>;
+        }
+
         const tare = row.getValue("tare") as number | null;
         if (tare === null) {
           return <span className="text-2xs text-muted-foreground italic">-</span>;
@@ -136,6 +156,46 @@ export function getWeighmentColumns() {
       meta: {
         title: "Tare",
         icon: PackageOpenIcon,
+      },
+    }),
+    columnHelper.accessor("in_weight", {
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="In Weight" icon={WeightScale01Icon} />
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-baseline gap-1 font-mono text-xs">
+          <span className="font-medium text-foreground">
+            {Number(row.original.in_weight).toLocaleString()}
+          </span>
+          <span className="text-2xs text-muted-foreground">kg</span>
+        </div>
+      ),
+      meta: {
+        title: "In Weight",
+        icon: WeightScale01Icon,
+      },
+    }),
+    columnHelper.accessor("out_weight", {
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Out Weight" icon={WeightScale01Icon} />
+      ),
+      cell: ({ row }) => {
+        const outWeight = row.original.out_weight;
+        if (outWeight === null) {
+          return <span className="text-2xs text-muted-foreground italic">-</span>;
+        }
+        return (
+          <div className="flex items-baseline gap-1 font-mono text-xs">
+            <span className="font-medium text-foreground">
+              {Number(outWeight).toLocaleString()}
+            </span>
+            <span className="text-2xs text-muted-foreground">kg</span>
+          </div>
+        );
+      },
+      meta: {
+        title: "Out Weight",
+        icon: WeightScale01Icon,
       },
     }),
     columnHelper.accessor((row) => row.in_center.name, {
@@ -173,37 +233,43 @@ export function getWeighmentColumns() {
       },
       enableSorting: false,
     }),
-    columnHelper.accessor((row) => row.in_creator?.name ?? row.out_creator?.name ?? "-", {
-      id: "operator",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Operator" icon={UserIcon} />
-      ),
-      cell: ({ row }) => {
-        const inCreator = row.original.in_creator;
-        const outCreator = row.original.out_creator;
+    ...(mode === "manual"
+      ? [
+          columnHelper.accessor((row) => row.in_creator?.name ?? row.out_creator?.name ?? "-", {
+            id: "operator",
+            header: ({ column }) => (
+              <DataTableColumnHeader column={column} title="Operator" icon={UserIcon} />
+            ),
+            cell: ({ row }) => {
+              const inCreator = row.original.in_creator;
+              const outCreator = row.original.out_creator;
 
-        if (!inCreator && !outCreator) {
-          return <span className="text-2xs text-muted-foreground italic">-</span>;
-        }
+              if (!inCreator && !outCreator) {
+                return <span className="text-2xs text-muted-foreground italic">-</span>;
+              }
 
-        if (inCreator && outCreator && inCreator.id !== outCreator.id) {
-          return (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs font-medium text-foreground">In: {inCreator.name}</span>
-              <span className="text-2xs text-muted-foreground">Out: {outCreator.name}</span>
-            </div>
-          );
-        }
+              if (inCreator && outCreator && inCreator.id !== outCreator.id) {
+                return (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-foreground">
+                      In: {inCreator.name}
+                    </span>
+                    <span className="text-2xs text-muted-foreground">Out: {outCreator.name}</span>
+                  </div>
+                );
+              }
 
-        const creator = inCreator ?? outCreator;
-        return <span className="text-xs font-medium text-foreground">{creator?.name}</span>;
-      },
-      meta: {
-        title: "Operator",
-        icon: UserIcon,
-      },
-      enableSorting: false,
-    }),
+              const creator = inCreator ?? outCreator;
+              return <span className="text-xs font-medium text-foreground">{creator?.name}</span>;
+            },
+            meta: {
+              title: "Operator",
+              icon: UserIcon,
+            },
+            enableSorting: false,
+          }),
+        ]
+      : []),
     columnHelper.accessor("in_time", {
       id: "in_time",
       header: ({ column }) => (

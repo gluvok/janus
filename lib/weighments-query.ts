@@ -103,7 +103,7 @@ export async function executeWeighmentsGetQuery(
     table,
     select,
     allowedSortColumns: ALLOWED_WEIGHMENT_SORT_COLUMNS,
-    defaultSort: { col: "created_at", ascending: false },
+    defaultSort: { col: "updated_at", ascending: false },
     searchColumns: ["vehicle_number"],
     applyCustomFilters: (query, searchParams) => {
       let filteredQuery = query;

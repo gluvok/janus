@@ -249,7 +249,7 @@ export function WeighmentsDataTable() {
     useDataTableStore((state) => state.tables["weighments"]) ?? DEFAULT_TABLE_ITEM_STATE;
   const mode = (currentTableState.mode ?? "automatic") as WeighmentMode;
 
-  const columns = useMemo(() => getWeighmentColumns(), []);
+  const columns = useMemo(() => getWeighmentColumns(mode), [mode]);
   const extraParams = useMemo(() => ({ mode }), [mode]);
 
   const {

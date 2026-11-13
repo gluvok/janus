@@ -147,7 +147,8 @@ export type WeighmentsPrunedState = z.infer<typeof weighmentsPrunedSchema>;
 export const weighmentsStrategy: TableStrategy<WeighmentsTableState, WeighmentsPrunedState> = {
   schema: weighmentsPrunedSchema,
   defaultState: {
-    ...hydrateBaseState(undefined, [{ id: "id", desc: true }]),
+    ...hydrateBaseState(undefined, [{ id: "updated_at", desc: true }]),
+    columnVisibility: { in_weight: false, out_weight: false },
     mode: "automatic",
   },
   prune: (state) => {
@@ -162,7 +163,8 @@ export const weighmentsStrategy: TableStrategy<WeighmentsTableState, WeighmentsP
     return pruned;
   },
   hydrate: (pruned) => ({
-    ...hydrateBaseState(pruned, [{ id: "id", desc: true }]),
+    ...hydrateBaseState(pruned, [{ id: "updated_at", desc: true }]),
+    columnVisibility: { in_weight: false, out_weight: false, ...pruned?.columnVisibility },
     mode: pruned?.mode ?? "automatic",
     filters: pruned?.filters ?? {},
   }),
