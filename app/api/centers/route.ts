@@ -11,7 +11,7 @@ export const GET = handleApiRoute(async (request: Request) => {
   return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Center>({
     request,
     table: "centers",
-    select: "id, name, api_key, created_at, updated_at",
+    select: "id, name, created_at, updated_at",
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
     defaultSort: { col: "id", ascending: false },
     searchColumns: ["name"],
@@ -35,7 +35,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     .update({ name })
     .eq("id", id)
     .eq("factory_id", context.factory.id)
-    .select("id, name, factory_id, api_key, created_at, updated_at")
+    .select("id, name, created_at, updated_at")
     .maybeSingle();
 
   if (error) {

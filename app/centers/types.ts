@@ -10,8 +10,8 @@ export const centerSchema = z
   .object({
     id: z.number().int().positive(),
     name: centerNameSchema,
-    factory_id: z.number().int().positive(),
-    api_key: z.string().min(1),
+    factory_id: z.number().int().positive().optional(),
+    api_key: z.string().min(1).optional(),
     created_at: z.string(),
     updated_at: z.string(),
   })

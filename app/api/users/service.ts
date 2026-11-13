@@ -119,7 +119,11 @@ export async function updateUserAccount(data: UpdateUserInput, factoryId: number
     throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
   }
 
-  updateUserSessionCache(updated.id, updated);
+  if (password && password.trim()) {
+    invalidateAllUserSessionCache(updated.id);
+  } else {
+    updateUserSessionCache(updated.id, updated);
+  }
 
   return updated;
 }

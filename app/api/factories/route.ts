@@ -6,24 +6,7 @@ import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
 import { updateFactorySessionCache } from "@/lib/auth";
 
 export const GET = handleApiRoute(async (_request: Request, context: ApiContext) => {
-  const { data, error } = await supabase
-    .from("factories")
-    .select("id, name, receipt_images_per_row, created_at, updated_at")
-    .eq("id", context.factory.id)
-    .maybeSingle();
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR },
-    );
-  }
-
-  if (!data) {
-    return NextResponse.json({ error: "Factory not found" }, { status: StatusCodes.NOT_FOUND });
-  }
-
-  return NextResponse.json({ data });
+  return NextResponse.json({ data: context.factory });
 });
 
 export const PATCH = handleApiRoute(async (request: Request, context: ApiContext) => {

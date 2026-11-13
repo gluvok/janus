@@ -25,6 +25,7 @@ import {
   PackageOpenIcon,
   ScaleIcon,
   TruckIcon,
+  UserIcon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { Weighment } from "./types";
@@ -52,6 +53,12 @@ export function getWeighmentColumns() {
             row.original.in_detected_vehicle_number !== row.original.vehicle_number && (
               <span className="font-mono text-3xs text-muted-foreground">
                 In ANPR: {row.original.in_detected_vehicle_number}
+              </span>
+            )}
+          {row.original.out_detected_vehicle_number &&
+            row.original.out_detected_vehicle_number !== row.original.vehicle_number && (
+              <span className="font-mono text-3xs text-muted-foreground">
+                Out ANPR: {row.original.out_detected_vehicle_number}
               </span>
             )}
         </div>
@@ -163,6 +170,37 @@ export function getWeighmentColumns() {
       meta: {
         title: "Out Center",
         icon: Building03Icon,
+      },
+      enableSorting: false,
+    }),
+    columnHelper.accessor((row) => row.in_creator?.name ?? row.out_creator?.name ?? "-", {
+      id: "operator",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Operator" icon={UserIcon} />
+      ),
+      cell: ({ row }) => {
+        const inCreator = row.original.in_creator;
+        const outCreator = row.original.out_creator;
+
+        if (!inCreator && !outCreator) {
+          return <span className="text-2xs text-muted-foreground italic">-</span>;
+        }
+
+        if (inCreator && outCreator && inCreator.id !== outCreator.id) {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-medium text-foreground">In: {inCreator.name}</span>
+              <span className="text-2xs text-muted-foreground">Out: {outCreator.name}</span>
+            </div>
+          );
+        }
+
+        const creator = inCreator ?? outCreator;
+        return <span className="text-xs font-medium text-foreground">{creator?.name}</span>;
+      },
+      meta: {
+        title: "Operator",
+        icon: UserIcon,
       },
       enableSorting: false,
     }),

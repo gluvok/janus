@@ -48,25 +48,25 @@ A centralized operational platform and automation management system for weighbri
 
 ## API Routes
 
-| Method   | Endpoint                    | Description                                                                              |
-| :------- | :-------------------------- | :--------------------------------------------------------------------------------------- |
-| `POST`   | `/api/auth/login`           | Authenticate via username & password, issue rolling session cookie.                      |
-| `POST`   | `/api/auth/logout`          | Invalidate session in database and delete session cookie.                                |
-| `GET`    | `/api/users/me`             | Retrieve live profile details and factory configuration for authenticated user.          |
-| `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                    |
-| `GET`    | `/api/factories`            | Retrieve factory configuration for the authenticated user's factory.                     |
-| `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                       |
-| `GET`    | `/api/centers`              | List centers for authenticated factory. Supports pagination & sorting.                   |
-| `PATCH`  | `/api/centers`              | Update center details.                                                                   |
-| `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`). |
-| `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                           |
-| `GET`    | `/api/tickets`              | List tickets for current factory. Supports status filter, search, sorting & pagination.  |
-| `PATCH`  | `/api/tickets`              | Update ticket resolution status and reply.                                               |
-| `DELETE` | `/api/tickets`              | Permanently delete a ticket (strictly permitted only when `status === 'pending'`).       |
-| `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                   |
-| `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                    |
-| `PATCH`  | `/api/users`                | Update staff user accounts.                                                              |
-| `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/tickets). |
+| Method   | Endpoint                    | Description                                                                                           |
+| :------- | :-------------------------- | :---------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/auth/login`           | Authenticate via username & password, issue rolling session cookie.                                   |
+| `POST`   | `/api/auth/logout`          | Invalidate session in database and delete session cookie.                                             |
+| `GET`    | `/api/users/me`             | Retrieve live profile details and factory configuration for authenticated user.                       |
+| `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                                 |
+| `GET`    | `/api/factories`            | Retrieve factory configuration (served directly from memory session cache with 0 DB queries).         |
+| `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                                    |
+| `GET`    | `/api/centers`              | List centers for authenticated factory (omits `api_key` for security). Supports pagination & sorting. |
+| `PATCH`  | `/api/centers`              | Update center details.                                                                                |
+| `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).              |
+| `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                                        |
+| `GET`    | `/api/tickets`              | List tickets for current factory. Supports status filter, search, sorting & pagination.               |
+| `PATCH`  | `/api/tickets`              | Update ticket resolution status and reply.                                                            |
+| `DELETE` | `/api/tickets`              | Permanently delete a ticket (strictly permitted only when `status === 'pending'`).                    |
+| `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                                |
+| `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                                 |
+| `PATCH`  | `/api/users`                | Update staff user accounts.                                                                           |
+| `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/tickets).              |
 
 ---
 
