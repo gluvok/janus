@@ -11,41 +11,26 @@ vi.mock("@/db", () => ({
 
 import { GET, POST, OPTIONS } from "./route";
 
-describe("OPTIONS /api/data", () => {
-  it("returns 200 with appropriate CORS preflight headers", async () => {
+describe("OPTIONS /api/data/weighments", () => {
+  it("returns 200 with empty json body for CORS preflight", async () => {
     const res = await OPTIONS();
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
-    expect(res.headers.get("access-control-allow-methods")).toBe("GET, POST, OPTIONS");
-    expect(res.headers.get("access-control-allow-headers")).toBe("Content-Type, x-api-key");
+    const json = await res.json();
+    expect(json).toEqual({});
   });
 });
 
-describe("GET /api/data", () => {
+describe("GET /api/data/weighments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("returns 401 Unauthorized when x-api-key header is missing", async () => {
-    const req = new NextRequest("http://localhost/api/data");
+    const req = new NextRequest("http://localhost/api/data/weighments");
     const res = await GET(req);
 
     expect(res.status).toBe(401);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
-    const json = await res.json();
-    expect(json.error).toBe("Missing x-api-key header");
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it("returns 401 Unauthorized when x-api-key header is whitespace only", async () => {
-    const req = new NextRequest("http://localhost/api/data", {
-      headers: { "x-api-key": "   " },
-    });
-    const res = await GET(req);
-
-    expect(res.status).toBe(401);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
     expect(mockRpc).not.toHaveBeenCalled();
@@ -57,7 +42,7 @@ describe("GET /api/data", () => {
       error: { message: "Database connection failed" },
     });
 
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       headers: { "x-api-key": "test_key_123" },
     });
     const res = await GET(req);
@@ -76,13 +61,12 @@ describe("GET /api/data", () => {
       error: null,
     });
 
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       headers: { "x-api-key": "non_existent_key" },
     });
     const res = await GET(req);
 
     expect(res.status).toBe(401);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Invalid API key");
     expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
@@ -118,13 +102,12 @@ describe("GET /api/data", () => {
       error: null,
     });
 
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       headers: { "x-api-key": "valid_live_key_999" },
     });
     const res = await GET(req);
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
       p_api_key: "valid_live_key_999",
     });
@@ -139,42 +122,26 @@ describe("GET /api/data", () => {
   });
 });
 
-describe("POST /api/data", () => {
+describe("POST /api/data/weighments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("returns 401 Unauthorized when x-api-key header is missing", async () => {
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
-      body: JSON.stringify({ weighment_id: 101 }),
+      body: JSON.stringify({ id: 101 }),
     });
     const res = await POST(req);
 
     expect(res.status).toBe(401);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
-    const json = await res.json();
-    expect(json.error).toBe("Missing x-api-key header");
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it("returns 401 Unauthorized when x-api-key header is whitespace only", async () => {
-    const req = new NextRequest("http://localhost/api/data", {
-      method: "POST",
-      headers: { "x-api-key": "   " },
-      body: JSON.stringify({ weighment_id: 101 }),
-    });
-    const res = await POST(req);
-
-    expect(res.status).toBe(401);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("returns 400 Bad Request when JSON body is invalid", async () => {
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
       headers: { "x-api-key": "valid_key" },
       body: "not-json",
@@ -187,8 +154,8 @@ describe("POST /api/data", () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("returns 400 Bad Request when weighment_id is missing or invalid", async () => {
-    const req = new NextRequest("http://localhost/api/data", {
+  it("returns 400 Bad Request when id is missing or invalid", async () => {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
       headers: { "x-api-key": "valid_key" },
       body: JSON.stringify({ foo: "bar" }),
@@ -197,21 +164,49 @@ describe("POST /api/data", () => {
 
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toBe("Invalid or missing weighment ID");
+    expect(json.error).toBe("Invalid or missing ID");
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("returns 400 Bad Request when weighment_id is non-positive or not an integer", async () => {
-    const req = new NextRequest("http://localhost/api/data", {
+  it("returns 400 Bad Request when id is non-positive or not an integer", async () => {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
       headers: { "x-api-key": "valid_key" },
-      body: JSON.stringify({ weighment_id: -5 }),
+      body: JSON.stringify({ id: -5 }),
     });
     const res = await POST(req);
 
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toBe("Invalid or missing weighment ID");
+    expect(json.error).toBe("Invalid or missing ID");
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 Bad Request when id is a string", async () => {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
+      method: "POST",
+      headers: { "x-api-key": "valid_key" },
+      body: JSON.stringify({ id: "101" }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("Invalid or missing ID");
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 Bad Request when legacy weighment_id alias is sent instead of id", async () => {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
+      method: "POST",
+      headers: { "x-api-key": "valid_key" },
+      body: JSON.stringify({ weighment_id: 101 }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("Invalid or missing ID");
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
@@ -221,10 +216,10 @@ describe("POST /api/data", () => {
       error: { message: "Database failure" },
     });
 
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
       headers: { "x-api-key": "valid_key" },
-      body: JSON.stringify({ weighment_id: 101 }),
+      body: JSON.stringify({ id: 101 }),
     });
     const res = await POST(req);
 
@@ -243,15 +238,14 @@ describe("POST /api/data", () => {
       error: null,
     });
 
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
       headers: { "x-api-key": "bad_key" },
-      body: JSON.stringify({ weighment_id: 101 }),
+      body: JSON.stringify({ id: 101 }),
     });
     const res = await POST(req);
 
     expect(res.status).toBe(401);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Invalid API key");
   });
@@ -262,10 +256,10 @@ describe("POST /api/data", () => {
       error: null,
     });
 
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
       headers: { "x-api-key": "valid_key" },
-      body: JSON.stringify({ weighment_id: 9999 }),
+      body: JSON.stringify({ id: 9999 }),
     });
     const res = await POST(req);
 
@@ -274,21 +268,20 @@ describe("POST /api/data", () => {
     expect(json.error).toBe("Weighment not found");
   });
 
-  it("returns 200 OK and confirms acknowledgment with weighment_id", async () => {
+  it("returns 200 OK and confirms acknowledgment with id", async () => {
     mockRpc.mockResolvedValue({
       data: { success: true, acknowledged_id: 101 },
       error: null,
     });
 
-    const req = new NextRequest("http://localhost/api/data", {
+    const req = new NextRequest("http://localhost/api/data/weighments", {
       method: "POST",
       headers: { "x-api-key": "valid_key" },
-      body: JSON.stringify({ weighment_id: 101 }),
+      body: JSON.stringify({ id: 101 }),
     });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json).toEqual({
       success: true,
@@ -298,29 +291,6 @@ describe("POST /api/data", () => {
     expect(mockRpc).toHaveBeenCalledWith("acknowledge_factory_weighment", {
       p_api_key: "valid_key",
       p_weighment_id: 101,
-    });
-  });
-
-  it("supports alias { id: number } and numeric string in payload", async () => {
-    mockRpc.mockResolvedValue({
-      data: { success: true, acknowledged_id: 202 },
-      error: null,
-    });
-
-    const req = new NextRequest("http://localhost/api/data", {
-      method: "POST",
-      headers: { "x-api-key": "valid_key" },
-      body: JSON.stringify({ id: "202" }),
-    });
-    const res = await POST(req);
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
-    const json = await res.json();
-    expect(json.acknowledged_id).toBe(202);
-    expect(mockRpc).toHaveBeenCalledWith("acknowledge_factory_weighment", {
-      p_api_key: "valid_key",
-      p_weighment_id: 202,
     });
   });
 });

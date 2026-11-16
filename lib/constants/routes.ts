@@ -30,7 +30,8 @@ export const ApiRoutes = {
   SETTINGS: "/api/settings",
   TICKETS: "/api/tickets",
   HEALTH: "/api/health",
-  DATA: "/api/data",
+  DATA_WEIGHMENTS: "/api/data/weighments",
+  DATA_ENTRIES: "/api/data/entries",
 } as const;
 
 export type ApiRoute = (typeof ApiRoutes)[keyof typeof ApiRoutes];
@@ -41,5 +42,6 @@ export const PUBLIC_ROUTES: readonly string[] = [AppRoutes.SERVICES];
 export const PUBLIC_API_ROUTES: readonly string[] = [
   ApiRoutes.AUTH_LOGIN,
   ApiRoutes.HEALTH,
-  ApiRoutes.DATA,
+  ApiRoutes.DATA_WEIGHMENTS,
+  ApiRoutes.DATA_ENTRIES,
 ];

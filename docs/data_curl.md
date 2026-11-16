@@ -1,6 +1,9 @@
-# Data API cURL Guide (`/api/data`)
+# Factory Data API Guide (`/api/data`)
 
-Endpoint for third-party systems and factories to retrieve flattened weighment records and acknowledge processed IDs.
+Secure external integration endpoints for factories and third-party systems to retrieve unprocessed data and acknowledge processed records.
+
+- **Weighments API**: `/api/data/weighments`
+- **Entries API**: `/api/data/entries`
 
 ---
 
@@ -13,12 +16,12 @@ Endpoint for third-party systems and factories to retrieve flattened weighment r
 
 ---
 
-## cURL Commands
+## 1. Weighments API (`/api/data/weighments`)
 
-### 1. Fetch Unprocessed Weighments (GET)
+### Fetch Unprocessed Weighments (GET)
 
 ```bash
-curl -X GET "http://localhost:3000/api/data" \
+curl -X GET "http://localhost:3000/api/data/weighments" \
   -H "x-api-key: YOUR_FACTORY_API_KEY"
 ```
 
@@ -48,18 +51,14 @@ curl -X GET "http://localhost:3000/api/data" \
 }
 ```
 
----
-
-### 2. Acknowledge Processed Weighment (POST)
+### Acknowledge Processed Weighment (POST)
 
 ```bash
-curl -X POST "http://localhost:3000/api/data" \
+curl -X POST "http://localhost:3000/api/data/weighments" \
   -H "x-api-key: YOUR_FACTORY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"weighment_id": 101}'
+  -d '{"id": 101}'
 ```
-
-_(Note: `{ "id": 101 }` is also accepted as an alias)_
 
 #### POST Response (`200 OK`)
 
@@ -73,44 +72,58 @@ _(Note: `{ "id": 101 }` is also accepted as an alias)_
 
 ---
 
-## Cross-Origin Resource Sharing (CORS)
+## 2. Entries API (`/api/data/entries`)
 
-`/api/data` fully supports CORS for external browser integrations and dashboards.
+### Fetch Unprocessed Entries (GET)
 
-- **Allowed Origin**: `*`
-- **Allowed Methods**: `GET, POST, OPTIONS`
-- **Allowed Headers**: `Content-Type, x-api-key`
-- **Preflight**: Send an `OPTIONS` request; returns `200 OK` with CORS headers.
+```bash
+curl -X GET "http://localhost:3000/api/data/entries" \
+  -H "x-api-key: YOUR_FACTORY_API_KEY"
+```
 
-### Browser `fetch` Example
+#### GET Response (`200 OK`)
 
-```javascript
-// Fetch unprocessed weighments
-const response = await fetch("https://gluvok.vercel.app/api/data", {
-  method: "GET",
-  headers: {
-    "x-api-key": "YOUR_FACTORY_API_KEY",
-  },
-});
-const result = await response.json();
-console.log(result.data);
+```json
+{
+  "data": [
+    {
+      "id": 501,
+      "vehicle_number": "KA05MM9999",
+      "weight": 12500,
+      "status": "approved",
+      "images": ["cam1.jpg", "cam2.jpg"],
+      "center_id": 2,
+      "created_at": "2026-11-01T12:00:00.000Z"
+    }
+  ],
+  "count": 1
+}
+```
 
-// Acknowledge a processed weighment
-await fetch("https://gluvok.vercel.app/api/data", {
-  method: "POST",
-  headers: {
-    "x-api-key": "YOUR_FACTORY_API_KEY",
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ weighment_id: 101 }),
-});
+### Acknowledge Processed Entry (POST)
+
+```bash
+curl -X POST "http://localhost:3000/api/data/entries" \
+  -H "x-api-key: YOUR_FACTORY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"id": 501}'
+```
+
+#### POST Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "acknowledged_id": 501,
+  "message": "Entry acknowledged successfully"
+}
 ```
 
 ---
 
 ## Cross-Origin Resource Sharing (CORS)
 
-`/api/data` fully supports CORS for external browser integrations and dashboards.
+All `/api/data/:path*` endpoints fully support CORS for browser integrations and dashboards.
 
 - **Allowed Origin**: `*`
 - **Allowed Methods**: `GET, POST, OPTIONS`
@@ -120,8 +133,8 @@ await fetch("https://gluvok.vercel.app/api/data", {
 ### Browser `fetch` Example
 
 ```javascript
-// Fetch unprocessed weighments
-const response = await fetch("https://gluvok.vercel.app/api/data", {
+// Fetch unprocessed entries
+const response = await fetch("https://gluvok.vercel.app/api/data/entries", {
   method: "GET",
   headers: {
     "x-api-key": "YOUR_FACTORY_API_KEY",
@@ -130,14 +143,14 @@ const response = await fetch("https://gluvok.vercel.app/api/data", {
 const result = await response.json();
 console.log(result.data);
 
-// Acknowledge a processed weighment
-await fetch("https://gluvok.vercel.app/api/data", {
+// Acknowledge a processed entry
+await fetch("https://gluvok.vercel.app/api/data/entries", {
   method: "POST",
   headers: {
     "x-api-key": "YOUR_FACTORY_API_KEY",
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({ weighment_id: 101 }),
+  body: JSON.stringify({ id: 501 }),
 });
 ```
 
@@ -145,10 +158,10 @@ await fetch("https://gluvok.vercel.app/api/data", {
 
 ## Status Codes
 
-| Code  | Meaning               | Reason                                                 |
-| :---- | :-------------------- | :----------------------------------------------------- |
-| `200` | OK                    | Successful retrieval or acknowledgment                 |
-| `400` | Bad Request           | Missing or invalid JSON body / weighment ID            |
-| `401` | Unauthorized          | Missing or invalid `x-api-key`                         |
-| `404` | Not Found             | Weighment does not exist or belongs to another factory |
-| `500` | Internal Server Error | Database failure                                       |
+| Code  | Meaning               | Reason                                              |
+| :---- | :-------------------- | :-------------------------------------------------- |
+| `200` | OK                    | Successful retrieval or acknowledgment              |
+| `400` | Bad Request           | Missing or invalid JSON body / ID                   |
+| `401` | Unauthorized          | Missing or invalid `x-api-key`                      |
+| `404` | Not Found             | Record does not exist or belongs to another factory |
+| `500` | Internal Server Error | Database failure                                    |

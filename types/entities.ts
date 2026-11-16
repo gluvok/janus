@@ -99,6 +99,16 @@ export interface DataApiWeighmentItem {
   out_center_name: string;
 }
 
+export interface DataApiEntryItem {
+  id: number;
+  vehicle_number: string;
+  weight: number;
+  status: EntryStatus;
+  images: string[];
+  center_id: number;
+  created_at: string;
+}
+
 export interface Session {
   id: number;
   token: string;

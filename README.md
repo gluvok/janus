@@ -183,77 +183,60 @@ All authenticated users can access the `/account` portal from the sidebar user m
 
 ---
 
-## 8. Factory Data API (`/api/data`)
+## 8. Factory Data API (`/api/data/:path*`)
 
-The `/api/data` endpoint provides an external integration route for third-party systems and factories to fetch unprocessed weighments and acknowledge processed records.
+The Factory Data API provides external integration endpoints for third-party systems and factories to fetch unprocessed records and acknowledge processed records.
+
+- `/api/data/weighments`: Fetch unprocessed weighments and acknowledge processed weighments.
+- `/api/data/entries`: Fetch unprocessed entries and acknowledge processed entries.
 
 ### Authentication & CORS
 
 All requests require the `x-api-key` header — the factory's API key used to resolve tenant scope. Missing or invalid keys return `401 Unauthorized`.
 
-`/api/data` includes full Cross-Origin Resource Sharing (CORS) support (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET, POST, OPTIONS`, and `Access-Control-Allow-Headers: Content-Type, x-api-key`) with an `OPTIONS` preflight handler for direct browser integrations and third-party dashboards.
+All `/api/data/:path*` endpoints include full Cross-Origin Resource Sharing (CORS) support (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET, POST, OPTIONS`, and `Access-Control-Allow-Headers: Content-Type, x-api-key`) with an `OPTIONS` preflight handler for direct browser integrations and third-party dashboards.
 
-### GET /api/data — Fetch Unprocessed Weighments
+### GET /api/data/weighments — Fetch Unprocessed Weighments
 
 Returns all weighments that have not yet been acknowledged for this factory.
 
 ```bash
-curl -X GET "https://your-domain.com/api/data" \
+curl -X GET "https://your-domain.com/api/data/weighments" \
   -H "x-api-key: your-factory-api-key"
 ```
 
-**Response (`200 OK`):**
-
-```json
-{
-  "data": [
-    {
-      "id": 101,
-      "vehicle_number": "KA-01-AB-1234",
-      "gross_weight": 15000,
-      "tare_weight": 5000,
-      "net_weight": 10000,
-      "images": ["in_cam1.jpg", "out_cam1.jpg"],
-      "in_entry_id": 11,
-      "in_entry_time": "2026-10-26T09:30:00.000Z",
-      "out_entry_id": 12,
-      "out_entry_time": "2026-10-26T10:45:00.000Z",
-      "in_center_id": 1,
-      "in_center_name": "Weighbridge North",
-      "out_center_id": 1,
-      "out_center_name": "Weighbridge North"
-    }
-  ],
-  "count": 1
-}
-```
-
-### POST /api/data — Acknowledge a Processed Weighment
+### POST /api/data/weighments — Acknowledge a Processed Weighment
 
 Marks a weighment as processed for this factory. Idempotent — re-acknowledging an already-acknowledged ID returns `200 OK`.
 
 ```bash
-curl -X POST "https://your-domain.com/api/data" \
+curl -X POST "https://your-domain.com/api/data/weighments" \
   -H "x-api-key: your-factory-api-key" \
   -H "Content-Type: application/json" \
-  -d '{"weighment_id": 101}'
+  -d '{"id": 101}'
 ```
 
-_(Note: `{ "id": 101 }` is also accepted as an alias)_
+### GET /api/data/entries — Fetch Unprocessed Entries
 
-**Response (`200 OK`):**
+Returns all non-deleted raw entries that have not yet been acknowledged for this factory.
 
-```json
-{
-  "success": true,
-  "acknowledged_id": 101,
-  "message": "Weighment acknowledged successfully"
-}
+```bash
+curl -X GET "https://your-domain.com/api/data/entries" \
+  -H "x-api-key: your-factory-api-key"
 ```
 
-Returns `404 Not Found` if the weighment does not exist or does not belong to this factory.
+### POST /api/data/entries — Acknowledge a Processed Entry
 
-See [docs/data_curl.md](docs/data_curl.md) for the full cURL reference and status code table.
+Marks an entry as processed for this factory.
+
+```bash
+curl -X POST "https://your-domain.com/api/data/entries" \
+  -H "x-api-key: your-factory-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"id": 501}'
+```
+
+See [docs/data_curl.md](docs/data_curl.md) for the full cURL reference, JSON schemas, and status code table.
 
 ---
 

@@ -114,10 +114,15 @@ describe("Next.js Middleware Proxy", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("passes through /api/data route without session token", async () => {
-    const req = new NextRequest("http://localhost/api/data");
-    const res = await proxy(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("location")).toBeNull();
+  it("passes through /api/data/weighments and /api/data/entries routes without session token", async () => {
+    const reqWeighments = new NextRequest("http://localhost/api/data/weighments");
+    const resWeighments = await proxy(reqWeighments);
+    expect(resWeighments.status).toBe(200);
+    expect(resWeighments.headers.get("location")).toBeNull();
+
+    const reqEntries = new NextRequest("http://localhost/api/data/entries");
+    const resEntries = await proxy(reqEntries);
+    expect(resEntries.status).toBe(200);
+    expect(resEntries.headers.get("location")).toBeNull();
   });
 });
