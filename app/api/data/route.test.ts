@@ -9,7 +9,18 @@ vi.mock("@/db", () => ({
   },
 }));
 
-import { GET, POST } from "./route";
+import { GET, POST, OPTIONS } from "./route";
+
+describe("OPTIONS /api/data", () => {
+  it("returns 200 with appropriate CORS preflight headers", async () => {
+    const res = await OPTIONS();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    expect(res.headers.get("access-control-allow-methods")).toBe("GET, POST, OPTIONS");
+    expect(res.headers.get("access-control-allow-headers")).toBe("Content-Type, x-api-key");
+  });
+});
 
 describe("GET /api/data", () => {
   beforeEach(() => {
@@ -21,6 +32,7 @@ describe("GET /api/data", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(401);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
     expect(mockRpc).not.toHaveBeenCalled();
@@ -33,6 +45,7 @@ describe("GET /api/data", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(401);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
     expect(mockRpc).not.toHaveBeenCalled();
@@ -69,6 +82,7 @@ describe("GET /api/data", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(401);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Invalid API key");
     expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
@@ -110,6 +124,7 @@ describe("GET /api/data", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     expect(mockRpc).toHaveBeenCalledWith("get_factory_weighment_data", {
       p_api_key: "valid_live_key_999",
     });
@@ -137,6 +152,7 @@ describe("POST /api/data", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(401);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
     expect(mockRpc).not.toHaveBeenCalled();
@@ -151,6 +167,7 @@ describe("POST /api/data", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(401);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Missing x-api-key header");
     expect(mockRpc).not.toHaveBeenCalled();
@@ -234,6 +251,7 @@ describe("POST /api/data", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(401);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.error).toBe("Invalid API key");
   });
@@ -270,6 +288,7 @@ describe("POST /api/data", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json).toEqual({
       success: true,
@@ -296,6 +315,7 @@ describe("POST /api/data", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     const json = await res.json();
     expect(json.acknowledged_id).toBe(202);
     expect(mockRpc).toHaveBeenCalledWith("acknowledge_factory_weighment", {

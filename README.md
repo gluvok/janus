@@ -187,9 +187,11 @@ All authenticated users can access the `/account` portal from the sidebar user m
 
 The `/api/data` endpoint provides an external integration route for third-party systems and factories to fetch unprocessed weighments and acknowledge processed records.
 
-### Authentication
+### Authentication & CORS
 
-All requests require `x-api-key` header — the factory's API key used to resolve tenant scope. Missing or invalid keys return `401 Unauthorized`.
+All requests require the `x-api-key` header — the factory's API key used to resolve tenant scope. Missing or invalid keys return `401 Unauthorized`.
+
+`/api/data` includes full Cross-Origin Resource Sharing (CORS) support (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET, POST, OPTIONS`, and `Access-Control-Allow-Headers: Content-Type, x-api-key`) with an `OPTIONS` preflight handler for direct browser integrations and third-party dashboards.
 
 ### GET /api/data — Fetch Unprocessed Weighments
 

@@ -73,6 +73,76 @@ _(Note: `{ "id": 101 }` is also accepted as an alias)_
 
 ---
 
+## Cross-Origin Resource Sharing (CORS)
+
+`/api/data` fully supports CORS for external browser integrations and dashboards.
+
+- **Allowed Origin**: `*`
+- **Allowed Methods**: `GET, POST, OPTIONS`
+- **Allowed Headers**: `Content-Type, x-api-key`
+- **Preflight**: Send an `OPTIONS` request; returns `200 OK` with CORS headers.
+
+### Browser `fetch` Example
+
+```javascript
+// Fetch unprocessed weighments
+const response = await fetch("https://gluvok.vercel.app/api/data", {
+  method: "GET",
+  headers: {
+    "x-api-key": "YOUR_FACTORY_API_KEY",
+  },
+});
+const result = await response.json();
+console.log(result.data);
+
+// Acknowledge a processed weighment
+await fetch("https://gluvok.vercel.app/api/data", {
+  method: "POST",
+  headers: {
+    "x-api-key": "YOUR_FACTORY_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ weighment_id: 101 }),
+});
+```
+
+---
+
+## Cross-Origin Resource Sharing (CORS)
+
+`/api/data` fully supports CORS for external browser integrations and dashboards.
+
+- **Allowed Origin**: `*`
+- **Allowed Methods**: `GET, POST, OPTIONS`
+- **Allowed Headers**: `Content-Type, x-api-key`
+- **Preflight**: Send an `OPTIONS` request; returns `200 OK` with CORS headers.
+
+### Browser `fetch` Example
+
+```javascript
+// Fetch unprocessed weighments
+const response = await fetch("https://gluvok.vercel.app/api/data", {
+  method: "GET",
+  headers: {
+    "x-api-key": "YOUR_FACTORY_API_KEY",
+  },
+});
+const result = await response.json();
+console.log(result.data);
+
+// Acknowledge a processed weighment
+await fetch("https://gluvok.vercel.app/api/data", {
+  method: "POST",
+  headers: {
+    "x-api-key": "YOUR_FACTORY_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ weighment_id: 101 }),
+});
+```
+
+---
+
 ## Status Codes
 
 | Code  | Meaning               | Reason                                                 |

@@ -9,9 +9,19 @@ import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/db";
 import { type DataApiWeighmentItem } from "@/types";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, x-api-key",
+};
+
 function getApiKey(req: NextRequest): string | null {
   const key = req.headers.get("x-api-key");
   return key && key.trim() ? key.trim() : null;
+}
+
+export async function OPTIONS(): Promise<NextResponse> {
+  return NextResponse.json({}, { headers: CORS_HEADERS });
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -19,7 +29,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!apiKey) {
     return NextResponse.json(
       { error: "Missing x-api-key header" },
-      { status: StatusCodes.UNAUTHORIZED },
+      { status: StatusCodes.UNAUTHORIZED, headers: CORS_HEADERS },
     );
   }
 
@@ -32,12 +42,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     console.error("RPC get_factory_weighment_data error:", rpcError);
     return NextResponse.json(
       { error: "Failed to retrieve weighment data" },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR },
+      { status: StatusCodes.INTERNAL_SERVER_ERROR, headers: CORS_HEADERS },
     );
   }
 
   if (!rpcResult || (rpcResult as { unauthorized?: boolean }).unauthorized) {
-    return NextResponse.json({ error: "Invalid API key" }, { status: StatusCodes.UNAUTHORIZED });
+    return NextResponse.json(
+      { error: "Invalid API key" },
+      { status: StatusCodes.UNAUTHORIZED, headers: CORS_HEADERS },
+    );
   }
 
   const result = rpcResult as {
@@ -50,7 +63,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       data: result.data || [],
       count: result.count,
     },
-    { status: StatusCodes.OK },
+    { status: StatusCodes.OK, headers: CORS_HEADERS },
   );
 }
 
@@ -59,7 +72,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!apiKey) {
     return NextResponse.json(
       { error: "Missing x-api-key header" },
-      { status: StatusCodes.UNAUTHORIZED },
+      { status: StatusCodes.UNAUTHORIZED, headers: CORS_HEADERS },
     );
   }
 
@@ -67,7 +80,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: StatusCodes.BAD_REQUEST });
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: StatusCodes.BAD_REQUEST, headers: CORS_HEADERS },
+    );
   }
 
   const rawId =
@@ -87,7 +103,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!weighmentId) {
     return NextResponse.json(
       { error: "Invalid or missing weighment ID" },
-      { status: StatusCodes.BAD_REQUEST },
+      { status: StatusCodes.BAD_REQUEST, headers: CORS_HEADERS },
     );
   }
 
@@ -100,7 +116,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.error("RPC acknowledge_factory_weighment error:", rpcError);
     return NextResponse.json(
       { error: "Failed to acknowledge weighment" },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR },
+      { status: StatusCodes.INTERNAL_SERVER_ERROR, headers: CORS_HEADERS },
     );
   }
 
@@ -112,11 +128,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } | null;
 
   if (!resObj || resObj.unauthorized) {
-    return NextResponse.json({ error: "Invalid API key" }, { status: StatusCodes.UNAUTHORIZED });
+    return NextResponse.json(
+      { error: "Invalid API key" },
+      { status: StatusCodes.UNAUTHORIZED, headers: CORS_HEADERS },
+    );
   }
 
   if (resObj.not_found) {
-    return NextResponse.json({ error: "Weighment not found" }, { status: StatusCodes.NOT_FOUND });
+    return NextResponse.json(
+      { error: "Weighment not found" },
+      { status: StatusCodes.NOT_FOUND, headers: CORS_HEADERS },
+    );
   }
 
   return NextResponse.json(
@@ -125,6 +147,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       acknowledged_id: weighmentId,
       message: "Weighment acknowledged successfully",
     },
-    { status: StatusCodes.OK },
+    { status: StatusCodes.OK, headers: CORS_HEADERS },
   );
 }
