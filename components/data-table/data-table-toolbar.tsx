@@ -70,18 +70,21 @@ export function DataTableToolbar<TData extends RowData>({
 }: DataTableToolbarProps<TData>) {
   return (
     <div className="flex flex-col gap-2 shrink-0">
-      {/* Row 1: Search Box & Date Range (Left) + Actions, Refresh Button & Columns (Right) */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+      {/* Controls Container: Mobile Multi-Row / Desktop Split Row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-auto">
           <DataTableSearchInput
             placeholder={searchPlaceholder}
             value={search}
             onChange={onSearchChange}
           />
+        </div>
+
+        <div className="flex-1 min-w-0 sm:flex-initial sm:w-auto">
           <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 sm:ml-auto shrink-0">
           {actions}
           <DataTableRefreshButton onClick={onRefresh} loading={loading} />
           <DataTableViewOptions table={table} />
@@ -90,7 +93,7 @@ export function DataTableToolbar<TData extends RowData>({
 
       {/* Row 2: Entity Facets + Unified Clear All + Multi-Sort Priority Chips */}
       {(filterConfigs.length > 0 || hasActiveFilters || hasActiveSorts) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {filterConfigs.map((config) => (
             <DataTableFacetedFilter
               key={config.key}

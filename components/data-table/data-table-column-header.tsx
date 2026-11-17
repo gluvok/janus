@@ -105,7 +105,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue = unknown>({
               <span>{sortingState.length > 1 ? "Sort only: Desc" : "Desc"}</span>
             </DropdownMenuItem>
 
-            {sortingState.length > 0 && (
+            {!isSorted && sortingState.length > 0 && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => column.toggleSorting(false, true)}>
@@ -119,7 +119,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue = unknown>({
               </>
             )}
 
-            {isSorted ? (
+            {isSorted && hasMultipleSorts ? (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => column.clearSorting()}>

@@ -7,7 +7,6 @@ import {
   ComboboxChips,
   ComboboxChipsInput,
   ComboboxContent,
-  ComboboxSearchInput,
   ComboboxEmpty,
   ComboboxItem,
   ComboboxList,
@@ -80,7 +79,7 @@ export function DataTableFacetedFilter({
   const triggerIcon = isActive ? appIcons.search : selectedOptions.length === 0 ? icon : null;
 
   return (
-    <div className="w-full sm:w-auto">
+    <div className="w-auto">
       <Combobox
         items={selectableOptions}
         multiple
@@ -96,7 +95,7 @@ export function DataTableFacetedFilter({
       >
         <ComboboxChips
           ref={anchor}
-          className="relative min-h-8 w-full sm:w-auto border-input bg-input/20 px-2.5 pr-7 has-data-[slot=combobox-chip]:pr-7 text-2xs font-normal dark:bg-input/30 cursor-text"
+          className="relative min-h-8 w-auto border-input bg-input/20 px-2.5 pr-7 has-data-[slot=combobox-chip]:pr-7 text-2xs font-normal dark:bg-input/30 cursor-text"
         >
           {triggerIcon && (
             <HugeiconsIcon
@@ -148,7 +147,6 @@ export function DataTableFacetedFilter({
           anchor={anchor}
           className="w-max min-w-(--anchor-width) max-w-xs sm:max-w-sm"
         >
-          <ComboboxSearchInput placeholder={`Search ${title.toLowerCase()}...`} />
           <ComboboxEmpty className="py-2 text-center text-xs text-muted-foreground">
             No {title.toLowerCase()} found.
           </ComboboxEmpty>
