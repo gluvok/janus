@@ -57,12 +57,34 @@ async function main() {
     process.exit(1);
   }
 
+  // 3. Insert notification event into notifications table
+  const { data: notif, error: notifErr } = await supabase
+    .from("notifications")
+    .insert({
+      factory_id: customer.factory_id,
+      customer_id: customer.id,
+      entry_id: entry.id,
+      title: "New Vehicle Entry",
+      message: `Vehicle ${plate} weighed at Main Weighbridge (${weight.toLocaleString()} kg)`,
+      vehicle_number: plate,
+      weight,
+      center_name: "Main Weighbridge",
+    })
+    .select("id")
+    .single();
+
+  if (notifErr) {
+    console.warn("⚠️ Notification table note:", notifErr.message);
+  } else {
+    console.log(`🔔 Notification event record #${notif.id} created.`);
+  }
+
   console.log("✅ Successfully injected customer weighment entry!");
   console.log(`   Entry ID:       ${entry.id}`);
   console.log(`   Vehicle Number: ${entry.vehicle_number}`);
   console.log(`   Weight:         ${entry.weight} kg`);
   console.log(`   Customer:       Ramesh Kumar (ID: ${customer.id})`);
-  console.log("📡 Realtime broadcast sent to connected browsers via 'entries' table.");
+  console.log("📡 Realtime broadcast sent to connected browsers via 'entries' and 'notifications'.");
 }
 
 main().catch((err) => {
