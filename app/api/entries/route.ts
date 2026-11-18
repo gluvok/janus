@@ -9,7 +9,6 @@ import {
   parseBulkIds,
   getAuthUser,
 } from "@/db/helpers";
-import { type AuthUserPayload } from "@/types";
 import { EntrySource, EntryStatus, ProjectSlug, PermissionKey, Role } from "@/lib/constants/enums";
 import { ApiErrorMessage } from "@/lib/constants/messages";
 import { createEntry, deleteEntries } from "@/lib/services/entries";
