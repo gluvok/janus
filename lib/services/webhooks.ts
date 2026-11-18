@@ -12,20 +12,53 @@ export const WEBHOOK_TIMEOUT_MS = 5000;
 export const WEBHOOK_TOLERANCE_SECONDS = 300; // 5 minutes
 
 /**
- * Validates outgoing webhook destination URL against SSRF and cloud metadata endpoints.
+ * Validates outgoing webhook destination URL against SSRF, cloud metadata, and internal network endpoints.
  */
 export function isValidWebhookUrl(urlStr: string): boolean {
   try {
     const parsed = new URL(urlStr);
     if (!["https:", "http:"].includes(parsed.protocol)) return false;
-    const hostname = parsed.hostname.toLowerCase();
+
+    // Disallow userinfo/credentials in URLs (e.g. http://user:pass@host)
+    if (parsed.username || parsed.password) return false;
+
+    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+
+    // Cloud metadata endpoints (AWS, GCP, Azure, Alibaba, Oracle)
     if (
       hostname === "169.254.169.254" ||
+      hostname.startsWith("169.254.") ||
       hostname === "metadata.google.internal" ||
-      hostname === "instance-data"
+      hostname.endsWith(".metadata.google.internal") ||
+      hostname === "metadata" ||
+      hostname === "instance-data" ||
+      hostname === "100.100.100.200" ||
+      hostname === "fd00:ec2::254" ||
+      hostname.startsWith("fe80:")
     ) {
       return false;
     }
+
+    // In production, block loopback and unspecified addresses
+    if (process.env.NODE_ENV === "production") {
+      if (
+        hostname === "localhost" ||
+        hostname.startsWith("127.") ||
+        hostname === "0.0.0.0" ||
+        hostname === "::1" ||
+        hostname === "::"
+      ) {
+        return false;
+      }
+    }
+
+    // Disallow non-standard internal infrastructure ports (e.g., Redis, DBs, SSH)
+    if (parsed.port) {
+      const portNum = Number(parsed.port);
+      const DANGEROUS_PORTS = [21, 22, 23, 25, 53, 110, 143, 445, 1433, 3306, 5432, 6379, 9200, 11211, 27017];
+      if (DANGEROUS_PORTS.includes(portNum)) return false;
+    }
+
     return true;
   } catch {
     return false;

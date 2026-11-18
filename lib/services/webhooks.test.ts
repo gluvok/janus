@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { signWebhookPayload, verifyWebhookSignature, dispatchWebhook, sweepPendingWebhooks } from "./webhooks";
+import {
+  signWebhookPayload,
+  verifyWebhookSignature,
+  dispatchWebhook,
+  sweepPendingWebhooks,
+  isValidWebhookUrl,
+} from "./webhooks";
 
 describe("Decoupled & Replay-Protected Webhook Dispatcher", () => {
   beforeEach(() => {
@@ -112,6 +118,24 @@ describe("Decoupled & Replay-Protected Webhook Dispatcher", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("forbidden");
+  });
+
+  it("validates webhook URLs comprehensively against SSRF evasions", () => {
+    expect(isValidWebhookUrl("https://valid.example.com/webhook")).toBe(true);
+    expect(isValidWebhookUrl("http://valid.example.com:8080/webhook")).toBe(true);
+    
+    // SSRF vectors
+    expect(isValidWebhookUrl("http://169.254.169.254/latest/meta-data")).toBe(false);
+    expect(isValidWebhookUrl("http://169.254.1.2/secret")).toBe(false);
+    expect(isValidWebhookUrl("http://metadata.google.internal/computeMetadata")).toBe(false);
+    expect(isValidWebhookUrl("http://foo.metadata.google.internal/")).toBe(false);
+    expect(isValidWebhookUrl("http://100.100.100.200/latest")).toBe(false);
+    expect(isValidWebhookUrl("http://[fd00:ec2::254]/")).toBe(false);
+    expect(isValidWebhookUrl("http://user:pass@example.com/webhook")).toBe(false);
+    expect(isValidWebhookUrl("http://example.com:6379/redis")).toBe(false);
+    expect(isValidWebhookUrl("http://example.com:5432/postgres")).toBe(false);
+    expect(isValidWebhookUrl("ftp://example.com/webhook")).toBe(false);
+    expect(isValidWebhookUrl("invalid-url")).toBe(false);
   });
 
   it("schedules exponential backoff retry when destination times out", async () => {

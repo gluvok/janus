@@ -23,7 +23,10 @@ export const POST = withAuth(async (req, user, client) => {
   let idsToMark: number[] = [];
 
   if (Array.isArray(notification_ids) && notification_ids.length > 0) {
-    idsToMark = notification_ids.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0);
+    idsToMark = notification_ids
+      .map(Number)
+      .filter((id) => Number.isSafeInteger(id) && id > 0)
+      .slice(0, 100);
   } else if (mark_all_before_id) {
     let query = client
       .from("notifications")
