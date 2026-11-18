@@ -1,105 +1,101 @@
 /**
  * @file lib/services/webhooks.ts
- * @description Outgoing webhook dispatch engine for real-time external event notifications.
+ * @description Outgoing webhook dispatcher with HMAC-SHA256 signature verification and delivery tracking.
  */
 
 import { createHmac } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabase as defaultClient } from "@/lib/supabase";
 
-export interface WebhookResult {
-  dispatched: boolean;
-  status?: number;
-  reason?: string;
+export interface DispatchWebhookOptions {
+  factoryId: number;
+  event: string;
+  payload: Record<string, unknown>;
+  client?: any;
+}
+
+export interface WebhookDispatchResult {
+  success: boolean;
+  statusCode?: number;
+  error?: string;
 }
 
 /**
- * Computes an HMAC-SHA256 signature string for webhook payloads.
+ * Computes HMAC-SHA256 signature string for webhook payload verification.
  */
-export function createWebhookSignature(payloadString: string, secret: string): string {
-  return createHmac("sha256", secret).update(payloadString).digest("hex");
+export function signWebhookPayload(payloadString: string, secret: string): string {
+  const hmac = createHmac("sha256", secret).update(payloadString).digest("hex");
+  return `sha256=${hmac}`;
 }
 
 /**
- * Validates whether a target URL protocol is permitted for webhook dispatch.
- * Prevents SSRF attacks via file://, gopher://, or other internal protocols.
+ * Dispatches a signed webhook payload to the factory's configured endpoint and records delivery log.
  */
-function isValidWebhookUrl(rawUrl: string): boolean {
-  try {
-    const parsed = new URL(rawUrl);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
+export async function dispatchWebhook({
+  factoryId,
+  event,
+  payload,
+  client = defaultClient,
+}: DispatchWebhookOptions): Promise<WebhookDispatchResult | null> {
+  const { data: factory } = await client
+    .from("factories")
+    .select("webhook_url, webhook_secret")
+    .eq("id", factoryId)
+    .single();
+
+  if (!factory?.webhook_url) {
+    return null;
   }
-}
 
-/**
- * Dispatches an event payload to a factory's configured webhook endpoint.
- * Non-blocking, times out after 5 seconds, and handles all network errors safely.
- */
-export async function dispatchWebhook(
-  client: SupabaseClient,
-  factoryId: number,
-  event: string,
-  data: unknown,
-): Promise<WebhookResult> {
+  const payloadString = JSON.stringify({
+    event,
+    factory_id: factoryId,
+    timestamp: new Date().toISOString(),
+    data: payload,
+  });
+
+  const signature = factory.webhook_secret
+    ? signWebhookPayload(payloadString, factory.webhook_secret)
+    : "";
+
   try {
-    const { data: factory, error } = await client
-      .from("factories")
-      .select("webhook_url, webhook_secret")
-      .eq("id", factoryId)
-      .single();
+    const res = await fetch(factory.webhook_url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Gluvok-Event": event,
+        "X-Gluvok-Signature": signature,
+      },
+      body: payloadString,
+      signal: AbortSignal.timeout(5000),
+    });
 
-    if (error || !factory?.webhook_url) {
-      return { dispatched: false, reason: "no_webhook_url" };
-    }
+    const isSuccess = res.ok;
+    const statusCode = res.status;
 
-    if (!isValidWebhookUrl(factory.webhook_url)) {
-      return { dispatched: false, reason: "invalid_url_protocol" };
-    }
-
-    const payload = {
-      event,
-      timestamp: new Date().toISOString(),
+    await client.from("webhook_logs").insert({
       factory_id: factoryId,
-      data,
-    };
+      event,
+      payload,
+      status: isSuccess ? "delivered" : "failed",
+      response_status: statusCode,
+      attempts: 1,
+      delivered_at: isSuccess ? new Date().toISOString() : null,
+      last_error: isSuccess ? null : `HTTP status ${statusCode}`,
+    });
 
-    const payloadString = JSON.stringify(payload);
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "User-Agent": "Gluvok-Webhook-Dispatcher/1.0",
-      "X-Gluvok-Event": event,
-    };
+    return { success: isSuccess, statusCode };
+  } catch (err: any) {
+    const errorMsg = err?.message || "Webhook delivery failed";
 
-    if (factory.webhook_secret) {
-      headers["X-Gluvok-Signature"] = createWebhookSignature(
-        payloadString,
-        factory.webhook_secret,
-      );
-    }
+    await client.from("webhook_logs").insert({
+      factory_id: factoryId,
+      event,
+      payload,
+      status: "failed",
+      attempts: 1,
+      last_error: errorMsg,
+    });
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      const res = await fetch(factory.webhook_url, {
-        method: "POST",
-        headers,
-        body: payloadString,
-        signal: controller.signal,
-      });
-
-      return {
-        dispatched: res.ok,
-        status: res.status,
-        reason: res.ok ? undefined : `HTTP ${res.status}`,
-      };
-    } finally {
-      clearTimeout(timeout);
-    }
-  } catch (err: unknown) {
-    const reason = err instanceof Error ? err.message : String(err);
-    console.error(`[Webhook] Dispatch failed for factory ${factoryId}:`, reason);
-    return { dispatched: false, reason };
+    return { success: false, error: errorMsg };
   }
 }

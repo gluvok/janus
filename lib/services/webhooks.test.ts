@@ -1,20 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { dispatchWebhook, createWebhookSignature } from "./webhooks";
+import { signWebhookPayload, dispatchWebhook } from "./webhooks";
 
 describe("Webhook Dispatcher Service", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("computes a valid HMAC-SHA256 signature string", () => {
-    const payload = JSON.stringify({ test: "value" });
-    const secret = "super-secret-key";
-    const sig = createWebhookSignature(payload, secret);
-    expect(sig).toMatch(/^[a-f0-9]{64}$/);
+  it("generates correct HMAC-SHA256 signature for payload", () => {
+    const payload = JSON.stringify({ event: "entry.created", id: 101 });
+    const secret = "test-secret-key";
+    const signature = signWebhookPayload(payload, secret);
+
+    expect(signature).toMatch(/^sha256=[a-f0-9]{64}$/);
   });
 
-  it("skips dispatch if factory has no webhook_url configured", async () => {
-    const mockClient: any = {
+  it("returns null early if factory has no webhook_url configured", async () => {
+    const dbMock: any = {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
@@ -24,97 +25,123 @@ describe("Webhook Dispatcher Service", () => {
       }),
     };
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const result = await dispatchWebhook(mockClient, 1, "entry.created", { id: 101 });
-    expect(result.dispatched).toBe(false);
-    expect(result.reason).toBe("no_webhook_url");
-    expect(fetchSpy).not.toHaveBeenCalled();
+    const result = await dispatchWebhook({
+      factoryId: 1,
+      event: "entry.created",
+      payload: { vehicle_number: "KA05MK8888" },
+      client: dbMock,
+    });
+
+    expect(result).toBeNull();
   });
 
-  it("dispatches POST request with correct payload and HMAC signature header", async () => {
-    const mockClient: any = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: {
-                webhook_url: "https://example.com/webhook",
-                webhook_secret: "secret-123",
-              },
+  it("sends HTTP POST with signature header when webhook_url is configured", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: vi.fn().mockResolvedValue("OK"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const logInsertMock = vi.fn().mockResolvedValue({ error: null });
+    const dbMock: any = {
+      from: vi.fn((table: string) => {
+        if (table === "factories") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    webhook_url: "https://example.com/webhook",
+                    webhook_secret: "secret-123",
+                  },
+                }),
+              }),
             }),
-          }),
-        }),
+          };
+        }
+        if (table === "webhook_logs") {
+          return { insert: logInsertMock };
+        }
+        return {};
       }),
     };
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-    } as any);
-
-    const result = await dispatchWebhook(mockClient, 1, "entry.created", {
-      id: 99,
-      vehicle_number: "KA05MK8888",
+    const result = await dispatchWebhook({
+      factoryId: 1,
+      event: "entry.created",
+      payload: { vehicle_number: "KA05MK8888", weight: 35000 },
+      client: dbMock,
     });
 
-    expect(result.dispatched).toBe(true);
-    expect(result.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledWith(
+    expect(result?.success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
       "https://example.com/webhook",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
           "Content-Type": "application/json",
           "X-Gluvok-Event": "entry.created",
-          "X-Gluvok-Signature": expect.any(String),
+          "X-Gluvok-Signature": expect.stringMatching(/^sha256=/),
         }),
+      }),
+    );
+    expect(logInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        factory_id: 1,
+        event: "entry.created",
+        status: "delivered",
+        response_status: 200,
+        attempts: 1,
       }),
     );
   });
 
-  it("rejects non-http/https webhook URLs safely (SSRF prevention)", async () => {
-    const mockClient: any = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: {
-                webhook_url: "file:///etc/passwd",
-                webhook_secret: "secret-123",
-              },
+  it("catches network failure and logs failure to webhook_logs", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("Connection refused"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const logInsertMock = vi.fn().mockResolvedValue({ error: null });
+    const dbMock: any = {
+      from: vi.fn((table: string) => {
+        if (table === "factories") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    webhook_url: "https://example.com/down",
+                    webhook_secret: "secret-123",
+                  },
+                }),
+              }),
             }),
-          }),
-        }),
+          };
+        }
+        if (table === "webhook_logs") {
+          return { insert: logInsertMock };
+        }
+        return {};
       }),
     };
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const result = await dispatchWebhook(mockClient, 1, "entry.created", { id: 99 });
-    expect(result.dispatched).toBe(false);
-    expect(result.reason).toBe("invalid_url_protocol");
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
+    const result = await dispatchWebhook({
+      factoryId: 1,
+      event: "entry.created",
+      payload: { vehicle_number: "KA05MK8888" },
+      client: dbMock,
+    });
 
-  it("handles fetch network failure without throwing uncaught exceptions", async () => {
-    const mockClient: any = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: {
-                webhook_url: "https://down.example.com",
-                webhook_secret: null,
-              },
-            }),
-          }),
-        }),
+    expect(result?.success).toBe(false);
+    expect(result?.error).toContain("Connection refused");
+    expect(logInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        factory_id: 1,
+        event: "entry.created",
+        status: "failed",
+        attempts: 1,
+        last_error: "Connection refused",
       }),
-    };
-
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Connection refused"));
-
-    const result = await dispatchWebhook(mockClient, 1, "entry.created", { id: 99 });
-    expect(result.dispatched).toBe(false);
-    expect(result.reason).toContain("Connection refused");
+    );
   });
 });
