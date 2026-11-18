@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS factories (
       {"camera": 2, "top": 0, "bottom": 0, "left": 0, "right": 0}
     ]'::jsonb,
     api_key TEXT UNIQUE,
+    webhook_url TEXT DEFAULT NULL,
+    webhook_secret TEXT DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
