@@ -1,61 +1,59 @@
 /**
  * @file app/api/notifications/route.ts
- * @description Persistent notifications endpoint for offline device catchup and read status management.
+ * @description API route for fetching unread and recent notifications with per-user read state.
  */
 
 import { NextResponse } from "next/server";
-import { withAuth, apiError, StatusCodes } from "@/db/helpers";
-import { Role } from "@/lib/constants/enums";
+import { withAuth } from "@/db/helpers";
 
 export const GET = withAuth(async (_req, user, client) => {
-  let query = client
+  const userId = Number(user.id);
+  const factoryId = Number(user.factory_id);
+
+  const { data: rawNotifications, error } = await client
     .from("notifications")
-    .select("*")
-    .eq("factory_id", user.factory_id)
-    .order("created_at", { ascending: false })
+    .select(
+      `
+      id,
+      factory_id,
+      customer_id,
+      entry_id,
+      title,
+      message,
+      vehicle_number,
+      weight,
+      center_name,
+      created_at,
+      notification_reads!left(read_at)
+    `,
+    )
+    .eq("factory_id", factoryId)
+    .order("id", { ascending: false })
     .limit(50);
 
-  if (user.role === Role.BASE) {
-    // If base role, find corresponding customer record or match customer_id
-    const { data: customer } = await client
-      .from("customers")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (customer?.id) {
-      query = query.or(`customer_id.eq.${customer.id},customer_id.is.null`);
-    }
-  }
-
-  const { data, error } = await query;
   if (error) {
-    return apiError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ notifications: data || [] });
-});
+  const notifications = (rawNotifications || []).map((n: any) => {
+    const isRead = Array.isArray(n.notification_reads) && n.notification_reads.length > 0;
+    return {
+      id: `entry-${n.id}`,
+      notificationId: n.id,
+      entryId: n.entry_id,
+      title: n.title,
+      vehicleNumber: n.vehicle_number,
+      weight: n.weight,
+      centerName: n.center_name || "Main Weighbridge",
+      createdAt: n.created_at,
+      read: isRead,
+    };
+  });
 
-export const PATCH = withAuth(async (req, user, client) => {
-  try {
-    const body = await req.json();
-    const { ids, all } = body || {};
+  const unreadCount = notifications.filter((n: any) => !n.read).length;
 
-    let query = client.from("notifications").update({ read: true }).eq("factory_id", user.factory_id);
-
-    if (Array.isArray(ids) && ids.length > 0) {
-      query = query.in("id", ids);
-    } else if (!all) {
-      return apiError("Missing 'ids' array or 'all: true'", StatusCodes.BAD_REQUEST);
-    }
-
-    const { error } = await query;
-    if (error) {
-      return apiError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return apiError(err?.message || "Invalid request body", StatusCodes.BAD_REQUEST);
-  }
+  return NextResponse.json({
+    notifications,
+    unreadCount,
+  });
 });
