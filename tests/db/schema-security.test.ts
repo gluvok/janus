@@ -20,4 +20,8 @@ describe("Database Schema Security Hardening", () => {
       expect(match).toMatch(/SET search_path\s*=\s*(public,\s*pg_temp|pg_temp,\s*public)/i);
     }
   });
+
+  it("ensures public.entries is published to supabase_realtime", () => {
+    expect(schemaSql).toMatch(/ALTER PUBLICATION supabase_realtime ADD TABLE public\.entries;/i);
+  });
 });
