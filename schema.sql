@@ -909,10 +909,53 @@ GRANT EXECUTE ON FUNCTION reset_all_sequences() TO service_role;
 REVOKE ALL ON FUNCTION delete_customers_with_user(INT[], INT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION delete_customers_with_user(INT[], INT) TO authenticated, service_role;
 
--- 8. ENABLE SUPABASE REALTIME REPLICATION FOR ENTRIES
+-- 8. NOTIFICATIONS & WEBHOOK LOGS TABLES (Persistent Pub/Sub and Dispatch Tracking)
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    customer_id INT REFERENCES customers(id) ON DELETE CASCADE,
+    entry_id INT REFERENCES entries(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    vehicle_number TEXT NOT NULL,
+    weight INT NOT NULL,
+    center_name TEXT DEFAULT NULL,
+    read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_factory ON notifications(factory_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_customer ON notifications(customer_id, read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(factory_id, read) WHERE read = FALSE;
+
+CREATE TABLE IF NOT EXISTS webhook_logs (
+    id BIGSERIAL PRIMARY KEY,
+    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
+    event TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    response_status INT DEFAULT NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    last_error TEXT DEFAULT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delivered_at TIMESTAMPTZ DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_factory ON webhook_logs(factory_id, created_at DESC);
+
+ALTER TABLE IF EXISTS notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS webhook_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow access notifications" ON notifications FOR ALL USING (true);
+CREATE POLICY "Allow access webhook_logs" ON webhook_logs FOR ALL USING (true);
+
+-- 9. ENABLE SUPABASE REALTIME REPLICATION FOR ENTRIES & NOTIFICATIONS
 ALTER PUBLICATION supabase_realtime ADD TABLE public.entries;
 ALTER TABLE public.entries REPLICA IDENTITY FULL;
 
--- 9. NOTIFY SUPABASE POSTGREST TO RELOAD SCHEMA CACHE IMMEDIATELY
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+ALTER TABLE public.notifications REPLICA IDENTITY FULL;
+
+-- 10. NOTIFY SUPABASE POSTGREST TO RELOAD SCHEMA CACHE IMMEDIATELY
 NOTIFY pgrst, 'reload schema';
 
