@@ -909,11 +909,20 @@ GRANT EXECUTE ON FUNCTION reset_all_sequences() TO service_role;
 REVOKE ALL ON FUNCTION delete_customers_with_user(INT[], INT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION delete_customers_with_user(INT[], INT) TO authenticated, service_role;
 
--- 8. NOTIFICATIONS & WEBHOOK LOGS TABLES (Persistent Pub/Sub and Dispatch Tracking)
+-- 8. ENABLE SUPABASE REALTIME REPLICATION FOR ENTRIES
+ALTER PUBLICATION supabase_realtime ADD TABLE public.entries;
+ALTER TABLE public.entries REPLICA IDENTITY FULL;
+
+-- 9. NOTIFICATIONS & OUTGOING WEBHOOK ENGINE
+
+-- Ensure factory columns exist for existing instances
+ALTER TABLE IF EXISTS factories ADD COLUMN IF NOT EXISTS webhook_url TEXT DEFAULT NULL;
+ALTER TABLE IF EXISTS factories ADD COLUMN IF NOT EXISTS webhook_secret TEXT DEFAULT NULL;
+
+-- NOTIFICATIONS TABLE (Immutable append-only event log)
 CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
     customer_id INT REFERENCES customers(id) ON DELETE CASCADE,
     entry_id INT REFERENCES entries(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
@@ -921,38 +930,65 @@ CREATE TABLE IF NOT EXISTS notifications (
     vehicle_number TEXT NOT NULL,
     weight INT NOT NULL,
     center_name TEXT DEFAULT NULL,
-    read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_notifications_factory ON notifications(factory_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_notifications_customer ON notifications(customer_id, read, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(factory_id, read) WHERE read = FALSE;
+-- Composite indexes for high-speed tenant catchup queries
+CREATE INDEX IF NOT EXISTS idx_notifications_factory_id ON notifications(factory_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_customer ON notifications(customer_id, id DESC);
 
+-- NOTIFICATION READS TABLE (Per-user read tracking, avoids multi-user / multi-device collision)
+CREATE TABLE IF NOT EXISTS notification_reads (
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    notification_id BIGINT NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+    read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, notification_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_reads_user ON notification_reads(user_id, read_at DESC);
+
+-- WEBHOOK LOGS TABLE (Decoupled execution and retry state machine)
 CREATE TABLE IF NOT EXISTS webhook_logs (
     id BIGSERIAL PRIMARY KEY,
     factory_id INT NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
     event TEXT NOT NULL,
     payload JSONB NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
+    status TEXT NOT NULL DEFAULT 'pending', -- ('pending', 'retrying', 'delivered', 'failed')
     response_status INT DEFAULT NULL,
-    attempts INT NOT NULL DEFAULT 0,
+    attempt_count INT NOT NULL DEFAULT 0,
+    next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_error TEXT DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delivered_at TIMESTAMPTZ DEFAULT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_retry ON webhook_logs(status, next_attempt_at ASC)
+WHERE status IN ('pending', 'retrying');
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_factory ON webhook_logs(factory_id, created_at DESC);
 
+-- ROW LEVEL SECURITY FOR NOTIFICATIONS & WEBHOOKS
 ALTER TABLE IF EXISTS notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS notification_reads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS webhook_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow access notifications" ON notifications FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "factory_tenant_isolation" ON notifications;
+CREATE POLICY "factory_tenant_isolation" ON notifications
+FOR SELECT USING (
+  -- Strict zero-trust fail-closed isolation checking scalar app_metadata claim
+  CASE 
+    WHEN (auth.jwt() -> 'app_metadata' ->> 'factory_id') IS NOT NULL 
+    THEN factory_id = ((auth.jwt() -> 'app_metadata' ->> 'factory_id')::int)
+    ELSE false
+  END
+);
+
+DROP POLICY IF EXISTS "Allow access notification_reads" ON notification_reads;
+CREATE POLICY "Allow access notification_reads" ON notification_reads FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow access webhook_logs" ON webhook_logs;
 CREATE POLICY "Allow access webhook_logs" ON webhook_logs FOR ALL USING (true);
 
--- 9. ENABLE SUPABASE REALTIME REPLICATION FOR ENTRIES & NOTIFICATIONS
-ALTER PUBLICATION supabase_realtime ADD TABLE public.entries;
-ALTER TABLE public.entries REPLICA IDENTITY FULL;
-
+-- ENABLE SUPABASE REALTIME REPLICATION FOR NOTIFICATIONS
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ALTER TABLE public.notifications REPLICA IDENTITY FULL;
 
