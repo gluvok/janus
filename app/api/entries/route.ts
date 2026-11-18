@@ -130,7 +130,7 @@ export const GET = withAuth(async (req, user, client) => {
   });
 });
 
-export async function POST(req: NextRequest, ...rest: unknown[]) {
+export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("multipart/form-data")) {
@@ -146,16 +146,7 @@ export async function POST(req: NextRequest, ...rest: unknown[]) {
     let creatorId: number;
     let factoryId: number;
 
-    // Direct invocation support in unit test environments
-    if (rest.length >= 1 && typeof rest[0] === "object" && rest[0] !== null && "role" in rest[0]) {
-      const user = rest[0] as AuthUserPayload;
-      if (!hasPermission(user, ProjectSlug.ENTRIES, PermissionKey.CREATE)) {
-        return forbiddenError();
-      }
-      isHardware = user.role === Role.HARDWARE;
-      creatorId = parseInt(user.sub, 10);
-      factoryId = user.factory_id!;
-    } else if (hasDeviceCredentials(req, formData)) {
+    if (hasDeviceCredentials(req, formData)) {
       const authResult = await verifyDeviceRequest(req, supabase, formData);
       if (!authResult.success || !authResult.device) {
         return apiError(
