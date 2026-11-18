@@ -86,4 +86,13 @@ describe("Notification Store", () => {
     expect(useNotificationStore.getState().notifications.length).toBe(0);
     expect(useNotificationStore.getState().unreadCount).toBe(0);
   });
+
+  it("loads default customer mock notifications", () => {
+    useNotificationStore.getState().loadCustomerMockData();
+    const state = useNotificationStore.getState();
+    expect(state.notifications.length).toBe(3);
+    expect(state.unreadCount).toBe(2);
+    expect(state.notifications[0].vehicleNumber).toBe("KA01EA1024");
+    expect(state.notifications[1].vehicleNumber).toBe("MH04AB1212");
+  });
 });
