@@ -70,6 +70,9 @@ FOR SELECT USING (
   END
 );
 
+DROP POLICY IF EXISTS "Allow access notifications" ON notifications;
+CREATE POLICY "Allow access notifications" ON notifications FOR ALL USING (true);
+
 DROP POLICY IF EXISTS "Allow access notification_reads" ON notification_reads;
 CREATE POLICY "Allow access notification_reads" ON notification_reads FOR ALL USING (true);
 
