@@ -68,7 +68,7 @@ describe("NotificationBox Component", () => {
     expect(screen.getByText("No entries received yet")).toBeDefined();
   });
 
-  it("marks all notifications as read when Mark all read is clicked", () => {
+  it("marks all notifications as read when Mark read is clicked", () => {
     useNotificationStore.getState().addNotification({
       id: "entry-1",
       entryId: 1,
@@ -83,9 +83,32 @@ describe("NotificationBox Component", () => {
     const button = screen.getByRole("button", { name: /notifications/i });
     fireEvent.click(button);
 
-    const markAllBtn = screen.getByRole("button", { name: /mark all read/i });
+    const markAllBtn = screen.getByRole("button", { name: /mark read/i });
     fireEvent.click(markAllBtn);
 
     expect(useNotificationStore.getState().unreadCount).toBe(0);
+  });
+
+  it("clears all notifications when Clear all is clicked", () => {
+    useNotificationStore.getState().addNotification({
+      id: "entry-1",
+      entryId: 1,
+      title: "New Vehicle Entry",
+      vehicleNumber: "KA01CD5678",
+      weight: 15000,
+      centerName: "Center #1",
+      createdAt: new Date().toISOString(),
+    });
+
+    render(<NotificationBox />);
+    const button = screen.getByRole("button", { name: /notifications/i });
+    fireEvent.click(button);
+
+    const clearAllBtn = screen.getByRole("button", { name: /clear all/i });
+    fireEvent.click(clearAllBtn);
+
+    expect(useNotificationStore.getState().notifications.length).toBe(0);
+    expect(useNotificationStore.getState().unreadCount).toBe(0);
+    expect(screen.getByText("No entries received yet")).toBeDefined();
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, CheckCheck, Truck, Scale } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Truck, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,7 +14,7 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
 export function NotificationBox() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
 
   return (
     <Popover>
@@ -37,16 +37,29 @@ export function NotificationBox() {
             <h4 className="text-sm font-semibold">Notifications</h4>
             {unreadCount > 0 && <Badge variant="secondary">{unreadCount} new</Badge>}
           </div>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={markAllAsRead}
-              className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <CheckCheck className="mr-1 h-3.5 w-3.5" /> Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAllAsRead}
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <CheckCheck className="mr-1 h-3.5 w-3.5" /> Mark read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAll}
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-destructive"
+                aria-label="Clear all notifications"
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" /> Clear all
+              </Button>
+            )}
+          </div>
         </div>
         <div className="max-h-80 overflow-y-auto divide-y">
           {notifications.length === 0 ? (
