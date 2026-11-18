@@ -190,10 +190,10 @@ export async function createEntry(client: typeof supabase, params: CreateEntryPa
       customer_id: newEntry.customer_id || null,
       entry_id: newEntry.id,
       title: "New Vehicle Entry",
-      message: `Vehicle ${plate} weighed at ${centerRecord.name || "Main Weighbridge"} (${Number(newEntry.weight || 0).toLocaleString()} kg)`,
+      message: `Vehicle ${plate} weighed at ${centerRecord?.name || "Main Weighbridge"} (${Number(newEntry.weight || 0).toLocaleString()} kg)`,
       vehicle_number: plate,
       weight: Number(newEntry.weight || 0),
-      center_name: centerRecord.name || null,
+      center_name: centerRecord?.name || null,
     });
   } catch (notifErr) {
     console.error("[Notifications] Async insert error:", notifErr);

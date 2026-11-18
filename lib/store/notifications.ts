@@ -48,7 +48,7 @@ export const DEFAULT_CUSTOMER_NOTIFICATIONS: EntryNotification[] = [
 interface NotificationState {
   notifications: EntryNotification[];
   unreadCount: number;
-  setNotifications: (items: EntryNotification[]) => void;
+  setNotifications: (items: EntryNotification[], totalUnread?: number) => void;
   addNotification: (item: Omit<EntryNotification, "read">) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -69,19 +69,19 @@ export const useNotificationStore = create<NotificationState>()(
     (set) => ({
       notifications: DEFAULT_CUSTOMER_NOTIFICATIONS,
       unreadCount: DEFAULT_CUSTOMER_NOTIFICATIONS.filter((n) => !n.read).length,
-      setNotifications: (items) => {
-        const sorted = sortNotifications(items).slice(0, 50);
+      setNotifications: (items, totalUnread) => {
+        const sorted = sortNotifications(items).slice(0, 100);
         set({
           notifications: sorted,
-          unreadCount: sorted.filter((n) => !n.read).length,
+          unreadCount: totalUnread !== undefined ? totalUnread : sorted.filter((n) => !n.read).length,
         });
       },
       addNotification: (item) =>
         set((state) => {
           if (state.notifications.some((n) => n.id === item.id)) return state;
           const merged = [{ ...item, read: false }, ...state.notifications];
-          const sorted = sortNotifications(merged).slice(0, 50);
-          return { notifications: sorted, unreadCount: sorted.filter((n) => !n.read).length };
+          const sorted = sortNotifications(merged).slice(0, 100);
+          return { notifications: sorted, unreadCount: state.unreadCount + 1 };
         }),
       markAsRead: (id) =>
         set((state) => {
