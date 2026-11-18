@@ -48,6 +48,7 @@ export const DEFAULT_CUSTOMER_NOTIFICATIONS: EntryNotification[] = [
 interface NotificationState {
   notifications: EntryNotification[];
   unreadCount: number;
+  setNotifications: (items: EntryNotification[]) => void;
   addNotification: (item: Omit<EntryNotification, "read">) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -55,16 +56,32 @@ interface NotificationState {
   loadCustomerMockData: () => void;
 }
 
+export function sortNotifications(items: EntryNotification[]): EntryNotification[] {
+  return [...items].sort((a, b) => {
+    const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return b.id.localeCompare(a.id);
+  });
+}
+
 export const useNotificationStore = create<NotificationState>()(
   persist(
     (set) => ({
       notifications: DEFAULT_CUSTOMER_NOTIFICATIONS,
       unreadCount: DEFAULT_CUSTOMER_NOTIFICATIONS.filter((n) => !n.read).length,
+      setNotifications: (items) => {
+        const sorted = sortNotifications(items).slice(0, 50);
+        set({
+          notifications: sorted,
+          unreadCount: sorted.filter((n) => !n.read).length,
+        });
+      },
       addNotification: (item) =>
         set((state) => {
           if (state.notifications.some((n) => n.id === item.id)) return state;
-          const updated = [{ ...item, read: false }, ...state.notifications].slice(0, 50);
-          return { notifications: updated, unreadCount: state.unreadCount + 1 };
+          const merged = [{ ...item, read: false }, ...state.notifications];
+          const sorted = sortNotifications(merged).slice(0, 50);
+          return { notifications: sorted, unreadCount: sorted.filter((n) => !n.read).length };
         }),
       markAsRead: (id) =>
         set((state) => {

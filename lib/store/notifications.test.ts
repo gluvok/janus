@@ -87,6 +87,37 @@ describe("Notification Store", () => {
     expect(useNotificationStore.getState().unreadCount).toBe(0);
   });
 
+  it("hydrates and sorts notifications using setNotifications", () => {
+    const items = [
+      {
+        id: "entry-1",
+        entryId: 1,
+        title: "Older Entry",
+        vehicleNumber: "KA01AB1111",
+        weight: 15000,
+        centerName: "Center 1",
+        createdAt: "2026-11-18T08:00:00Z",
+        read: true,
+      },
+      {
+        id: "entry-2",
+        entryId: 2,
+        title: "Newer Entry",
+        vehicleNumber: "KA01AB2222",
+        weight: 25000,
+        centerName: "Center 1",
+        createdAt: "2026-11-18T09:00:00Z",
+        read: false,
+      },
+    ];
+
+    useNotificationStore.getState().setNotifications(items);
+    const state = useNotificationStore.getState();
+    expect(state.notifications).toHaveLength(2);
+    expect(state.notifications[0].id).toBe("entry-2"); // newer first
+    expect(state.unreadCount).toBe(1);
+  });
+
   it("loads default customer mock notifications", () => {
     useNotificationStore.getState().loadCustomerMockData();
     const state = useNotificationStore.getState();
