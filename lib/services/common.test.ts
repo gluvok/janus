@@ -6,6 +6,7 @@ import {
   insertRow,
   updateRow,
   apiRequest,
+  sanitizeSearchTerm,
 } from "./common";
 import { ProjectSlug, Unit } from "@/lib/constants/enums";
 import { useAuthStore } from "@/lib/store/auth";
@@ -141,5 +142,22 @@ describe("apiRequest", () => {
     ).rejects.toThrow("Unauthorized");
 
     expect(clearSessionSpy).toHaveBeenCalled();
+  });
+});
+
+describe("sanitizeSearchTerm", () => {
+  it("strips PostgREST AST injection characters and operators", () => {
+    const raw = "KA01AB1234),id.gt.0,name.eq.foo";
+    const cleaned = sanitizeSearchTerm(raw);
+    expect(cleaned).toBe("KA01AB1234idgt0nameeqfoo");
+    expect(cleaned).not.toContain(",");
+    expect(cleaned).not.toContain(")");
+    expect(cleaned).not.toContain("(");
+    expect(cleaned).not.toContain(".");
+  });
+
+  it("handles empty or whitespace inputs gracefully", () => {
+    expect(sanitizeSearchTerm("")).toBe("");
+    expect(sanitizeSearchTerm("   ")).toBe("");
   });
 });

@@ -11,6 +11,7 @@ import {
   parseBulkIds,
 } from "@/db/helpers";
 import { Role, ProjectSlug, PermissionKey } from "@/lib/constants/enums";
+import { sanitizeSearchTerm } from "@/lib/services/common";
 import { ApiErrorMessage } from "@/lib/constants/messages";
 import { addUserSchema } from "@/lib/validation";
 import { hashPassword } from "@/lib/auth/password";
@@ -43,11 +44,16 @@ export const GET = withAuth(async (req, user, client) => {
   }
 
   if (search) {
-    const searchNum = parseInt(search, 10);
-    if (!isNaN(searchNum)) {
-      query = query.or(`name.ilike.%${search}%,username.ilike.%${search}%,id.eq.${searchNum}`);
-    } else {
-      query = query.or(`name.ilike.%${search}%,username.ilike.%${search}%`);
+    const cleanSearch = sanitizeSearchTerm(search);
+    if (cleanSearch) {
+      const searchNum = parseInt(cleanSearch, 10);
+      if (!isNaN(searchNum)) {
+        query = query.or(
+          `name.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,id.eq.${searchNum}`,
+        );
+      } else {
+        query = query.or(`name.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%`);
+      }
     }
   }
 

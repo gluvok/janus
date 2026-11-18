@@ -15,6 +15,7 @@ import {
 } from "@/db/helpers";
 import { PermissionKey, ProjectSlug, TicketStatus } from "@/lib/constants/enums";
 import { createTicketSchema } from "@/lib/validation/tickets";
+import { sanitizeSearchTerm } from "@/lib/services/common";
 
 export const GET = withAuth(async (req, user, client) => {
   if (!hasPermission(user, ProjectSlug.TICKETS, PermissionKey.READ)) {
@@ -70,13 +71,16 @@ export const GET = withAuth(async (req, user, client) => {
   }
 
   if (search) {
-    const searchNum = parseInt(search, 10);
-    if (!isNaN(searchNum)) {
-      query = query.or(
-        `concern.ilike.%${search}%,reply.ilike.%${search}%,id.eq.${searchNum},entry_id.eq.${searchNum},weighment_id.eq.${searchNum}`,
-      );
-    } else {
-      query = query.or(`concern.ilike.%${search}%,reply.ilike.%${search}%`);
+    const cleanSearch = sanitizeSearchTerm(search);
+    if (cleanSearch) {
+      const searchNum = parseInt(cleanSearch, 10);
+      if (!isNaN(searchNum)) {
+        query = query.or(
+          `concern.ilike.%${cleanSearch}%,reply.ilike.%${cleanSearch}%,id.eq.${searchNum},entry_id.eq.${searchNum},weighment_id.eq.${searchNum}`,
+        );
+      } else {
+        query = query.or(`concern.ilike.%${cleanSearch}%,reply.ilike.%${cleanSearch}%`);
+      }
     }
   }
 

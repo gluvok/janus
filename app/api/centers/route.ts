@@ -6,6 +6,7 @@ import {
   fetchPaginatedResult,
 } from "@/db/helpers";
 import { ProjectSlug, PermissionKey } from "@/lib/constants/enums";
+import { sanitizeSearchTerm } from "@/lib/services/common";
 
 export const GET = withAuth(async (req, user, client) => {
   if (!hasPermission(user, ProjectSlug.CENTERS, PermissionKey.READ)) return forbiddenError();
@@ -29,11 +30,14 @@ export const GET = withAuth(async (req, user, client) => {
   }
 
   if (search) {
-    const searchNum = parseInt(search, 10);
-    if (!isNaN(searchNum)) {
-      query = query.or(`name.ilike.%${search}%,id.eq.${searchNum}`);
-    } else {
-      query = query.ilike("name", `%${search}%`);
+    const cleanSearch = sanitizeSearchTerm(search);
+    if (cleanSearch) {
+      const searchNum = parseInt(cleanSearch, 10);
+      if (!isNaN(searchNum)) {
+        query = query.or(`name.ilike.%${cleanSearch}%,id.eq.${searchNum}`);
+      } else {
+        query = query.ilike("name", `%${cleanSearch}%`);
+      }
     }
   }
 
