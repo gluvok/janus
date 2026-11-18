@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
-import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
+import {
+  handleApiRoute,
+  ServiceError,
+  validationErrorResponse,
+  type ApiContext,
+} from "@/lib/api-handler";
 import {
   ticketStatusEnum,
   updateTicketSchema,
@@ -22,6 +27,25 @@ const ALLOWED_SORT_COLUMNS = [
   "created_at",
   "updated_at",
 ] as const;
+
+async function findTicketForFactory(id: number, factoryId: number) {
+  const { data: ticket, error: findError } = await supabase
+    .from("tickets")
+    .select("id, status, user:users!user_id!inner(factory_id)")
+    .eq("id", id)
+    .eq("user.factory_id", factoryId)
+    .maybeSingle();
+
+  if (findError) {
+    throw new ServiceError(findError.message, StatusCodes.INTERNAL_SERVER_ERROR);
+  }
+
+  if (!ticket) {
+    throw new ServiceError("Ticket not found or has been deleted.", StatusCodes.NOT_FOUND);
+  }
+
+  return ticket;
+}
 
 export const GET = handleApiRoute(async (request: Request) => {
   return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Ticket>({
@@ -48,34 +72,11 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
   const validation = updateTicketSchema.safeParse(await request.json());
 
   if (!validation.success) {
-    return NextResponse.json(
-      { error: validation.error.issues[0].message },
-      { status: StatusCodes.BAD_REQUEST },
-    );
+    return validationErrorResponse(validation.error);
   }
 
   const { id, reply, status } = validation.data;
-
-  const { data: existing, error: findError } = await supabase
-    .from("tickets")
-    .select("id, status, user:users!user_id!inner(factory_id)")
-    .eq("id", id)
-    .eq("user.factory_id", context.factory.id)
-    .maybeSingle();
-
-  if (findError) {
-    return NextResponse.json(
-      { error: findError.message },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR },
-    );
-  }
-
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Ticket not found or has been deleted." },
-      { status: StatusCodes.NOT_FOUND },
-    );
-  }
+  await findTicketForFactory(id, context.factory.id);
 
   const updates: { reply?: string | null; status?: TicketStatus } = {};
   if (reply !== undefined) {
@@ -93,10 +94,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     .single();
 
   if (updateError) {
-    return NextResponse.json(
-      { error: updateError.message },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR },
-    );
+    throw new ServiceError(updateError.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   return NextResponse.json({
@@ -109,55 +107,26 @@ export const DELETE = handleApiRoute(async (request: Request, context: ApiContex
   const validation = deleteTicketSchema.safeParse(await request.json());
 
   if (!validation.success) {
-    return NextResponse.json(
-      { error: validation.error.issues[0].message },
-      { status: StatusCodes.BAD_REQUEST },
-    );
+    return validationErrorResponse(validation.error);
   }
 
   const { id } = validation.data;
-
-  const { data: ticket, error: findError } = await supabase
-    .from("tickets")
-    .select("id, status, user:users!user_id!inner(factory_id)")
-    .eq("id", id)
-    .eq("user.factory_id", context.factory.id)
-    .maybeSingle();
-
-  if (findError) {
-    return NextResponse.json(
-      { error: findError.message },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR },
-    );
-  }
-
-  if (!ticket) {
-    return NextResponse.json(
-      { error: "Ticket not found or has been deleted." },
-      { status: StatusCodes.NOT_FOUND },
-    );
-  }
+  const ticket = await findTicketForFactory(id, context.factory.id);
 
   if (ticket.status !== "pending") {
-    return NextResponse.json(
-      { error: "Only pending tickets can be deleted." },
-      { status: StatusCodes.BAD_REQUEST },
-    );
+    throw new ServiceError("Only pending tickets can be deleted.", StatusCodes.BAD_REQUEST);
   }
 
   const { error: deleteError } = await supabase.from("tickets").delete().eq("id", id);
 
   if (deleteError) {
     if (deleteError.code === "23503") {
-      return NextResponse.json(
-        { error: "Cannot delete ticket due to dependent records." },
-        { status: StatusCodes.CONFLICT },
+      throw new ServiceError(
+        "Cannot delete ticket due to dependent records.",
+        StatusCodes.CONFLICT,
       );
     }
-    return NextResponse.json(
-      { error: deleteError.message },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR },
-    );
+    throw new ServiceError(deleteError.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   return NextResponse.json({

@@ -1,19 +1,18 @@
 "use client";
 
+import * as React from "react";
 import type { ReactTable, RowData, SortingState, Updater } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  DataTableSearchInput,
-  DataTableFacetedFilter,
-  DataTableRefreshButton,
-  type FacetedFilterOption,
-  DataTableViewOptions,
-  DatePickerWithRange,
-  type DataTableFeatures,
-  DataTableCriteriaBar,
-  DataTableClearButton,
-} from "@/components/data-table";
+import { type DataTableFeatures } from "./data-table-features";
+import { DataTableSearchInput } from "./data-table-search-input";
+import { DataTableRefreshButton } from "./data-table-refresh-button";
+import { DataTableViewOptions } from "./data-table-view-options";
+import { DataTableFacetedFilter, type FacetedFilterOption } from "./data-table-faceted-filter";
+import { DataTableClearButton } from "./data-table-clear-button";
+import { DataTableCriteriaBar } from "./data-table-criteria-bar";
+import { DatePickerWithRange } from "./date-range-picker";
+import type { UseDataTableReturn } from "./use-data-table";
 
 export interface DataTableFilterConfig {
   key: string;
@@ -24,50 +23,55 @@ export interface DataTableFilterConfig {
 }
 
 export interface DataTableToolbarProps<TData extends RowData> {
-  table: ReactTable<DataTableFeatures, TData>;
-  search: string;
-  onSearchChange: (value: string) => void;
+  instance?: UseDataTableReturn<TData>;
+  table?: ReactTable<DataTableFeatures, TData>;
+  search?: string;
+  onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
   actions?: React.ReactNode;
-  onRefresh: () => void;
+  onRefresh?: () => void;
   loading?: boolean;
-  dateRange: DateRange | undefined;
-  onDateRangeChange: (range: DateRange | undefined) => void;
+  dateRange?: DateRange | undefined;
+  onDateRangeChange?: (range: DateRange | undefined) => void;
   filterConfigs?: DataTableFilterConfig[];
   filters?: Record<string, string>;
   onFilterChange?: (key: string, value: string) => void;
   hasActiveFilters?: boolean;
   onResetFilters?: () => void;
-  hasActiveSorts: boolean;
-  sorting: SortingState;
-  onSortingChange: (updater: Updater<SortingState>) => void;
-  onRemoveSort: (columnId: string) => void;
+  hasActiveSorts?: boolean;
+  sorting?: SortingState;
+  onSortingChange?: (updater: Updater<SortingState>) => void;
+  onRemoveSort?: (columnId: string) => void;
   onResetSorts?: () => void;
   onResetAll?: () => void;
 }
 
 export function DataTableToolbar<TData extends RowData>({
-  table,
-  search,
-  onSearchChange,
+  instance,
+  table: customTable,
+  search = instance?.search ?? "",
+  onSearchChange = instance?.setSearch ?? (() => {}),
   searchPlaceholder = "Search records...",
   actions,
-  onRefresh,
-  loading,
-  dateRange,
-  onDateRangeChange,
+  onRefresh = instance?.refresh ?? (() => {}),
+  loading = instance?.loading ?? false,
+  dateRange = instance?.dateRange,
+  onDateRangeChange = instance?.setDateRange ?? (() => {}),
   filterConfigs = [],
-  filters = {},
-  onFilterChange = () => {},
-  hasActiveFilters,
-  onResetFilters,
-  hasActiveSorts,
-  sorting,
-  onSortingChange,
-  onRemoveSort,
-  onResetSorts,
-  onResetAll,
+  filters = instance?.tableState.filters ?? {},
+  onFilterChange = instance?.setFilter ?? (() => {}),
+  hasActiveFilters = instance?.hasActiveFilters,
+  onResetFilters = instance?.resetAllFilters,
+  hasActiveSorts = instance?.hasActiveSorts ?? false,
+  sorting = instance?.sorting ?? [],
+  onSortingChange = instance?.setSorting ?? (() => {}),
+  onRemoveSort = instance?.removeSort ?? (() => {}),
+  onResetSorts = instance?.resetSorting,
+  onResetAll = instance?.resetAllCriteria,
 }: DataTableToolbarProps<TData>) {
+  const table = customTable ?? instance?.table;
+  if (!table) return null;
+
   return (
     <div className="flex flex-col gap-2 shrink-0">
       {/* Controls Container: Mobile Multi-Row / Desktop Split Row */}

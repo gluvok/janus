@@ -54,4 +54,4 @@ export {
 
 export { DataTableErrorState, type DataTableErrorStateProps } from "./data-table-error-state";
 
-export { useDataTable } from "./use-data-table";
+export { useDataTable, type UseDataTableReturn } from "./use-data-table";

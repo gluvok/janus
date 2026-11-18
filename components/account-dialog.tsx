@@ -12,28 +12,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   DialogActionFooter,
   DialogIconBadge,
   FormErrorBanner,
   FormRequiredNotice,
 } from "@/components/form-primitives";
+import { FullNameField, CredentialsFields } from "@/app/users/dialog-primitives";
 import { RoleBadge } from "@/components/role-badge";
 import { toast } from "@/components/ui/toast";
 import { cn, formatDateTime, getErrorMessage } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Calendar01Icon,
-  Clock01Icon,
-  Key01Icon,
-  TextFontIcon,
-  UserCircleIcon,
-  UserIcon,
-} from "@hugeicons/core-free-icons";
+import { Calendar01Icon, Clock01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { nameSchema, usernameSchema, passwordSchema, type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 import { useUserStore } from "@/stores/use-user-store";
@@ -100,44 +91,49 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
           useFactoryStore.getState().setFactory(freshFactory);
         })
         .catch((err: unknown) => {
-          const msg = getErrorMessage(err, "Failed to load account details.");
-          setFormError(msg);
-          toast.add({
-            type: "error",
-            title: "Session Error",
-            description: msg,
-          });
+          setFormError(getErrorMessage(err, "Failed to load latest profile."));
         })
         .finally(() => {
           setIsFetchingProfile(false);
         });
     }
-  }, [open, reset, onUserUpdated]);
+  }, [open, onUserUpdated, reset]);
 
   const onSubmit = async (values: AccountFormInput) => {
+    setFormError(null);
+
+    const payload: { name: string; username: string; password?: string } = {
+      name: values.name.trim(),
+      username: values.username.trim().toLowerCase(),
+    };
+
+    if (values.password && values.password.trim().length > 0) {
+      payload.password = values.password.trim();
+    }
+
     try {
-      setFormError(null);
-      const payload = {
-        name: values.name.trim(),
-        username: values.username.trim().toLowerCase(),
-        ...(values.password && values.password.trim() ? { password: values.password.trim() } : {}),
-      };
-
-      const response = await axios.patch<{ data: User; message: string }>("/api/users/me", payload);
-      const updatedUser = response.data.data;
-
-      toast.add({
-        type: "success",
-        title: "Account Updated",
-        description: response.data.message || "Your profile has been saved successfully.",
-      });
+      const res = await axios.patch<{ data: User }>("/api/users/me", payload);
+      const updatedUser = res.data.data;
 
       setCurrentUser(updatedUser);
       onUserUpdated(updatedUser);
       useUserStore.getState().setUser(updatedUser);
+
+      toast.add({
+        type: "success",
+        title: "Profile updated",
+        description: "Your profile details have been saved successfully.",
+      });
+
       onOpenChange(false);
     } catch (err: unknown) {
-      setFormError(getErrorMessage(err, "Failed to update account profile."));
+      const msg = getErrorMessage(err, "Failed to update profile.");
+      setFormError(msg);
+      toast.add({
+        type: "error",
+        title: "Update failed",
+        description: msg,
+      });
     }
   };
 
@@ -190,76 +186,30 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
               <FormRequiredNotice />
               <FormErrorBanner error={formError} />
 
-              <Field data-invalid={Boolean(errors.name)}>
-                <FieldLabel htmlFor="account-name">
-                  <HugeiconsIcon icon={UserIcon} className="size-3.5 text-muted-foreground" />
-                  <span>Full Name</span>
-                  <span className="text-destructive font-semibold" aria-hidden="true">
-                    *
-                  </span>
-                </FieldLabel>
-                <Input
-                  id="account-name"
-                  value={name}
-                  onChange={(e) =>
-                    setValue("name", e.target.value, { shouldValidate: true, shouldDirty: true })
-                  }
-                  placeholder="e.g. Alex Morgan"
-                  aria-invalid={Boolean(errors.name)}
-                  className="h-8 text-xs"
-                />
-                {errors.name && <FieldError errors={[{ message: errors.name.message }]} />}
-                <FieldDescription>Your display name.</FieldDescription>
-              </Field>
+              <FullNameField
+                value={name}
+                onChange={(val) =>
+                  setValue("name", val, { shouldValidate: true, shouldDirty: true })
+                }
+                error={errors.name?.message}
+                description="Your display name."
+              />
 
-              <Field data-invalid={Boolean(errors.username)}>
-                <FieldLabel htmlFor="account-username">
-                  <HugeiconsIcon icon={TextFontIcon} className="size-3.5 text-muted-foreground" />
-                  <span>Username</span>
-                  <span className="text-destructive font-semibold" aria-hidden="true">
-                    *
-                  </span>
-                </FieldLabel>
-                <Input
-                  id="account-username"
-                  value={username}
-                  onChange={(e) =>
-                    setValue("username", e.target.value.toLowerCase(), {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    })
-                  }
-                  placeholder="e.g. admin1"
-                  aria-invalid={Boolean(errors.username)}
-                  className="h-8 text-xs font-mono"
-                  autoComplete="off"
-                />
-                {errors.username && <FieldError errors={[{ message: errors.username.message }]} />}
-                <FieldDescription>Lowercase handle.</FieldDescription>
-              </Field>
-
-              <Field data-invalid={Boolean(errors.password)}>
-                <FieldLabel htmlFor="account-password">
-                  <HugeiconsIcon icon={Key01Icon} className="size-3.5 text-muted-foreground" />
-                  <span>New Password (Optional)</span>
-                </FieldLabel>
-                <PasswordInput
-                  id="account-password"
-                  value={password || ""}
-                  onChange={(e) =>
-                    setValue("password", e.target.value, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    })
-                  }
-                  placeholder="Leave blank to keep current password"
-                  aria-invalid={Boolean(errors.password)}
-                  className="h-8 text-xs"
-                  autoComplete="new-password"
-                />
-                {errors.password && <FieldError errors={[{ message: errors.password.message }]} />}
-                <FieldDescription>Leave empty to keep your existing password.</FieldDescription>
-              </Field>
+              <CredentialsFields
+                username={username}
+                setUsername={(val) =>
+                  setValue("username", val, { shouldValidate: true, shouldDirty: true })
+                }
+                usernameError={errors.username?.message}
+                password={password || ""}
+                setPassword={(val) =>
+                  setValue("password", val, { shouldValidate: true, shouldDirty: true })
+                }
+                passwordError={errors.password?.message}
+                isPasswordRequired={false}
+                usernamePlaceholder="e.g. admin1"
+                usernameDescription="Lowercase handle."
+              />
 
               <DialogActionFooter
                 isDirty={isDirty}

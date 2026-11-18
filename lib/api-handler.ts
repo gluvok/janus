@@ -1,13 +1,31 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
+import { type z } from "zod";
 import { AuthError, getAuthSession } from "@/lib/auth";
-import { ServiceError } from "@/app/api/users/service";
 import type { User } from "@/app/users/types";
 import type { Factory } from "@/app/settings/types";
 
 export interface ApiContext {
   user: User;
   factory: Factory;
+}
+
+export class ServiceError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number = StatusCodes.BAD_REQUEST,
+    public details?: unknown,
+  ) {
+    super(message);
+    this.name = "ServiceError";
+  }
+}
+
+export function validationErrorResponse(error: z.ZodError): NextResponse {
+  return NextResponse.json(
+    { error: error.issues[0]?.message ?? "Validation failed" },
+    { status: StatusCodes.BAD_REQUEST },
+  );
 }
 
 /**

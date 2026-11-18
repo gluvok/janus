@@ -119,6 +119,7 @@ export const useDataTableStore = create<DataTableStoreState>()(
         set((state) =>
           updateTableState(state, tableId, (prev) => ({
             sorting: resolveUpdater(updaterOrValue, prev.sorting),
+            pagination: { ...prev.pagination, pageIndex: 0 },
           })),
         ),
 
@@ -126,11 +127,17 @@ export const useDataTableStore = create<DataTableStoreState>()(
         set((state) =>
           updateTableState(state, tableId, (prev) => ({
             sorting: prev.sorting.filter((s) => s.id !== columnId),
+            pagination: { ...prev.pagination, pageIndex: 0 },
           })),
         ),
 
       resetTableSorting: (tableId) =>
-        set((state) => updateTableState(state, tableId, () => ({ sorting: [] }))),
+        set((state) =>
+          updateTableState(state, tableId, (prev) => ({
+            sorting: [],
+            pagination: { ...prev.pagination, pageIndex: 0 },
+          })),
+        ),
 
       setTablePagination: (tableId, updaterOrValue) =>
         set((state) =>

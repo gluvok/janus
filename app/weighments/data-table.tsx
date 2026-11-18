@@ -252,26 +252,7 @@ export function WeighmentsDataTable() {
   const columns = useMemo(() => getWeighmentColumns(mode), [mode]);
   const extraParams = useMemo(() => ({ mode }), [mode]);
 
-  const {
-    table,
-    loading,
-    error,
-    search,
-    setSearch,
-    dateRange,
-    setDateRange,
-    sorting,
-    setSorting,
-    removeSort,
-    hasActiveSorts,
-    hasActiveFilters,
-    resetAllCriteria,
-    resetAllFilters,
-    resetSorting,
-    setFilter,
-    refresh,
-    tableState,
-  } = useDataTable<Weighment>({
+  const dataTable = useDataTable<Weighment>({
     tableId: "weighments",
     columns,
     extraParams,
@@ -317,41 +298,28 @@ export function WeighmentsDataTable() {
     );
   }
 
+  const effectiveLoading = dataTable.loading || isInitialLoading;
+
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       {/* Primary Toolbar - 2-Tier Layout with Integrated Multi-Sort */}
       <DataTableToolbar
-        table={table}
-        search={search}
-        onSearchChange={setSearch}
+        instance={dataTable}
         searchPlaceholder="Search weighments..."
-        onRefresh={refresh}
-        loading={loading || isInitialLoading}
-        dateRange={dateRange}
-        onDateRangeChange={(range) => setDateRange(range)}
+        loading={effectiveLoading}
         filterConfigs={filterConfigs}
-        filters={tableState.filters}
-        onFilterChange={(key, val) => setFilter(key, val)}
-        hasActiveFilters={hasActiveFilters}
-        onResetFilters={resetAllFilters}
-        hasActiveSorts={hasActiveSorts}
-        sorting={sorting}
-        onSortingChange={(updater) => setSorting(updater)}
-        onRemoveSort={(columnId) => removeSort(columnId)}
-        onResetSorts={resetSorting}
-        onResetAll={resetAllCriteria}
       />
 
       {/* Reusable Data Table Content */}
       <DataTableContent
-        table={table}
-        loading={loading || isInitialLoading}
-        error={error}
-        onRetry={refresh}
+        table={dataTable.table}
+        loading={effectiveLoading}
+        error={dataTable.error}
+        onRetry={dataTable.refresh}
       />
 
       {/* Permanently Anchored Bottom Pagination Bar */}
-      <DataTablePagination table={table} loading={loading || isInitialLoading} />
+      <DataTablePagination table={dataTable.table} loading={effectiveLoading} />
 
       {/* Consolidated Photo Carousel Modal */}
       <PhotosDialog

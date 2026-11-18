@@ -287,3 +287,5 @@ export function useDataTable<TData extends RowData>({
     tableState,
   };
 }
+
+export type UseDataTableReturn<TData extends RowData> = ReturnType<typeof useDataTable<TData>>;

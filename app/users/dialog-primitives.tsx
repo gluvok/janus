@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Switch } from "@/components/ui/switch";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   Combobox,
@@ -239,29 +238,6 @@ export function CredentialsFields({
           {isPasswordRequired ? "Minimum 6 characters." : "Leave blank to keep current password."}
         </FieldDescription>
       </Field>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Customer Portal Access Toggle Switch                                       */
-/* -------------------------------------------------------------------------- */
-
-interface CustomerPortalSwitchProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}
-
-export function CustomerPortalSwitch({ checked, onCheckedChange }: CustomerPortalSwitchProps) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border p-3">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-xs font-medium">Enable Customer Portal Access</span>
-        <span className="text-2xs text-muted-foreground">
-          Allow customer to view weighing tickets online.
-        </span>
-      </div>
-      <Switch id="portal-access-switch" checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   );
 }

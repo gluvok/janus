@@ -3,12 +3,15 @@ import argon2 from "argon2";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { updateUserSessionCache, invalidateAllUserSessionCache } from "@/lib/auth";
+import { ServiceError } from "@/lib/api-handler";
 import {
   userRoleEnum,
   type UserRole,
   type CreateUserInput,
   type UpdateUserInput,
 } from "@/app/users/types";
+
+export { ServiceError };
 
 export const rolesFilterSchema = z
   .string()
@@ -39,17 +42,6 @@ export const ALLOWED_SORT_COLUMNS = [
 
 export const USER_SELECT_PROJECTION =
   "id, username, name, role, factory_id, created_at, updated_at" as const;
-
-export class ServiceError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number,
-    public details?: unknown,
-  ) {
-    super(message);
-    this.name = "ServiceError";
-  }
-}
 
 /**
  * Creates a new staff user account with mandatory credentials and dynamic factory_id.

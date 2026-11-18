@@ -50,34 +50,12 @@ export function TicketsDataTable() {
     [handleEditTicket, handleDeleteTicket],
   );
 
-  const {
-    table,
-    loading,
-    error,
-    search,
-    setSearch,
-    dateRange,
-    setDateRange,
-    sorting,
-    setSorting,
-    removeSort,
-    setPagination,
-    hasActiveSorts,
-    hasActiveFilters,
-    resetAllCriteria,
-    resetAllFilters,
-    resetSorting,
-    setFilter,
-    refresh,
-    tableState,
-  } = useDataTable<Ticket>({
+  const dataTable = useDataTable<Ticket>({
     tableId: "tickets",
     columns,
     endpoint: "/api/tickets",
     meta: tableMeta,
   });
-
-  const statusFilter = tableState.filters["status"] ?? "all";
 
   const filterConfigs: DataTableFilterConfig[] = useMemo(
     () => [
@@ -92,61 +70,32 @@ export function TicketsDataTable() {
     [],
   );
 
-  const handleMutationSuccess = () => {
-    refresh();
-  };
-
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       {/* Primary Toolbar */}
       <DataTableToolbar
-        table={table}
-        search={search}
-        onSearchChange={setSearch}
+        instance={dataTable}
         searchPlaceholder="Search tickets by concern or reply..."
-        onRefresh={refresh}
-        loading={loading}
-        dateRange={dateRange}
-        onDateRangeChange={(range) => {
-          setDateRange(range);
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-        }}
         filterConfigs={filterConfigs}
-        filters={{ status: statusFilter }}
-        onFilterChange={(key, val) => {
-          if (key === "status") {
-            setFilter("status", val);
-            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-          }
-        }}
-        hasActiveFilters={hasActiveFilters}
-        onResetFilters={resetAllFilters}
-        hasActiveSorts={hasActiveSorts}
-        sorting={sorting}
-        onSortingChange={(updater) => {
-          setSorting(updater);
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-        }}
-        onRemoveSort={(columnId) => {
-          removeSort(columnId);
-          setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-        }}
-        onResetAll={resetAllCriteria}
-        onResetSorts={resetSorting}
       />
 
       {/* Table Content Surface */}
-      <DataTableContent table={table} loading={loading} error={error} />
+      <DataTableContent
+        table={dataTable.table}
+        loading={dataTable.loading}
+        error={dataTable.error}
+        onRetry={dataTable.refresh}
+      />
 
       {/* Responsive Pagination Bar */}
-      <DataTablePagination table={table} />
+      <DataTablePagination table={dataTable.table} loading={dataTable.loading} />
 
       {/* Edit Ticket Dialog */}
       <TicketEditDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         ticket={editingTicket}
-        onSuccess={handleMutationSuccess}
+        onSuccess={dataTable.refresh}
       />
 
       {/* Delete Ticket Confirmation Dialog */}
@@ -154,7 +103,7 @@ export function TicketsDataTable() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         ticket={deletingTicket}
-        onSuccess={handleMutationSuccess}
+        onSuccess={dataTable.refresh}
       />
     </div>
   );
