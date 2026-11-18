@@ -5,9 +5,10 @@
 
 import { NextResponse } from "next/server";
 import { withAuth } from "@/db/helpers";
+import { Role } from "@/lib/constants/enums";
 
 export const POST = withAuth(async (req, user, client) => {
-  const userId = Number(user.id);
+  const userId = Number(user.sub);
   const factoryId = Number(user.factory_id);
 
   let body: any = {};
@@ -22,15 +23,30 @@ export const POST = withAuth(async (req, user, client) => {
   let idsToMark: number[] = [];
 
   if (Array.isArray(notification_ids) && notification_ids.length > 0) {
-    idsToMark = notification_ids.map(Number).filter((id) => !isNaN(id));
+    idsToMark = notification_ids.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0);
   } else if (mark_all_before_id) {
-    // Look up unread notification IDs before cursor
-    const { data: rows } = await client
+    let query = client
       .from("notifications")
       .select("id")
       .eq("factory_id", factoryId)
       .lte("id", Number(mark_all_before_id));
 
+    if (user.role === Role.BASE) {
+      const { data: customer } = await client
+        .from("customers")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("factory_id", factoryId)
+        .maybeSingle();
+
+      if (!customer) {
+        return NextResponse.json({ success: true, markedCount: 0 });
+      }
+
+      query = query.eq("customer_id", customer.id);
+    }
+
+    const { data: rows } = await query;
     if (rows) {
       idsToMark = rows.map((r: any) => r.id);
     }

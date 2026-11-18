@@ -90,13 +90,37 @@ describe("Decoupled & Replay-Protected Webhook Dispatcher", () => {
     expect(callHeaders["X-Gluvok-Timestamp"]).toBeUndefined();
   });
 
+  it("blocks SSRF attempts targeting cloud metadata endpoints", async () => {
+    const dbMock: any = {
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { webhook_url: "http://169.254.169.254/latest/meta-data/", webhook_secret: "sec" },
+            }),
+          }),
+        }),
+      })),
+    };
+
+    const result = await dispatchWebhook({
+      factoryId: 1,
+      event: "entry.created",
+      payload: {},
+      client: dbMock,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("forbidden");
+  });
+
   it("schedules exponential backoff retry when destination times out", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("Timeout aborted"));
     vi.stubGlobal("fetch", fetchMock);
 
     let updatedFields: any = null;
     const dbMock: any = {
-      from: vi.fn((table: string) => ({
+      from: vi.fn((_table: string) => ({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({

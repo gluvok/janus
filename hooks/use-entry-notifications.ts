@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useNotificationStore } from "@/lib/store/notifications";
-import { useAuthStore } from "@/lib/store";
+import { useAuthStore, useEntitiesStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export function useEntryNotifications() {
@@ -49,9 +49,21 @@ export function useEntryNotifications() {
           toast.info(`New Weighment Entry: ${plate}`, {
             description: `Weight: ${weightKg}`,
           });
+
+          try {
+            useEntitiesStore.getState().triggerEntitiesUpdate();
+          } catch {
+            // Ignore if store uninitialized
+          }
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          console.error("[Realtime] Subscription error:", err);
+        } else if (status === "SUBSCRIBED") {
+          console.log("[Realtime] Connected and listening for entries");
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

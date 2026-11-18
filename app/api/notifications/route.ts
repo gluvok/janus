@@ -1,16 +1,17 @@
 /**
  * @file app/api/notifications/route.ts
- * @description API route for fetching unread and recent notifications with per-user read state.
+ * @description API route for fetching unread and recent notifications with per-user read state and tenant isolation.
  */
 
 import { NextResponse } from "next/server";
 import { withAuth } from "@/db/helpers";
+import { Role } from "@/lib/constants/enums";
 
 export const GET = withAuth(async (_req, user, client) => {
-  const userId = Number(user.id);
+  const userId = Number(user.sub);
   const factoryId = Number(user.factory_id);
 
-  const { data: rawNotifications, error } = await client
+  let query = client
     .from("notifications")
     .select(
       `
@@ -27,7 +28,25 @@ export const GET = withAuth(async (_req, user, client) => {
       notification_reads!left(read_at)
     `,
     )
-    .eq("factory_id", factoryId)
+    .eq("factory_id", factoryId);
+
+  // Tenant & Customer Isolation: Base users (customers) may ONLY access their own notifications
+  if (user.role === Role.BASE) {
+    const { data: customer } = await client
+      .from("customers")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("factory_id", factoryId)
+      .maybeSingle();
+
+    if (!customer) {
+      return NextResponse.json({ notifications: [], unreadCount: 0 });
+    }
+
+    query = query.eq("customer_id", customer.id);
+  }
+
+  const { data: rawNotifications, error } = await query
     .order("id", { ascending: false })
     .limit(50);
 

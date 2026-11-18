@@ -11,6 +11,27 @@ export const MAX_WEBHOOK_ATTEMPTS = 5;
 export const WEBHOOK_TIMEOUT_MS = 5000;
 export const WEBHOOK_TOLERANCE_SECONDS = 300; // 5 minutes
 
+/**
+ * Validates outgoing webhook destination URL against SSRF and cloud metadata endpoints.
+ */
+export function isValidWebhookUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (!["https:", "http:"].includes(parsed.protocol)) return false;
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "169.254.169.254" ||
+      hostname === "metadata.google.internal" ||
+      hostname === "instance-data"
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface DispatchOptions {
   factoryId: number;
   event: string;
@@ -88,6 +109,10 @@ export async function dispatchWebhook({
 
   if (!factory?.webhook_url) {
     return { success: false, error: "No webhook_url configured" };
+  }
+
+  if (!isValidWebhookUrl(factory.webhook_url)) {
+    return { success: false, error: "Invalid webhook_url (protocol or host forbidden)" };
   }
 
   // 1. Insert initial log record in pending state

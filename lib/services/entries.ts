@@ -9,7 +9,6 @@ import { ApiErrorMessage } from "@/lib/constants/messages";
 import { uploadBase64ImagesToStorage, deleteStorageImages } from "./storage";
 import { validateSequentialApproval, tryMergeEntries } from "./weighments";
 import { isNoPlateDetectedText } from "@/lib/validation";
-import { dispatchWebhook } from "./webhooks";
 
 export interface CreateEntryParams {
   factoryId: number;
@@ -180,11 +179,6 @@ export async function createEntry(client: typeof supabase, params: CreateEntryPa
       creator: { role: creator?.role },
     });
   }
-
-  // 8. Fire outgoing webhook event asynchronously (fire-and-forget)
-  void dispatchWebhook(client, factoryId, "entry.created", newEntry).catch((err) => {
-    console.error("[Webhook] Async dispatch error:", err);
-  });
 
   return {
     ...newEntry,

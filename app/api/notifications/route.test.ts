@@ -33,7 +33,7 @@ describe("Notifications API Endpoints", () => {
     });
 
     it("returns notifications with personal read state and bounds to 50", async () => {
-      const mockUser = { id: 5, factory_id: 1, role: "base" };
+      const mockUser = { sub: "1", factory_id: 1, role: "admin" };
       mockGetAuthUser.mockResolvedValue({ user: mockUser });
 
       const mockNotifications = [
@@ -79,6 +79,47 @@ describe("Notifications API Endpoints", () => {
       expect(data.notifications[1].read).toBe(false);
       expect(data.unreadCount).toBe(1);
     });
+
+    it("scopes notifications query to customer_id when user.role is base", async () => {
+      const mockBaseUser = { sub: "5", factory_id: 1, role: "base" };
+      mockGetAuthUser.mockResolvedValue({ user: mockBaseUser });
+
+      const eqMock = vi.fn().mockReturnValue({
+        order: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      });
+
+      mockDb.from.mockImplementation((table: string) => {
+        if (table === "customers") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({ data: { id: 42 } }),
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === "notifications") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: eqMock,
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/notifications");
+      const res = await GET(req, { params: Promise.resolve({}) });
+
+      expect(res.status).toBe(200);
+      expect(eqMock).toHaveBeenCalledWith("customer_id", 42);
+    });
   });
 
   describe("POST /api/notifications/read", () => {
@@ -95,7 +136,7 @@ describe("Notifications API Endpoints", () => {
     });
 
     it("batch marks specified notification_ids as read for current user", async () => {
-      const mockUser = { id: 5, factory_id: 1 };
+      const mockUser = { sub: "5", factory_id: 1 };
       mockGetAuthUser.mockResolvedValue({ user: mockUser });
 
       const upsertMock = vi.fn().mockResolvedValue({ error: null });
