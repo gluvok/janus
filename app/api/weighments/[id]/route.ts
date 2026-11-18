@@ -61,11 +61,12 @@ export const PATCH = withAuth<{ id: string }>(async (req, user, client, ctx) => 
     return apiError(parsed.error.issues[0].message, StatusCodes.BAD_REQUEST);
   }
 
-  // 1. Fetch existing weighment
+  // 1. Fetch existing weighment scoped to user's factory
   const { data: existing, error: fetchErr } = await client
     .from("weighments")
-    .select("id, rate_id, type")
+    .select("id, rate_id, type, in_entry:entries!in_entry_id!inner(center_id)")
     .eq("id", weighmentId)
+    .eq("in_entry.factory_id", user.factory_id!)
     .is("deleted_at", null)
     .maybeSingle();
 
