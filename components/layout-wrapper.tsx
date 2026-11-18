@@ -13,6 +13,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AuthGuard } from "@/components/auth/guard";
 import { AUTH_ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store";
+import { useEntryNotifications } from "@/hooks/use-entry-notifications";
 
 /**
  * MainLayout Component
@@ -23,6 +24,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = AUTH_ROUTES.includes(pathname);
   const user = useAuthStore((state) => state.user);
+
+  useEntryNotifications();
 
   if (isAuthPage) {
     return <AuthGuard>{children}</AuthGuard>;
