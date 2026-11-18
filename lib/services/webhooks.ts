@@ -12,6 +12,60 @@ export const WEBHOOK_TIMEOUT_MS = 5000;
 export const WEBHOOK_TOLERANCE_SECONDS = 300; // 5 minutes
 
 /**
+ * Checks whether a URL points to private/internal networks, loopback, or cloud metadata services.
+ */
+export function isPrivateOrInternalUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+
+    // Loopback & local
+    if (
+      hostname === "localhost" ||
+      hostname.startsWith("127.") ||
+      hostname === "0.0.0.0" ||
+      hostname === "::1" ||
+      hostname === "::"
+    ) {
+      return true;
+    }
+
+    // Cloud metadata endpoints (AWS, GCP, Azure, Alibaba, Oracle)
+    if (
+      hostname === "169.254.169.254" ||
+      hostname.startsWith("169.254.") ||
+      hostname === "metadata.google.internal" ||
+      hostname.endsWith(".metadata.google.internal") ||
+      hostname === "metadata" ||
+      hostname === "instance-data" ||
+      hostname === "100.100.100.200" ||
+      hostname === "fd00:ec2::254" ||
+      hostname.startsWith("fe80:")
+    ) {
+      return true;
+    }
+
+    // RFC 1918 Private IPv4 ranges
+    // 10.0.0.0/8
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+      return true;
+    }
+    // 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
+    if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+      return true;
+    }
+    // 192.168.0.0/16
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Validates outgoing webhook destination URL against SSRF, cloud metadata, and internal network endpoints.
  */
 export function isValidWebhookUrl(urlStr: string): boolean {
@@ -39,15 +93,9 @@ export function isValidWebhookUrl(urlStr: string): boolean {
       return false;
     }
 
-    // In production, block loopback and unspecified addresses
+    // In production, block loopback, RFC 1918 and unspecified addresses
     if (process.env.NODE_ENV === "production") {
-      if (
-        hostname === "localhost" ||
-        hostname.startsWith("127.") ||
-        hostname === "0.0.0.0" ||
-        hostname === "::1" ||
-        hostname === "::"
-      ) {
+      if (isPrivateOrInternalUrl(urlStr)) {
         return false;
       }
     }
