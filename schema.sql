@@ -460,6 +460,7 @@ CREATE OR REPLACE FUNCTION reset_table_sequence(table_name text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     seq_name text;
@@ -478,6 +479,7 @@ CREATE OR REPLACE FUNCTION reset_all_sequences()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     t text;
@@ -510,6 +512,7 @@ CREATE OR REPLACE FUNCTION create_customer_with_user(
 ) RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_id INT := NULL;
@@ -556,6 +559,7 @@ CREATE OR REPLACE FUNCTION update_customer_with_user(
 ) RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_id INT;
@@ -624,6 +628,7 @@ CREATE OR REPLACE FUNCTION delete_customers_with_user(
 ) RETURNS INT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_ids INT[];
@@ -658,6 +663,7 @@ CREATE OR REPLACE FUNCTION get_factory_weighment_data(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -729,6 +735,7 @@ CREATE OR REPLACE FUNCTION acknowledge_factory_weighment(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -773,6 +780,7 @@ CREATE OR REPLACE FUNCTION get_factory_entry_data(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -830,6 +838,7 @@ CREATE OR REPLACE FUNCTION acknowledge_factory_entry(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -886,6 +895,17 @@ CREATE TRIGGER trg_invalidate_sessions_on_user_update
 AFTER UPDATE OF password_hash, deleted_at, username ON users
 FOR EACH ROW
 EXECUTE FUNCTION trigger_invalidate_sessions_on_user_update();
+
+
+-- REVOKE PUBLIC EXECUTION ON PRIVILEGED PROCEDURES
+REVOKE ALL ON FUNCTION reset_table_sequence(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION reset_table_sequence(text) TO service_role;
+
+REVOKE ALL ON FUNCTION reset_all_sequences() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION reset_all_sequences() TO service_role;
+
+REVOKE ALL ON FUNCTION delete_customers_with_user(INT[], INT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION delete_customers_with_user(INT[], INT) TO authenticated, service_role;
 
 -- 8. NOTIFY SUPABASE POSTGREST TO RELOAD SCHEMA CACHE IMMEDIATELY
 NOTIFY pgrst, 'reload schema';
