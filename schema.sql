@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS factories (
       {"camera": 2, "top": 0, "bottom": 0, "left": 0, "right": 0}
     ]'::jsonb,
     api_key TEXT UNIQUE,
+    webhook_url TEXT DEFAULT NULL,
+    webhook_secret TEXT DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
@@ -460,6 +462,7 @@ CREATE OR REPLACE FUNCTION reset_table_sequence(table_name text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     seq_name text;
@@ -478,6 +481,7 @@ CREATE OR REPLACE FUNCTION reset_all_sequences()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     t text;
@@ -510,6 +514,7 @@ CREATE OR REPLACE FUNCTION create_customer_with_user(
 ) RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_id INT := NULL;
@@ -556,6 +561,7 @@ CREATE OR REPLACE FUNCTION update_customer_with_user(
 ) RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_id INT;
@@ -624,6 +630,7 @@ CREATE OR REPLACE FUNCTION delete_customers_with_user(
 ) RETURNS INT
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_user_ids INT[];
@@ -658,6 +665,7 @@ CREATE OR REPLACE FUNCTION get_factory_weighment_data(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -729,6 +737,7 @@ CREATE OR REPLACE FUNCTION acknowledge_factory_weighment(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -773,6 +782,7 @@ CREATE OR REPLACE FUNCTION get_factory_entry_data(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -830,6 +840,7 @@ CREATE OR REPLACE FUNCTION acknowledge_factory_entry(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_factory_id INT;
@@ -887,6 +898,103 @@ AFTER UPDATE OF password_hash, deleted_at, username ON users
 FOR EACH ROW
 EXECUTE FUNCTION trigger_invalidate_sessions_on_user_update();
 
--- 8. NOTIFY SUPABASE POSTGREST TO RELOAD SCHEMA CACHE IMMEDIATELY
+
+-- REVOKE PUBLIC EXECUTION ON PRIVILEGED PROCEDURES
+REVOKE ALL ON FUNCTION reset_table_sequence(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION reset_table_sequence(text) TO service_role;
+
+REVOKE ALL ON FUNCTION reset_all_sequences() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION reset_all_sequences() TO service_role;
+
+REVOKE ALL ON FUNCTION delete_customers_with_user(INT[], INT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION delete_customers_with_user(INT[], INT) TO authenticated, service_role;
+
+-- 8. ENABLE SUPABASE REALTIME REPLICATION FOR ENTRIES
+ALTER PUBLICATION supabase_realtime ADD TABLE public.entries;
+ALTER TABLE public.entries REPLICA IDENTITY FULL;
+
+-- 9. NOTIFICATIONS & OUTGOING WEBHOOK ENGINE
+
+-- Ensure factory columns exist for existing instances
+ALTER TABLE IF EXISTS factories ADD COLUMN IF NOT EXISTS webhook_url TEXT DEFAULT NULL;
+ALTER TABLE IF EXISTS factories ADD COLUMN IF NOT EXISTS webhook_secret TEXT DEFAULT NULL;
+
+-- NOTIFICATIONS TABLE (Immutable append-only event log)
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
+    customer_id INT REFERENCES customers(id) ON DELETE CASCADE,
+    entry_id INT REFERENCES entries(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    vehicle_number TEXT NOT NULL,
+    weight INT NOT NULL,
+    center_name TEXT DEFAULT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Composite indexes for high-speed tenant catchup queries
+CREATE INDEX IF NOT EXISTS idx_notifications_factory_id ON notifications(factory_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_customer ON notifications(customer_id, id DESC);
+
+-- NOTIFICATION READS TABLE (Per-user read tracking, avoids multi-user / multi-device collision)
+CREATE TABLE IF NOT EXISTS notification_reads (
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    notification_id BIGINT NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+    read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, notification_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_reads_user ON notification_reads(user_id, read_at DESC);
+
+-- WEBHOOK LOGS TABLE (Decoupled execution and retry state machine)
+CREATE TABLE IF NOT EXISTS webhook_logs (
+    id BIGSERIAL PRIMARY KEY,
+    factory_id INT NOT NULL REFERENCES factories(id) ON DELETE CASCADE,
+    event TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- ('pending', 'retrying', 'delivered', 'failed')
+    response_status INT DEFAULT NULL,
+    attempt_count INT NOT NULL DEFAULT 0,
+    next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_error TEXT DEFAULT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delivered_at TIMESTAMPTZ DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_retry ON webhook_logs(status, next_attempt_at ASC)
+WHERE status IN ('pending', 'retrying');
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_factory ON webhook_logs(factory_id, created_at DESC);
+
+-- ROW LEVEL SECURITY FOR NOTIFICATIONS & WEBHOOKS
+ALTER TABLE IF EXISTS notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS notification_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS webhook_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "factory_tenant_isolation" ON notifications;
+CREATE POLICY "factory_tenant_isolation" ON notifications
+FOR SELECT USING (
+  -- Strict zero-trust fail-closed isolation checking scalar app_metadata claim
+  CASE
+    WHEN (auth.jwt() -> 'app_metadata' ->> 'factory_id') IS NOT NULL
+    THEN factory_id = ((auth.jwt() -> 'app_metadata' ->> 'factory_id')::int)
+    ELSE false
+  END
+);
+
+DROP POLICY IF EXISTS "Allow access notifications" ON notifications;
+CREATE POLICY "Allow access notifications" ON notifications FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow access notification_reads" ON notification_reads;
+CREATE POLICY "Allow access notification_reads" ON notification_reads FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow access webhook_logs" ON webhook_logs;
+CREATE POLICY "Allow access webhook_logs" ON webhook_logs FOR ALL USING (true);
+
+-- ENABLE SUPABASE REALTIME REPLICATION FOR NOTIFICATIONS
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+ALTER TABLE public.notifications REPLICA IDENTITY FULL;
+
+-- 10. NOTIFY SUPABASE POSTGREST TO RELOAD SCHEMA CACHE IMMEDIATELY
 NOTIFY pgrst, 'reload schema';
 

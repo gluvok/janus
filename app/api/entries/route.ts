@@ -9,10 +9,10 @@ import {
   parseBulkIds,
   getAuthUser,
 } from "@/db/helpers";
-import { type AuthUserPayload } from "@/types";
 import { EntrySource, EntryStatus, ProjectSlug, PermissionKey, Role } from "@/lib/constants/enums";
 import { ApiErrorMessage } from "@/lib/constants/messages";
 import { createEntry, deleteEntries } from "@/lib/services/entries";
+import { sanitizeSearchTerm } from "@/lib/services/common";
 import { uploadFilesToStorage, deleteStorageImages } from "@/lib/services/storage";
 import {
   preprocessCameraFiles,
@@ -83,10 +83,13 @@ export const GET = withAuth(async (req, user, client) => {
   if (endDate) query = query.lte("created_at", endDate);
 
   if (search) {
-    const searchNum = parseInt(search, 10);
-    query = isNaN(searchNum)
-      ? query.ilike("vehicle_number", `%${search}%`)
-      : query.or(`vehicle_number.ilike.%${search}%,id.eq.${searchNum}`);
+    const cleanSearch = sanitizeSearchTerm(search);
+    if (cleanSearch) {
+      const searchNum = parseInt(cleanSearch, 10);
+      query = isNaN(searchNum)
+        ? query.ilike("vehicle_number", `%${cleanSearch}%`)
+        : query.or(`vehicle_number.ilike.%${cleanSearch}%,id.eq.${searchNum}`);
+    }
   }
 
   const { page, limit, offset } = pagination;
@@ -126,7 +129,7 @@ export const GET = withAuth(async (req, user, client) => {
   });
 });
 
-export async function POST(req: NextRequest, ...rest: unknown[]) {
+export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("multipart/form-data")) {
@@ -142,16 +145,7 @@ export async function POST(req: NextRequest, ...rest: unknown[]) {
     let creatorId: number;
     let factoryId: number;
 
-    // Direct invocation support in unit test environments
-    if (rest.length >= 1 && typeof rest[0] === "object" && rest[0] !== null && "role" in rest[0]) {
-      const user = rest[0] as AuthUserPayload;
-      if (!hasPermission(user, ProjectSlug.ENTRIES, PermissionKey.CREATE)) {
-        return forbiddenError();
-      }
-      isHardware = user.role === Role.HARDWARE;
-      creatorId = parseInt(user.sub, 10);
-      factoryId = user.factory_id!;
-    } else if (hasDeviceCredentials(req, formData)) {
+    if (hasDeviceCredentials(req, formData)) {
       const authResult = await verifyDeviceRequest(req, supabase, formData);
       if (!authResult.success || !authResult.device) {
         return apiError(

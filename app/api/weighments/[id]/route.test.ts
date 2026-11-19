@@ -35,6 +35,17 @@ const sampleUser = {
   factory_id: 1,
 };
 
+function createChainableMock(resolvedData: unknown = null) {
+  const mock: any = {
+    eq: vi.fn(() => mock),
+    is: vi.fn(() => mock),
+    select: vi.fn(() => mock),
+    single: vi.fn().mockResolvedValue({ data: resolvedData, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: resolvedData, error: null }),
+  };
+  return mock;
+}
+
 const context = { params: Promise.resolve({ id: "100" }) };
 
 describe("Weighments [id] DELETE route handler", () => {
@@ -152,6 +163,25 @@ describe("Weighments [id] PATCH route handler", () => {
     mockHasPermission.mockReturnValue(true);
   });
 
+  it("enforces factory isolation by querying with in_entry.factory_id", async () => {
+    const patchRequest = new Request("http://localhost/api/weighments/100", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "in" }),
+    });
+
+    const chain = createChainableMock(null);
+    const mockDb = {
+      from: vi.fn(() => chain),
+    };
+
+    const handler = PATCH as unknown as RawHandler;
+    const response = await handler(patchRequest, sampleUser, mockDb, context);
+
+    expect(response.status).toBe(404);
+    expect(chain.eq).toHaveBeenCalledWith("in_entry.factory_id", sampleUser.factory_id);
+  });
+
   it("updates weighment type when currently unassigned", async () => {
     const patchRequest = new Request("http://localhost/api/weighments/100", {
       method: "PATCH",
@@ -174,16 +204,7 @@ describe("Weighments [id] PATCH route handler", () => {
 
     const mockDb = {
       from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: { id: 100, type: "unassigned", rate_id: null },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+        select: vi.fn(() => createChainableMock({ id: 100, type: "unassigned", rate_id: null })),
         update: updateMock,
       })),
     };
@@ -218,16 +239,7 @@ describe("Weighments [id] PATCH route handler", () => {
 
     const mockDb = {
       from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: { id: 100, type: "unassigned", rate_id: null },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+        select: vi.fn(() => createChainableMock({ id: 100, type: "unassigned", rate_id: null })),
         update: updateMock,
       })),
     };
@@ -249,16 +261,7 @@ describe("Weighments [id] PATCH route handler", () => {
 
     const mockDb = {
       from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: { id: 100, type: "in", rate_id: null },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+        select: vi.fn(() => createChainableMock({ id: 100, type: "in", rate_id: null })),
       })),
     };
 
@@ -294,16 +297,9 @@ describe("Weighments [id] PATCH route handler", () => {
       from: vi.fn((table: string) => {
         if (table === "weighments") {
           return {
-            select: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                is: vi.fn(() => ({
-                  maybeSingle: vi.fn().mockResolvedValue({
-                    data: { id: 100, type: "unassigned", rate_id: null },
-                    error: null,
-                  }),
-                })),
-              })),
-            })),
+            select: vi.fn(() =>
+              createChainableMock({ id: 100, type: "unassigned", rate_id: null }),
+            ),
             update: updateMock,
           };
         }
@@ -344,16 +340,7 @@ describe("Weighments [id] PATCH route handler", () => {
 
     const mockDb = {
       from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: { id: 100, type: "unassigned", rate_id: 3 },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+        select: vi.fn(() => createChainableMock({ id: 100, type: "unassigned", rate_id: 3 })),
       })),
     };
 
@@ -376,16 +363,9 @@ describe("Weighments [id] PATCH route handler", () => {
       from: vi.fn((table: string) => {
         if (table === "weighments") {
           return {
-            select: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                is: vi.fn(() => ({
-                  maybeSingle: vi.fn().mockResolvedValue({
-                    data: { id: 100, type: "unassigned", rate_id: null },
-                    error: null,
-                  }),
-                })),
-              })),
-            })),
+            select: vi.fn(() =>
+              createChainableMock({ id: 100, type: "unassigned", rate_id: null }),
+            ),
           };
         }
         if (table === "rates") {

@@ -8,6 +8,7 @@ const {
   mockVerifyDeviceRequest,
   mockUploadFilesToStorage,
   mockDeleteStorageImages,
+  mockGetAuthUser,
   mockDb,
 } = vi.hoisted(() => ({
   mockHasPermission: vi.fn(),
@@ -15,6 +16,7 @@ const {
   mockVerifyDeviceRequest: vi.fn(),
   mockUploadFilesToStorage: vi.fn(),
   mockDeleteStorageImages: vi.fn(),
+  mockGetAuthUser: vi.fn(),
   mockDb: {
     from: vi.fn(),
   },
@@ -44,6 +46,7 @@ vi.mock("@/db/helpers", async (importOriginal) => {
     ...actual,
     withAuth: <T>(handler: T) => handler,
     hasPermission: mockHasPermission,
+    getAuthUser: mockGetAuthUser,
   };
 });
 
@@ -93,6 +96,7 @@ describe("Entries route handlers (/api/entries)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockHasPermission.mockReturnValue(true);
+    mockGetAuthUser.mockResolvedValue({ user: sampleUser });
   });
 
   describe("GET /api/entries", () => {
@@ -271,6 +275,20 @@ describe("Entries route handlers (/api/entries)", () => {
       expect(json.error).toBe("POST /api/entries requires multipart/form-data");
     });
 
+    it("rejects non-device requests when user is unauthenticated", async () => {
+      mockGetAuthUser.mockResolvedValueOnce(null);
+      const req = createMultipartReq({
+        vehicle_number: "MH12AB1234",
+        weight: 10000,
+        center_id: 1,
+      });
+
+      const response = await POST(req);
+      expect(response.status).toBe(401);
+      const json = await response.json();
+      expect(json.error).toBe(ApiErrorMessage.UNAUTHORIZED);
+    });
+
     it("rejects when user lacks CREATE permission", async () => {
       mockHasPermission.mockReturnValue(false);
       const req = createMultipartReq({
@@ -279,8 +297,7 @@ describe("Entries route handlers (/api/entries)", () => {
         center_id: 1,
       });
 
-      const handler = POST as unknown as RawHandler;
-      const response = await handler(req, sampleUser, {}, context);
+      const response = await POST(req);
 
       expect(response.status).toBe(403);
       expect(mockHasPermission).toHaveBeenCalledWith(
@@ -296,8 +313,7 @@ describe("Entries route handlers (/api/entries)", () => {
         weight: -50,
       });
 
-      const handler = POST as unknown as RawHandler;
-      const response = await handler(req, sampleUser, {}, context);
+      const response = await POST(req);
 
       expect(response.status).toBe(400);
     });
@@ -335,8 +351,7 @@ describe("Entries route handlers (/api/entries)", () => {
         [file],
       );
 
-      const handler = POST as unknown as RawHandler;
-      const response = await handler(req, sampleUser, {}, context);
+      const response = await POST(req);
 
       expect(response.status).toBe(201);
       const json = await response.json();
@@ -610,8 +625,7 @@ describe("Entries route handlers (/api/entries)", () => {
         [file],
       );
 
-      const handler = POST as unknown as RawHandler;
-      const response = await handler(req, sampleUser, {}, context);
+      const response = await POST(req);
 
       expect(response.status).toBe(400);
       const json = await response.json();

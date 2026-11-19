@@ -153,6 +153,24 @@ describe("uploadFilesToStorage", () => {
     );
   });
 
+  it("rejects files with missing MIME type or unwhitelisted extension", async () => {
+    const fakeHtmlFile = {
+      name: "payload.html",
+      size: 50,
+      type: "",
+      arrayBuffer: vi.fn(),
+    } as unknown as File;
+    await expect(uploadFilesToStorage([fakeHtmlFile], 1)).rejects.toThrow(/Invalid image file/i);
+
+    const badExtFile = {
+      name: "payload.exe",
+      size: 50,
+      type: "image/jpeg",
+      arrayBuffer: vi.fn(),
+    } as unknown as File;
+    await expect(uploadFilesToStorage([badExtFile], 1)).rejects.toThrow(/Invalid image file/i);
+  });
+
   it("successfully uploads valid File and returns public URL", async () => {
     mockUpload.mockResolvedValue({ error: null });
     mockGetPublicUrl.mockReturnValue({

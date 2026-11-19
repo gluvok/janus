@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { LayoutDashboard } from "lucide-react";
+import { NotificationBox } from "@/components/notifications/notification-box";
 
 interface ProjectHeaderProps {
   projectSlug: string;
@@ -30,8 +31,8 @@ interface ProjectHeaderProps {
  */
 export function ProjectHeader({ projectSlug, projectName, Icon }: ProjectHeaderProps) {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-      <div className="flex items-center gap-2 px-4">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
+      <div className="flex items-center gap-2">
         <SidebarTrigger id={`sidebar-trigger-${projectSlug}`} className="-ml-1" />
         <Separator
           orientation="vertical"
@@ -58,6 +59,9 @@ export function ProjectHeader({ projectSlug, projectName, Icon }: ProjectHeaderP
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+      </div>
+      <div className="flex items-center">
+        <NotificationBox />
       </div>
     </header>
   );

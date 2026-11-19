@@ -9,6 +9,7 @@ import { ApiErrorMessage } from "@/lib/constants/messages";
 import { uploadBase64ImagesToStorage, deleteStorageImages } from "./storage";
 import { validateSequentialApproval, tryMergeEntries } from "./weighments";
 import { isNoPlateDetectedText } from "@/lib/validation";
+import { dispatchWebhook } from "./webhooks";
 
 export interface CreateEntryParams {
   factoryId: number;
@@ -29,10 +30,10 @@ export async function validateCenterBelongsToFactory(
   client: typeof supabase,
   centerId: number,
   factoryId: number,
-): Promise<{ id: number; auto_approve: boolean }> {
+): Promise<{ id: number; name?: string; auto_approve: boolean }> {
   const { data: centerRecord } = await client
     .from("centers")
-    .select("id, auto_approve")
+    .select("id, name, auto_approve")
     .eq("id", centerId)
     .eq("factory_id", factoryId)
     .is("deleted_at", null)
@@ -44,6 +45,7 @@ export async function validateCenterBelongsToFactory(
 
   return {
     id: centerRecord.id,
+    name: centerRecord.name,
     auto_approve: Boolean(centerRecord.auto_approve),
   };
 }
@@ -179,6 +181,43 @@ export async function createEntry(client: typeof supabase, params: CreateEntryPa
       creator: { role: creator?.role },
     });
   }
+
+  // 8. Insert persistent notification row (database pub/sub single source of truth)
+  const plate = newEntry.vehicle_number || newEntry.detected_vehicle_number || "Unidentified";
+  try {
+    await client.from("notifications").insert({
+      factory_id: factoryId,
+      customer_id: newEntry.customer_id || null,
+      entry_id: newEntry.id,
+      title: "New Vehicle Entry",
+      message: `Vehicle ${plate} weighed at ${centerRecord?.name || "Main Weighbridge"} (${Number(newEntry.weight || 0).toLocaleString()} kg)`,
+      vehicle_number: plate,
+      weight: Number(newEntry.weight || 0),
+      center_name: centerRecord?.name || null,
+    });
+  } catch (notifErr) {
+    console.error("[Notifications] Async insert error:", notifErr);
+  }
+
+  // 9. Fire outgoing webhook event asynchronously (decoupled, non-blocking)
+  void dispatchWebhook({
+    factoryId,
+    event: "entry.created",
+    payload: {
+      id: newEntry.id,
+      vehicle_number: plate,
+      detected_vehicle_number: newEntry.detected_vehicle_number,
+      weight: newEntry.weight,
+      status: newEntry.status,
+      center_id: newEntry.center_id,
+      customer_id: newEntry.customer_id,
+      images: newEntry.images,
+      created_at: newEntry.created_at,
+    },
+    client,
+  }).catch((webhookErr) => {
+    console.error("[Webhook] Async dispatch error:", webhookErr);
+  });
 
   return {
     ...newEntry,

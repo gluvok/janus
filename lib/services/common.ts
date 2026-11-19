@@ -136,3 +136,11 @@ export async function deleteRows(slug: ProjectSlug, ids: number[]): Promise<numb
     return response.data.deleted_count;
   });
 }
+
+/**
+ * Strips PostgREST structural syntax characters to prevent filter AST injection in .or() clauses.
+ */
+export function sanitizeSearchTerm(term: string): string {
+  if (!term || typeof term !== "string") return "";
+  return term.replace(/[(),."':;\\]/g, "").trim();
+}

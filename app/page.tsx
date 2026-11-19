@@ -19,6 +19,7 @@ import { LayoutDashboard } from "lucide-react";
 import { PROJECTS } from "@/lib/projects";
 import { DashboardCard } from "@/components/dashboard";
 import { useAuthStore, hasPageAccess } from "@/lib/store";
+import { NotificationBox } from "@/components/notifications/notification-box";
 
 export default function Page() {
   const user = useAuthStore((state) => state.user);
@@ -32,8 +33,8 @@ export default function Page() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-        <div className="flex items-center gap-2 px-4">
+      <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
+        <div className="flex items-center gap-2">
           <SidebarTrigger id="sidebar-trigger-home" className="-ml-1" />
           <Separator
             orientation="vertical"
@@ -49,6 +50,9 @@ export default function Page() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+        </div>
+        <div className="flex items-center">
+          <NotificationBox />
         </div>
       </header>
 

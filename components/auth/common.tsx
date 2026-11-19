@@ -2,7 +2,7 @@
 
 /**
  * @file components/auth/common.tsx
- * @description Common layout and input sub-components utilized across various authentication pages.
+ * @description Shared layout and input components for authentication pages.
  */
 
 import * as React from "react";

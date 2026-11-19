@@ -19,6 +19,7 @@ export const ALLOWED_MIME_TYPES = new Set([
   "image/heic",
   "image/bmp",
 ]);
+export const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "heic", "bmp"]);
 export const PUBLIC_URL_INDICATOR = "/public/gluvok/";
 
 /**
@@ -47,13 +48,21 @@ export async function uploadFilesToStorage(
       throw new Error(`File "${file.name}" exceeds maximum allowed size of 10MB`);
     }
 
-    if (file.type && !ALLOWED_MIME_TYPES.has(file.type.toLowerCase())) {
+    const fileExt = file.name ? file.name.split(".").pop()?.toLowerCase() || "" : "";
+    const mimeType = file.type ? file.type.toLowerCase() : "";
+
+    if (!mimeType || !ALLOWED_MIME_TYPES.has(mimeType)) {
       throw new Error(
-        `Invalid image file type "${file.type}". Allowed types: JPEG, PNG, WebP, GIF, HEIC, BMP`,
+        `Invalid image file type "${file.type || "unknown"}". Allowed types: JPEG, PNG, WebP, GIF, HEIC, BMP`,
       );
     }
 
-    const fileExt = file.name ? file.name.split(".").pop() || "jpg" : "jpg";
+    if (!fileExt || !ALLOWED_EXTENSIONS.has(fileExt)) {
+      throw new Error(
+        `Invalid image file extension ".${fileExt}". Allowed extensions: jpg, jpeg, png, webp, gif, heic, bmp`,
+      );
+    }
+
     const uniqueId = `${Math.random().toString(36).substring(2, 15)}-${Date.now()}`;
     const filePath = `${factoryPrefix}/${uniqueId}.${fileExt}`;
 

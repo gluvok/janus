@@ -11,6 +11,7 @@ import {
   isUniqueConstraintError,
 } from "@/db/helpers";
 import { ProjectSlug, PermissionKey } from "@/lib/constants/enums";
+import { sanitizeSearchTerm } from "@/lib/services/common";
 import { ApiErrorMessage } from "@/lib/constants/messages";
 import { addRateSchema } from "@/lib/validation";
 
@@ -48,13 +49,18 @@ export const GET = withAuth(async (req, user, client) => {
   }
 
   if (search) {
-    const searchNum = parseInt(search, 10);
-    if (!isNaN(searchNum)) {
-      query = query.or(
-        `id.eq.${searchNum},unit_price::text.ilike.%${search}%,commodities.name.ilike.%${search}%`,
-      );
-    } else {
-      query = query.or(`unit_price::text.ilike.%${search}%,commodities.name.ilike.%${search}%`);
+    const cleanSearch = sanitizeSearchTerm(search);
+    if (cleanSearch) {
+      const searchNum = parseInt(cleanSearch, 10);
+      if (!isNaN(searchNum)) {
+        query = query.or(
+          `id.eq.${searchNum},unit_price::text.ilike.%${cleanSearch}%,commodities.name.ilike.%${cleanSearch}%`,
+        );
+      } else {
+        query = query.or(
+          `unit_price::text.ilike.%${cleanSearch}%,commodities.name.ilike.%${cleanSearch}%`,
+        );
+      }
     }
   }
 
