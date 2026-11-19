@@ -103,7 +103,9 @@ export function isValidWebhookUrl(urlStr: string): boolean {
     // Disallow non-standard internal infrastructure ports (e.g., Redis, DBs, SSH)
     if (parsed.port) {
       const portNum = Number(parsed.port);
-      const DANGEROUS_PORTS = [21, 22, 23, 25, 53, 110, 143, 445, 1433, 3306, 5432, 6379, 9200, 11211, 27017];
+      const DANGEROUS_PORTS = [
+        21, 22, 23, 25, 53, 110, 143, 445, 1433, 3306, 5432, 6379, 9200, 11211, 27017,
+      ];
       if (DANGEROUS_PORTS.includes(portNum)) return false;
     }
 
@@ -167,7 +169,10 @@ export function verifyWebhookSignature(
   const expectedHmac = crypto.createHmac("sha256", secret).update(expectedPayload).digest("hex");
 
   try {
-    return crypto.timingSafeEqual(Buffer.from(receivedHmac, "hex"), Buffer.from(expectedHmac, "hex"));
+    return crypto.timingSafeEqual(
+      Buffer.from(receivedHmac, "hex"),
+      Buffer.from(expectedHmac, "hex"),
+    );
   } catch {
     return false;
   }

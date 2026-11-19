@@ -73,7 +73,8 @@ export const useNotificationStore = create<NotificationState>()(
         const sorted = sortNotifications(items).slice(0, 100);
         set({
           notifications: sorted,
-          unreadCount: totalUnread !== undefined ? totalUnread : sorted.filter((n) => !n.read).length,
+          unreadCount:
+            totalUnread !== undefined ? totalUnread : sorted.filter((n) => !n.read).length,
         });
       },
       addNotification: (item) =>

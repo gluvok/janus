@@ -46,9 +46,7 @@ export const GET = withAuth(async (_req, user, client) => {
     query = query.eq("customer_id", customer.id);
   }
 
-  const { data: rawNotifications, error } = await query
-    .order("id", { ascending: false })
-    .limit(50);
+  const { data: rawNotifications, error } = await query.order("id", { ascending: false }).limit(50);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -26,7 +26,9 @@ describe("createEntry with notifications and webhooks", () => {
               eq: vi.fn().mockReturnValue({
                 eq: vi.fn().mockReturnValue({
                   is: vi.fn().mockReturnValue({
-                    maybeSingle: vi.fn().mockResolvedValue({ data: { id: 1, name: "North Gate", auto_approve: false } }),
+                    maybeSingle: vi.fn().mockResolvedValue({
+                      data: { id: 1, name: "North Gate", auto_approve: false },
+                    }),
                   }),
                 }),
               }),

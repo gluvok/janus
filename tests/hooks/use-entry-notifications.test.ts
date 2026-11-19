@@ -1,31 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-const { mockChannel, mockRemoveChannel, mockToastInfo, mockChannelObj, callbacks } = vi.hoisted(() => {
-  const callbacks: {
-    onPayload: ((payload: any) => void) | null;
-    onStatus: ((status: string, err?: any) => void) | null;
-  } = { onPayload: null, onStatus: null };
+const { mockChannel, mockRemoveChannel, mockToastInfo, mockChannelObj, callbacks } = vi.hoisted(
+  () => {
+    const callbacks: {
+      onPayload: ((payload: any) => void) | null;
+      onStatus: ((status: string, err?: any) => void) | null;
+    } = { onPayload: null, onStatus: null };
 
-  const mockChannelObj = {
-    on: vi.fn((_event: string, _filter: any, callback: (payload: any) => void) => {
-      callbacks.onPayload = callback;
-      return mockChannelObj;
-    }),
-    subscribe: vi.fn((callback?: (status: string, err?: any) => void) => {
-      if (callback) callbacks.onStatus = callback;
-      return mockChannelObj;
-    }),
-  };
+    const mockChannelObj = {
+      on: vi.fn((_event: string, _filter: any, callback: (payload: any) => void) => {
+        callbacks.onPayload = callback;
+        return mockChannelObj;
+      }),
+      subscribe: vi.fn((callback?: (status: string, err?: any) => void) => {
+        if (callback) callbacks.onStatus = callback;
+        return mockChannelObj;
+      }),
+    };
 
-  return {
-    mockChannel: vi.fn().mockReturnValue(mockChannelObj),
-    mockRemoveChannel: vi.fn(),
-    mockToastInfo: vi.fn(),
-    mockChannelObj,
-    callbacks,
-  };
-});
+    return {
+      mockChannel: vi.fn().mockReturnValue(mockChannelObj),
+      mockRemoveChannel: vi.fn(),
+      mockToastInfo: vi.fn(),
+      mockChannelObj,
+      callbacks,
+    };
+  },
+);
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {

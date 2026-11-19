@@ -20,7 +20,9 @@ async function main() {
   const plate = process.argv[2] || "KA05MK8888";
   const weight = Number(process.argv[3]) || 38450;
 
-  console.log(`Injecting entry for customer Ramesh Kumar (Plate: ${plate}, Weight: ${weight} kg)...`);
+  console.log(
+    `Injecting entry for customer Ramesh Kumar (Plate: ${plate}, Weight: ${weight} kg)...`,
+  );
 
   // 1. Get Customer Ramesh Kumar (id: 1)
   const { data: customer, error: custErr } = await supabase
@@ -84,7 +86,9 @@ async function main() {
   console.log(`   Vehicle Number: ${entry.vehicle_number}`);
   console.log(`   Weight:         ${entry.weight} kg`);
   console.log(`   Customer:       Ramesh Kumar (ID: ${customer.id})`);
-  console.log("📡 Realtime broadcast sent to connected browsers via 'entries' and 'notifications'.");
+  console.log(
+    "📡 Realtime broadcast sent to connected browsers via 'entries' and 'notifications'.",
+  );
 }
 
 main().catch((err) => {

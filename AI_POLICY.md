@@ -25,5 +25,5 @@ Before any AI-assisted change is pushed or submitted for review, it must pass al
 ## 4. Code Quality & Slop Prevention
 
 - **Minimal Diffs**: Keep changes focused strictly on the requested task. Do not accept AI-generated boilerplate, speculative interfaces, or unused utility functions.
-- **No Buzzwords or Fluff**: Documentation, commit messages, and PR descriptions must be direct, factual, and free of promotional jargon (e.g., *streamline*, *robust*, *cutting-edge*, *paradigm shift*).
+- **No Buzzwords or Fluff**: Documentation, commit messages, and PR descriptions must be direct, factual, and free of promotional jargon (e.g., _streamline_, _robust_, _cutting-edge_, _paradigm shift_).
 - **Concise Comments**: Code comments must explain non-obvious constraints, not restate what the code clearly does.

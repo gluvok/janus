@@ -10,7 +10,9 @@ describe("Database Schema Security Hardening", () => {
   });
 
   it("ensures reset_table_sequence revokes execution from PUBLIC and anon", () => {
-    expect(schemaSql).toMatch(/REVOKE ALL ON FUNCTION reset_table_sequence\(text\) FROM PUBLIC, anon;/i);
+    expect(schemaSql).toMatch(
+      /REVOKE ALL ON FUNCTION reset_table_sequence\(text\) FROM PUBLIC, anon;/i,
+    );
   });
 
   it("enforces SET search_path on all SECURITY DEFINER procedures", () => {

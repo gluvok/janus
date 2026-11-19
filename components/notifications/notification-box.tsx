@@ -4,17 +4,14 @@ import * as React from "react";
 import { Bell, CheckCheck, Trash2, Truck, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNotificationStore } from "@/lib/store/notifications";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
 export function NotificationBox() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } =
+    useNotificationStore();
 
   return (
     <Popover>
@@ -87,7 +84,8 @@ export function NotificationBox() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Scale className="h-3 w-3" /> {item.weight.toLocaleString()} kg &bull; {item.centerName}
+                    <Scale className="h-3 w-3" /> {item.weight.toLocaleString()} kg &bull;{" "}
+                    {item.centerName}
                   </div>
                 </div>
                 {!item.read && <span className="h-2 w-2 rounded-full bg-primary" />}

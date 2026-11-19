@@ -19,7 +19,9 @@ describe("Hardened Production Notifications and Webhook Schema", () => {
   it("defines notification_reads join table for per-user read tracking", () => {
     expect(schemaSql).toContain("CREATE TABLE IF NOT EXISTS notification_reads");
     expect(schemaSql).toMatch(/user_id\s+INT\s+NOT\s+NULL\s+REFERENCES\s+users/i);
-    expect(schemaSql).toMatch(/notification_id\s+BIGINT\s+NOT\s+NULL\s+REFERENCES\s+notifications/i);
+    expect(schemaSql).toMatch(
+      /notification_id\s+BIGINT\s+NOT\s+NULL\s+REFERENCES\s+notifications/i,
+    );
     expect(schemaSql).toContain("PRIMARY KEY (user_id, notification_id)");
   });
 
@@ -32,7 +34,9 @@ describe("Hardened Production Notifications and Webhook Schema", () => {
 
   it("defines zero-join RLS policy checking auth.jwt() app_metadata factory_id with fail-closed default", () => {
     expect(schemaSql).toContain("factory_tenant_isolation");
-    expect(schemaSql).toMatch(/factory_id\s*=\s*\(\(auth\.jwt\(\)\s*->\s*'app_metadata'\s*->>\s*'factory_id'\)::int\)/i);
+    expect(schemaSql).toMatch(
+      /factory_id\s*=\s*\(\(auth\.jwt\(\)\s*->\s*'app_metadata'\s*->>\s*'factory_id'\)::int\)/i,
+    );
     expect(schemaSql).toMatch(/ELSE\s+false/i);
   });
 });

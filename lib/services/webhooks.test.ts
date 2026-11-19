@@ -102,7 +102,10 @@ describe("Decoupled & Replay-Protected Webhook Dispatcher", () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
-              data: { webhook_url: "http://169.254.169.254/latest/meta-data/", webhook_secret: "sec" },
+              data: {
+                webhook_url: "http://169.254.169.254/latest/meta-data/",
+                webhook_secret: "sec",
+              },
             }),
           }),
         }),

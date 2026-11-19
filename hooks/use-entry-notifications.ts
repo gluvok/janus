@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { useNotificationStore, type EntryNotification, sortNotifications } from "@/lib/store/notifications";
+import {
+  useNotificationStore,
+  type EntryNotification,
+  sortNotifications,
+} from "@/lib/store/notifications";
 import { useAuthStore, useEntitiesStore } from "@/lib/store";
 import { toast } from "sonner";
 

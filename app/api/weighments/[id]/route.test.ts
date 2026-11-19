@@ -297,7 +297,9 @@ describe("Weighments [id] PATCH route handler", () => {
       from: vi.fn((table: string) => {
         if (table === "weighments") {
           return {
-            select: vi.fn(() => createChainableMock({ id: 100, type: "unassigned", rate_id: null })),
+            select: vi.fn(() =>
+              createChainableMock({ id: 100, type: "unassigned", rate_id: null }),
+            ),
             update: updateMock,
           };
         }
@@ -361,7 +363,9 @@ describe("Weighments [id] PATCH route handler", () => {
       from: vi.fn((table: string) => {
         if (table === "weighments") {
           return {
-            select: vi.fn(() => createChainableMock({ id: 100, type: "unassigned", rate_id: null })),
+            select: vi.fn(() =>
+              createChainableMock({ id: 100, type: "unassigned", rate_id: null }),
+            ),
           };
         }
         if (table === "rates") {
