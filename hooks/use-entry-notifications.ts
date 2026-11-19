@@ -82,8 +82,6 @@ export function useEntryNotifications() {
         }
 
         if (status === "SUBSCRIBED") {
-          console.log("[Realtime] Connected and listening for entries");
-
           // Catchup: fetch unread & recent notifications after socket is established
           try {
             const res = await fetch("/api/notifications");
