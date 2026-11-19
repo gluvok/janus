@@ -12,32 +12,29 @@ import {
 import { Delete02Icon, SecurityCheckIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { getColumns, type UsersTableMeta } from "./columns";
-import { StaffUserDialog } from "./staff-user-dialog";
-import { UserDeleteDialog } from "./delete-dialog";
+import { CreateUserDialog, EditUserDialog } from "./staff-user-dialog";
+import { SingleUserDeleteDialog, BatchUsersDeleteDialog } from "./delete-dialog";
 import { ROLE_OPTIONS } from "./dialog-primitives";
 import { type User } from "./types";
 
 const ROLE_FILTER_OPTIONS = [{ value: "all", label: "All Roles" }, ...ROLE_OPTIONS];
 
 export function UsersDataTable() {
-  const [selectedUserForEdit, setSelectedUserForEdit] = useState<User | null>(null);
-  const [formDialogOpen, setFormDialogOpen] = useState<boolean>(false);
-  const [usersToDelete, setUsersToDelete] = useState<User[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [createUserOpen, setCreateUserOpen] = useState<boolean>(false);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [batchUsersToDelete, setBatchUsersToDelete] = useState<User[]>([]);
 
   const handleEditUser = useCallback((user: User) => {
-    setSelectedUserForEdit(user);
-    setFormDialogOpen(true);
+    setUserToEdit(user);
   }, []);
 
   const handleDeleteUser = useCallback((user: User) => {
-    setUsersToDelete([user]);
-    setDeleteDialogOpen(true);
+    setUserToDelete(user);
   }, []);
 
   const handleAddUser = useCallback(() => {
-    setSelectedUserForEdit(null);
-    setFormDialogOpen(true);
+    setCreateUserOpen(true);
   }, []);
 
   const tableMeta = useMemo<UsersTableMeta>(
@@ -77,8 +74,7 @@ export function UsersDataTable() {
 
   const handleBatchDelete = useCallback(() => {
     if (dataTable.selectedRows.length > 0) {
-      setUsersToDelete(dataTable.selectedRows);
-      setDeleteDialogOpen(true);
+      setBatchUsersToDelete(dataTable.selectedRows);
     }
   }, [dataTable.selectedRows]);
 
@@ -126,19 +122,42 @@ export function UsersDataTable() {
       {/* Responsive Pagination Bar */}
       <DataTablePagination table={dataTable.table} loading={dataTable.loading} />
 
-      {/* Staff User Form Dialog */}
-      <StaffUserDialog
-        open={formDialogOpen}
-        onOpenChange={setFormDialogOpen}
-        user={selectedUserForEdit}
+      {/* Create User Dialog */}
+      <CreateUserDialog
+        open={createUserOpen}
+        onOpenChange={setCreateUserOpen}
         onSuccess={handleMutationSuccess}
       />
 
-      {/* User Deletion Dialog */}
-      <UserDeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        users={usersToDelete}
+      {/* Edit User Dialog */}
+      {userToEdit && (
+        <EditUserDialog
+          open={Boolean(userToEdit)}
+          onOpenChange={(open) => {
+            if (!open) setUserToEdit(null);
+          }}
+          user={userToEdit}
+          onSuccess={handleMutationSuccess}
+        />
+      )}
+
+      {/* Single User Deletion Dialog */}
+      <SingleUserDeleteDialog
+        open={Boolean(userToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setUserToDelete(null);
+        }}
+        user={userToDelete}
+        onSuccess={handleMutationSuccess}
+      />
+
+      {/* Batch Users Deletion Dialog */}
+      <BatchUsersDeleteDialog
+        open={batchUsersToDelete.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setBatchUsersToDelete([]);
+        }}
+        users={batchUsersToDelete}
         onSuccess={handleMutationSuccess}
       />
     </div>

@@ -70,27 +70,28 @@ export interface PaginatedEntityQueryOptions<TCol extends string> {
 }
 
 /**
- * Builds and executes a standard Supabase entity query, returning raw PaginatedResult<TData>.
- * Automatically scopes queries by factory_id across all tables without requiring caller filters.
+ * Builds the common Supabase query foundation with tenant isolation, search filters, date range, and custom filters.
  */
-export async function buildPaginatedEntityResult<TCol extends string, TData = unknown>({
-  searchParams,
+export function buildBaseEntityQuery({
   table,
   select = "*",
-  allowedSortColumns,
-  defaultSort,
   searchColumns = [],
   applyCustomFilters,
   factoryId,
-}: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
-  searchParams: URLSearchParams;
+  searchParams,
+  countExact = false,
+}: {
+  table: string;
+  select?: string;
+  searchColumns?: readonly string[];
+  applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
   factoryId: number;
-}): Promise<PaginatedResult<TData>> {
-  const isAll = searchParams.get("all") === "true";
-  const pagination = parsePagination(searchParams);
-  const sortRules = parseSorting(searchParams, allowedSortColumns, defaultSort);
-
-  let query: any = supabase.from(table).select(select, { count: "exact" });
+  searchParams: URLSearchParams;
+  countExact?: boolean;
+}) {
+  let query: any = countExact
+    ? supabase.from(table).select(select, { count: "exact" })
+    : supabase.from(table).select(select);
 
   const factoryColumn = TABLE_FACTORY_COLUMNS[table];
   if (factoryColumn) {
@@ -113,29 +114,85 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
     query = applyCustomFilters(query, searchParams);
   }
 
-  if (isAll) {
-    const activeSort = sortRules.length > 0 ? sortRules : defaultSort ? [defaultSort] : [];
-    query = applySorting(query, activeSort);
-  } else {
-    query = applySortingAndPagination(query, sortRules, pagination);
-  }
+  return query;
+}
+
+/**
+ * Builds and executes a standard paginated Supabase entity query, returning raw PaginatedResult<TData>.
+ */
+export async function buildPaginatedEntityResult<TCol extends string, TData = unknown>({
+  searchParams,
+  table,
+  select = "*",
+  allowedSortColumns,
+  defaultSort,
+  searchColumns = [],
+  applyCustomFilters,
+  factoryId,
+}: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
+  searchParams: URLSearchParams;
+  factoryId: number;
+}): Promise<PaginatedResult<TData>> {
+  const pagination = parsePagination(searchParams);
+  const sortRules = parseSorting(searchParams, allowedSortColumns, defaultSort);
+
+  let query = buildBaseEntityQuery({
+    table,
+    select,
+    searchColumns,
+    applyCustomFilters,
+    factoryId,
+    searchParams,
+    countExact: true,
+  });
+
+  query = applySortingAndPagination(query, sortRules, pagination);
 
   const { data, count, error } = await query;
   if (error) {
     throw new Error(error.message);
   }
 
-  if (isAll) {
-    return {
-      data: (data ?? []) as TData[],
-      totalCount: data?.length ?? 0,
-      page: 1,
-      pageSize: data?.length ?? 0,
-      totalPages: 1,
-    };
+  return formatPaginatedResponse<TData>(data as TData[] | null, count, pagination);
+}
+
+/**
+ * Builds and executes an unpaginated Supabase entity query, returning all matching records.
+ */
+export async function buildAllEntityResult<TCol extends string, TData = unknown>({
+  searchParams,
+  table,
+  select = "*",
+  allowedSortColumns,
+  defaultSort,
+  searchColumns = [],
+  applyCustomFilters,
+  factoryId,
+}: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
+  searchParams: URLSearchParams;
+  factoryId: number;
+}): Promise<{ data: TData[] }> {
+  const sortRules = parseSorting(searchParams, allowedSortColumns, defaultSort);
+
+  let query = buildBaseEntityQuery({
+    table,
+    select,
+    searchColumns,
+    applyCustomFilters,
+    factoryId,
+    searchParams,
+    countExact: false,
+  });
+
+  const activeSort = sortRules.length > 0 ? sortRules : defaultSort ? [defaultSort] : [];
+  query = applySorting(query, activeSort);
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
   }
 
-  return formatPaginatedResponse<TData>(data as TData[] | null, count, pagination);
+  return { data: (data ?? []) as TData[] };
 }
 
 /**
@@ -150,6 +207,29 @@ export async function executePaginatedEntityQuery<TCol extends string, TData = u
     const factoryId = Number(options.request.headers.get("x-factory-id"));
 
     const result = await buildPaginatedEntityResult<TCol, TData>({
+      ...options,
+      factoryId,
+      searchParams,
+    });
+    return NextResponse.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+  }
+}
+
+/**
+ * Executes an unpaginated entity query for Next.js route handlers, returning a { data: TData[] } envelope.
+ * Automatically injects factoryId from request headers for tenant isolation.
+ */
+export async function executeAllEntityQuery<TCol extends string, TData = unknown>(
+  options: PaginatedEntityQueryOptions<TCol>,
+): Promise<NextResponse> {
+  try {
+    const { searchParams } = new URL(options.request.url);
+    const factoryId = Number(options.request.headers.get("x-factory-id"));
+
+    const result = await buildAllEntityResult<TCol, TData>({
       ...options,
       factoryId,
       searchParams,

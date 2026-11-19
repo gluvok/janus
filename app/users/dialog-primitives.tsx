@@ -314,3 +314,66 @@ export function SystemRoleSelect({ value, onChange, error }: SystemRoleSelectPro
     </Field>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Composite Form Fields (Full Name, Role & Credentials)                      */
+/* -------------------------------------------------------------------------- */
+
+export interface UserFormFieldsProps {
+  name: string;
+  setName: (val: string) => void;
+  nameError?: string;
+  role: UserRole;
+  setRole: (val: UserRole) => void;
+  roleError?: string;
+  username: string;
+  setUsername: (val: string) => void;
+  usernameError?: string;
+  password?: string;
+  setPassword: (val: string) => void;
+  passwordError?: string;
+  isPasswordRequired: boolean;
+}
+
+export function UserFormFields({
+  name,
+  setName,
+  nameError,
+  role,
+  setRole,
+  roleError,
+  username,
+  setUsername,
+  usernameError,
+  password,
+  setPassword,
+  passwordError,
+  isPasswordRequired,
+}: UserFormFieldsProps) {
+  return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FullNameField
+          value={name}
+          onChange={setName}
+          placeholder="e.g. Alex Morgan"
+          description="Operator name displayed in audit trails."
+          error={nameError}
+        />
+        <SystemRoleSelect value={role} onChange={setRole} error={roleError} />
+      </div>
+
+      <CredentialsFields
+        username={username}
+        setUsername={setUsername}
+        usernameError={usernameError}
+        password={password ?? ""}
+        setPassword={setPassword}
+        passwordError={passwordError}
+        isPasswordRequired={isPasswordRequired}
+        usernamePlaceholder="e.g. alex_operator"
+        usernameDescription="Unique lowercase login handle."
+      />
+    </>
+  );
+}

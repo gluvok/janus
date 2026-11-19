@@ -26,7 +26,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-strategy";
 import { PhotosDialog } from "@/components/photos-dialog";
-import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
+import { WEIGHMENT_COLUMNS, type WeighmentsTableMeta } from "./columns";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
 
@@ -249,7 +249,7 @@ export function WeighmentsDataTable() {
     useDataTableStore((state) => state.tables["weighments"]) ?? DEFAULT_TABLE_ITEM_STATE;
   const mode = (currentTableState.mode ?? "automatic") as WeighmentMode;
 
-  const columns = useMemo(() => getWeighmentColumns(mode), [mode]);
+  const columns = useMemo(() => WEIGHMENT_COLUMNS[mode](), [mode]);
   const extraParams = useMemo(() => ({ mode }), [mode]);
 
   const dataTable = useDataTable<Weighment>({

@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import type { ReactTable, RowData, SortingState, Updater } from "@tanstack/react-table";
-import type { DateRange } from "react-day-picker";
+import type { RowData } from "@tanstack/react-table";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { type DataTableFeatures } from "./data-table-features";
 import { DataTableSearchInput } from "./data-table-search-input";
 import { DataTableRefreshButton } from "./data-table-refresh-button";
 import { DataTableViewOptions } from "./data-table-view-options";
@@ -23,54 +21,42 @@ export interface DataTableFilterConfig {
 }
 
 export interface DataTableToolbarProps<TData extends RowData> {
-  instance?: UseDataTableReturn<TData>;
-  table?: ReactTable<DataTableFeatures, TData>;
-  search?: string;
-  onSearchChange?: (value: string) => void;
+  instance: UseDataTableReturn<TData>;
   searchPlaceholder?: string;
   actions?: React.ReactNode;
-  onRefresh?: () => void;
   loading?: boolean;
-  dateRange?: DateRange | undefined;
-  onDateRangeChange?: (range: DateRange | undefined) => void;
   filterConfigs?: DataTableFilterConfig[];
-  filters?: Record<string, string>;
-  onFilterChange?: (key: string, value: string) => void;
-  hasActiveFilters?: boolean;
-  onResetFilters?: () => void;
-  hasActiveSorts?: boolean;
-  sorting?: SortingState;
-  onSortingChange?: (updater: Updater<SortingState>) => void;
-  onRemoveSort?: (columnId: string) => void;
-  onResetSorts?: () => void;
-  onResetAll?: () => void;
 }
 
 export function DataTableToolbar<TData extends RowData>({
   instance,
-  table: customTable,
-  search = instance?.search ?? "",
-  onSearchChange = instance?.setSearch ?? (() => {}),
   searchPlaceholder = "Search records...",
   actions,
-  onRefresh = instance?.refresh ?? (() => {}),
-  loading = instance?.loading ?? false,
-  dateRange = instance?.dateRange,
-  onDateRangeChange = instance?.setDateRange ?? (() => {}),
+  loading: customLoading,
   filterConfigs = [],
-  filters = instance?.tableState.filters ?? {},
-  onFilterChange = instance?.setFilter ?? (() => {}),
-  hasActiveFilters = instance?.hasActiveFilters,
-  onResetFilters = instance?.resetAllFilters,
-  hasActiveSorts = instance?.hasActiveSorts ?? false,
-  sorting = instance?.sorting ?? [],
-  onSortingChange = instance?.setSorting ?? (() => {}),
-  onRemoveSort = instance?.removeSort ?? (() => {}),
-  onResetSorts = instance?.resetSorting,
-  onResetAll = instance?.resetAllCriteria,
 }: DataTableToolbarProps<TData>) {
-  const table = customTable ?? instance?.table;
-  if (!table) return null;
+  const {
+    table,
+    search,
+    setSearch,
+    dateRange,
+    setDateRange,
+    loading: instanceLoading,
+    refresh,
+    tableState,
+    setFilter,
+    hasActiveFilters,
+    resetAllFilters,
+    hasActiveSorts,
+    sorting,
+    setSorting,
+    removeSort,
+    resetSorting,
+    resetAllCriteria,
+  } = instance;
+
+  const loading = customLoading ?? instanceLoading;
+  const filters = tableState.filters;
 
   return (
     <div className="flex flex-col gap-2 shrink-0">
@@ -80,17 +66,17 @@ export function DataTableToolbar<TData extends RowData>({
           <DataTableSearchInput
             placeholder={searchPlaceholder}
             value={search}
-            onChange={onSearchChange}
+            onChange={setSearch}
           />
         </div>
 
         <div className="flex-1 min-w-0 sm:flex-initial sm:w-auto">
-          <DatePickerWithRange date={dateRange} onDateChange={onDateRangeChange} />
+          <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
         </div>
 
         <div className="flex items-center gap-2 sm:ml-auto shrink-0">
           {actions}
-          <DataTableRefreshButton onClick={onRefresh} loading={loading} />
+          <DataTableRefreshButton onClick={refresh} loading={loading} />
           <DataTableViewOptions table={table} />
         </div>
       </div>
@@ -105,21 +91,19 @@ export function DataTableToolbar<TData extends RowData>({
               icon={config.categoryIcon}
               options={config.options}
               value={filters[config.key] ?? "all"}
-              onValueChange={(val: string) => onFilterChange(config.key, val)}
+              onValueChange={(val: string) => setFilter(config.key, val)}
             />
           ))}
 
-          {hasActiveFilters && onResetFilters && (
-            <DataTableClearButton label="Clear all" onClick={onResetFilters} />
-          )}
+          {hasActiveFilters && <DataTableClearButton label="Clear all" onClick={resetAllFilters} />}
 
           <DataTableCriteriaBar
             hasActiveSorts={hasActiveSorts}
             sorting={sorting}
-            onSortingChange={onSortingChange}
-            onRemoveSort={onRemoveSort}
-            onResetSorts={onResetSorts}
-            onResetAll={onResetAll}
+            onSortingChange={setSorting}
+            onRemoveSort={removeSort}
+            onResetSorts={resetSorting}
+            onResetAll={resetAllCriteria}
           />
         </div>
       )}

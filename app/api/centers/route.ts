@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
-import { executePaginatedEntityQuery } from "@/lib/api-query";
+import { executePaginatedEntityQuery, executeAllEntityQuery } from "@/lib/api-query";
 import { updateCenterSchema, type Center } from "@/app/centers/types";
 import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
 
 const ALLOWED_SORT_COLUMNS = ["id", "name", "created_at", "updated_at"] as const;
 
 export const GET = handleApiRoute(async (request: Request) => {
-  return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Center>({
+  const { searchParams } = new URL(request.url);
+  const options = {
     request,
     table: "centers",
     select: "id, name, created_at, updated_at",
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
-    defaultSort: { col: "id", ascending: false },
+    defaultSort: { col: "id" as const, ascending: false },
     searchColumns: ["name"],
-  });
+  };
+
+  if (searchParams.get("all") === "true") {
+    return executeAllEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Center>(options);
+  }
+
+  return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Center>(options);
 });
 
 export const PATCH = handleApiRoute(async (request: Request, context: ApiContext) => {

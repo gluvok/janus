@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { addDays, endOfMonth, format, isSameDay, startOfMonth, subDays, subMonths } from "date-fns";
+import { endOfMonth, format, isSameDay, startOfMonth, subDays, subMonths } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
@@ -77,30 +77,15 @@ function isPresetSelected(preset: DatePreset, current: DateRange | undefined): b
 }
 
 export interface DatePickerWithRangeProps {
-  date?: DateRange | undefined;
-  onDateChange?: (date: DateRange | undefined) => void;
-  className?: string;
+  date: DateRange | undefined;
+  onDateChange: (date: DateRange | undefined) => void;
 }
 
-export function DatePickerWithRange({
-  date: controlledDate,
-  onDateChange,
-  className,
-}: DatePickerWithRangeProps) {
-  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), 0, 20),
-    to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),
-  });
+export function DatePickerWithRange({ date, onDateChange }: DatePickerWithRangeProps) {
   const [open, setOpen] = React.useState(false);
 
-  const isControlled = onDateChange !== undefined;
-  const date = isControlled ? controlledDate : internalDate;
-
   const handleSelect = (selected: DateRange | undefined) => {
-    if (!isControlled) {
-      setInternalDate(selected);
-    }
-    onDateChange?.(selected);
+    onDateChange(selected);
   };
 
   const handlePresetSelect = (presetRange: DateRange) => {
@@ -109,7 +94,7 @@ export function DatePickerWithRange({
   };
 
   return (
-    <Field className={cn("w-full sm:w-auto", className)}>
+    <Field className="w-full sm:w-auto">
       <FieldLabel htmlFor="date-picker-range" className="sr-only">
         Date Picker Range
       </FieldLabel>

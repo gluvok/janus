@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
-import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
+import { handleApiRoute, validationErrorResponse, type ApiContext } from "@/lib/api-handler";
 import {
   createUserSchema,
   updateUserSchema,
@@ -51,13 +50,7 @@ export const POST = handleApiRoute(async (request: Request, context: ApiContext)
   const validation = createUserSchema.safeParse(await request.json());
 
   if (!validation.success) {
-    return NextResponse.json(
-      {
-        error: "Validation error",
-        details: z.treeifyError(validation.error),
-      },
-      { status: StatusCodes.BAD_REQUEST },
-    );
+    return validationErrorResponse(validation.error);
   }
 
   const created = await createUserAccount(validation.data, context.factory.id);
@@ -76,13 +69,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
   const validation = updateUserSchema.safeParse(await request.json());
 
   if (!validation.success) {
-    return NextResponse.json(
-      {
-        error: "Validation error",
-        details: z.treeifyError(validation.error),
-      },
-      { status: StatusCodes.BAD_REQUEST },
-    );
+    return validationErrorResponse(validation.error);
   }
 
   const updated = await updateUserAccount(validation.data, context.factory.id);
@@ -97,13 +84,7 @@ export const DELETE = handleApiRoute(async (request: Request, context: ApiContex
   const validation = deleteUserSchema.safeParse(await request.json());
 
   if (!validation.success) {
-    return NextResponse.json(
-      {
-        error: "Validation error",
-        details: z.treeifyError(validation.error),
-      },
-      { status: StatusCodes.BAD_REQUEST },
-    );
+    return validationErrorResponse(validation.error);
   }
 
   const { deletedCount } = await deleteUserAccounts(validation.data.ids, context.factory.id);
