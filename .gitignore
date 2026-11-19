@@ -38,6 +38,11 @@ yarn-error.log*
 
 # implementation plans & scratch docs
 docs/plans/
+docs/*.md
+*.md
+!README.md
+!AGENTS.md
+!AI_POLICY.md
 
 # typescript
 *.tsbuildinfo

@@ -63,8 +63,8 @@ ALTER TABLE IF EXISTS webhook_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "factory_tenant_isolation" ON notifications;
 CREATE POLICY "factory_tenant_isolation" ON notifications
 FOR SELECT USING (
-  CASE 
-    WHEN (auth.jwt() -> 'app_metadata' ->> 'factory_id') IS NOT NULL 
+  CASE
+    WHEN (auth.jwt() -> 'app_metadata' ->> 'factory_id') IS NOT NULL
     THEN factory_id = ((auth.jwt() -> 'app_metadata' ->> 'factory_id')::int)
     ELSE false
   END
@@ -83,14 +83,14 @@ CREATE POLICY "Allow access webhook_logs" ON webhook_logs FOR ALL USING (true);
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_publication_tables 
+    SELECT 1 FROM pg_publication_tables
     WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'entries'
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.entries;
   END IF;
-  
+
   IF NOT EXISTS (
-    SELECT 1 FROM pg_publication_tables 
+    SELECT 1 FROM pg_publication_tables
     WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'notifications'
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;

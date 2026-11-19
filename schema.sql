@@ -975,8 +975,8 @@ DROP POLICY IF EXISTS "factory_tenant_isolation" ON notifications;
 CREATE POLICY "factory_tenant_isolation" ON notifications
 FOR SELECT USING (
   -- Strict zero-trust fail-closed isolation checking scalar app_metadata claim
-  CASE 
-    WHEN (auth.jwt() -> 'app_metadata' ->> 'factory_id') IS NOT NULL 
+  CASE
+    WHEN (auth.jwt() -> 'app_metadata' ->> 'factory_id') IS NOT NULL
     THEN factory_id = ((auth.jwt() -> 'app_metadata' ->> 'factory_id')::int)
     ELSE false
   END
