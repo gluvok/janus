@@ -234,7 +234,7 @@ export function CredentialsFields({
         />
         {passwordError && <FieldError errors={[{ message: passwordError }]} />}
         <FieldDescription>
-          {isPasswordRequired ? "Minimum 6 characters." : "Leave blank to keep current password."}
+          {isPasswordRequired ? "Minimum 6 characters." : "Account password."}
         </FieldDescription>
       </Field>
     </div>
