@@ -44,6 +44,7 @@ export function useWeighmentPdfDownload() {
       offscreenContainer.style.left = "-9999px";
       offscreenContainer.style.top = "0";
       offscreenContainer.style.zIndex = "-9999";
+      offscreenContainer.className = "font-sans antialiased";
       document.body.appendChild(offscreenContainer);
 
       root = createRoot(offscreenContainer);

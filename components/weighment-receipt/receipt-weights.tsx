@@ -8,6 +8,12 @@ interface ReceiptWeightsProps {
 export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
   const hasOperators = Boolean(weighment.in_creator || weighment.out_creator);
 
+  // Gross is max(in_weight, out_weight), Tare is min(in_weight, out_weight)
+  const isGrossIn = weighment.out_weight === null || weighment.in_weight >= weighment.out_weight;
+
+  const grossSourceLabel = isGrossIn ? "In Weight" : "Out Weight";
+  const tareSourceLabel = isGrossIn ? "Out Weight" : "In Weight";
+
   return (
     <div className="border border-zinc-200/80 rounded-md p-3.5 bg-white flex flex-col gap-3">
       {/* 3-Column Open Balance Bar */}
@@ -18,12 +24,15 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
             Gross Weight
           </span>
           <div className="flex items-baseline gap-1">
-            <span className="font-mono text-base sm:text-lg font-bold text-zinc-950 tabular-nums">
+            <span
+              className="font-mono text-base sm:text-lg font-bold text-zinc-950 tabular-nums"
+              style={{ fontFamily: "var(--font-mono), monospace" }}
+            >
               {weighment.gross.toLocaleString()}
             </span>
             <span className="text-3xs font-semibold text-zinc-400">kg</span>
           </div>
-          <span className="text-3xs text-zinc-400">Entry Scale Total</span>
+          <span className="text-3xs font-medium text-zinc-500">{grossSourceLabel}</span>
         </div>
 
         {/* Tare Weight */}
@@ -32,12 +41,17 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
             Tare Weight
           </span>
           <div className="flex items-baseline gap-1">
-            <span className="font-mono text-base sm:text-lg font-bold text-zinc-950 tabular-nums">
+            <span
+              className="font-mono text-base sm:text-lg font-bold text-zinc-950 tabular-nums"
+              style={{ fontFamily: "var(--font-mono), monospace" }}
+            >
               {weighment.tare !== null ? weighment.tare.toLocaleString() : "—"}
             </span>
             <span className="text-3xs font-semibold text-zinc-400">kg</span>
           </div>
-          <span className="text-3xs text-zinc-400">Exit Vehicle Tare</span>
+          <span className="text-3xs font-medium text-zinc-500">
+            {weighment.tare !== null ? tareSourceLabel : "Pending Scale"}
+          </span>
         </div>
 
         {/* Net Weight (Hero Value in Matcha) */}
@@ -46,7 +60,10 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
             Net Weight (Gross - Tare)
           </span>
           <div className="flex items-baseline gap-1">
-            <span className="font-mono text-xl sm:text-2xl font-black text-[#66684f] tabular-nums tracking-tight">
+            <span
+              className="font-mono text-xl sm:text-2xl font-black text-[#66684f] tabular-nums tracking-tight"
+              style={{ fontFamily: "var(--font-mono), monospace" }}
+            >
               {weighment.net !== null ? weighment.net.toLocaleString() : "—"}
             </span>
             <span className="text-xs font-bold text-[#66684f]/80">kg</span>

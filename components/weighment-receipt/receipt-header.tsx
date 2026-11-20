@@ -42,8 +42,8 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
 
   return (
     <div className="flex items-center justify-between gap-4 border-b border-zinc-200/80 pb-3">
-      {/* Factory Branding */}
-      <div className="flex items-center gap-3 min-w-0">
+      {/* Factory Branding (Zero Truncation) */}
+      <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logo.png"
@@ -51,11 +51,12 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
           crossOrigin="anonymous"
           className="size-10 rounded object-contain border border-zinc-200 p-0.5 bg-zinc-50 shrink-0"
         />
-        <div className="flex flex-col min-w-0">
-          <span className="font-heading text-lg sm:text-xl font-black tracking-tight text-zinc-950 uppercase truncate">
-            {factoryName ?? "Mesto Facility"}
-          </span>
-        </div>
+        <span
+          className="font-heading text-lg sm:text-xl font-black tracking-tight text-zinc-950 uppercase whitespace-normal leading-snug"
+          style={{ fontFamily: "var(--font-heading), var(--font-sans), sans-serif" }}
+        >
+          {factoryName ?? "Mesto Facility"}
+        </span>
       </div>
 
       {/* Slip Metadata & Status Badges */}
@@ -87,7 +88,7 @@ export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHea
 
   return (
     <div className="flex items-center justify-between border-b border-zinc-200/80 pb-2.5">
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center gap-2.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logo.png"
@@ -95,10 +96,13 @@ export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHea
           crossOrigin="anonymous"
           className="size-6 rounded object-contain border border-zinc-200 p-0.5 bg-zinc-50 shrink-0"
         />
-        <span className="font-heading text-xs font-black tracking-tight text-zinc-950 uppercase truncate">
+        <span
+          className="font-heading text-xs font-black tracking-tight text-zinc-950 uppercase whitespace-normal"
+          style={{ fontFamily: "var(--font-heading), var(--font-sans), sans-serif" }}
+        >
           {factoryName ?? "Mesto Facility"}
         </span>
-        <span className="text-3xs font-medium text-zinc-400 uppercase tracking-wider">
+        <span className="text-3xs font-medium text-zinc-400 uppercase tracking-wider shrink-0">
           • Transit Photos (Cont.)
         </span>
       </div>

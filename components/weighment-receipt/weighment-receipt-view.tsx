@@ -79,7 +79,13 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
             <div
               key={`receipt-page-${pageIdx + 1}`}
               className="receipt-page bg-white text-zinc-950 border border-zinc-200/80 p-7 flex flex-col gap-4 font-sans text-xs relative box-border"
-              style={{ width: "794px", height: "1123px", minHeight: "1123px", maxHeight: "1123px" }}
+              style={{
+                width: "794px",
+                height: "1123px",
+                minHeight: "1123px",
+                maxHeight: "1123px",
+                fontFamily: "var(--font-sans), system-ui, sans-serif",
+              }}
             >
               {isFirstPage ? (
                 <>
