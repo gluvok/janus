@@ -1,11 +1,15 @@
 /**
  * @file scripts/test-seed/weighments.ts
- * @description Generates automatic and manual weighments with 100% valid, unique SVG photos.
+ * @description Generates automatic and manual weighments with Supabase Storage photos / SVG fallback.
  */
 
 import { supabase } from "../supabase.ts";
 import { SAMPLE_PLATES, daysAgo } from "./constants.ts";
-import { buildUniquePhotoSvgUri } from "./photos.ts";
+import {
+  generateWeighmentPhotoSvg,
+  uploadOrFallbackPhotos,
+  type GeneratedPhotoMetadata,
+} from "./photos.ts";
 import type { SeedContext } from "./types.ts";
 
 export async function seedWeighments(ctx: SeedContext): Promise<{
@@ -29,7 +33,44 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     centerNameMap,
   } = ctx;
 
-  const autoWeighments = [];
+  const pendingPhotos: GeneratedPhotoMetadata[] = [];
+
+  // Helper to register photo metadata
+  function registerPhoto(params: {
+    factoryId: number;
+    mode: "auto" | "manual";
+    weighmentIndex: number;
+    direction: "in" | "out";
+    photoIndex: number;
+    plate: string;
+    scaleName: string;
+  }): GeneratedPhotoMetadata {
+    const meta = generateWeighmentPhotoSvg(params);
+    pendingPhotos.push(meta);
+    return meta;
+  }
+
+  // Intermediate descriptor for building final database rows
+  interface WeighmentSpec {
+    vehicle_number: string;
+    in_detected_vehicle_number: string | null;
+    out_detected_vehicle_number: string | null;
+    in_weight: number;
+    out_weight: number | null;
+    in_time: string;
+    out_time: string | null;
+    in_center_id: number;
+    out_center_id: number | null;
+    in_creator_id?: number;
+    out_creator_id?: number | null;
+    inPhotoPaths: string[];
+    outPhotoPaths: string[];
+    created_at: string;
+    updated_at: string;
+  }
+
+  const autoSpecs: WeighmentSpec[] = [];
+  const manualSpecs: WeighmentSpec[] = [];
 
   // Factory 1 Auto Weighments (30 records)
   for (let i = 0; i < 30; i++) {
@@ -63,35 +104,39 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     }
 
     const inCount = (i % 2) + 1;
-    const inImages = Array.from({ length: inCount }, (_, p) =>
-      buildUniquePhotoSvgUri({
-        factoryId: primaryFactoryId,
-        mode: "auto",
-        weighmentIndex: i,
-        direction: "in",
-        photoIndex: p,
-        plate,
-        scaleName: inCenterName,
-      }),
+    const inPhotoPaths = Array.from(
+      { length: inCount },
+      (_, p) =>
+        registerPhoto({
+          factoryId: primaryFactoryId,
+          mode: "auto",
+          weighmentIndex: i,
+          direction: "in",
+          photoIndex: p,
+          plate,
+          scaleName: inCenterName,
+        }).storagePath,
     );
 
     const outCount = category !== 0 ? ((i + 1) % 2) + 1 : 0;
-    const outImages =
+    const outPhotoPaths =
       category !== 0
-        ? Array.from({ length: outCount }, (_, p) =>
-            buildUniquePhotoSvgUri({
-              factoryId: primaryFactoryId,
-              mode: "auto",
-              weighmentIndex: i,
-              direction: "out",
-              photoIndex: p,
-              plate,
-              scaleName: outCenterName,
-            }),
+        ? Array.from(
+            { length: outCount },
+            (_, p) =>
+              registerPhoto({
+                factoryId: primaryFactoryId,
+                mode: "auto",
+                weighmentIndex: i,
+                direction: "out",
+                photoIndex: p,
+                plate,
+                scaleName: outCenterName,
+              }).storagePath,
           )
         : [];
 
-    autoWeighments.push({
+    autoSpecs.push({
       vehicle_number: plate,
       in_detected_vehicle_number: inDetected,
       out_detected_vehicle_number: outDetected,
@@ -101,8 +146,8 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       out_time: outTime,
       in_center_id: inCenterId,
       out_center_id: outCenterId,
-      in_images: inImages,
-      out_images: outImages,
+      inPhotoPaths,
+      outPhotoPaths,
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });
@@ -137,35 +182,39 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     }
 
     const inCount = (i % 2) + 1;
-    const inImages = Array.from({ length: inCount }, (_, p) =>
-      buildUniquePhotoSvgUri({
-        factoryId: secondaryFactoryId,
-        mode: "auto",
-        weighmentIndex: i + 30,
-        direction: "in",
-        photoIndex: p,
-        plate,
-        scaleName: inCenterName,
-      }),
+    const inPhotoPaths = Array.from(
+      { length: inCount },
+      (_, p) =>
+        registerPhoto({
+          factoryId: secondaryFactoryId,
+          mode: "auto",
+          weighmentIndex: i + 30,
+          direction: "in",
+          photoIndex: p,
+          plate,
+          scaleName: inCenterName,
+        }).storagePath,
     );
 
     const outCount = category !== 0 ? (i % 2) + 1 : 0;
-    const outImages =
+    const outPhotoPaths =
       category !== 0
-        ? Array.from({ length: outCount }, (_, p) =>
-            buildUniquePhotoSvgUri({
-              factoryId: secondaryFactoryId,
-              mode: "auto",
-              weighmentIndex: i + 30,
-              direction: "out",
-              photoIndex: p,
-              plate,
-              scaleName: outCenterName,
-            }),
+        ? Array.from(
+            { length: outCount },
+            (_, p) =>
+              registerPhoto({
+                factoryId: secondaryFactoryId,
+                mode: "auto",
+                weighmentIndex: i + 30,
+                direction: "out",
+                photoIndex: p,
+                plate,
+                scaleName: outCenterName,
+              }).storagePath,
           )
         : [];
 
-    autoWeighments.push({
+    autoSpecs.push({
       vehicle_number: plate,
       in_detected_vehicle_number: plate,
       out_detected_vehicle_number: category !== 0 ? plate : null,
@@ -175,19 +224,17 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       out_time: outTime,
       in_center_id: inCenterId,
       out_center_id: outCenterId,
-      in_images: inImages,
-      out_images: outImages,
+      inPhotoPaths,
+      outPhotoPaths,
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });
   }
 
-  // Manual Weighments
+  // Operators for Manual Weighments
   const operatorId1 = userMap.get("operator1")!;
   const operatorId2 = userMap.get("operator2")!;
   const operatorApexId = userMap.get("operatorApex1")!;
-
-  const manualWeighments = [];
 
   // Factory 1 Manual Weighments (20 records)
   for (let i = 0; i < 20; i++) {
@@ -215,22 +262,24 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     }
 
     const inCount = (i % 2) + 1;
-    const inImages = Array.from({ length: inCount }, (_, p) =>
-      buildUniquePhotoSvgUri({
-        factoryId: primaryFactoryId,
-        mode: "manual",
-        weighmentIndex: i,
-        direction: "in",
-        photoIndex: p,
-        plate,
-        scaleName: inCenterName,
-      }),
+    const inPhotoPaths = Array.from(
+      { length: inCount },
+      (_, p) =>
+        registerPhoto({
+          factoryId: primaryFactoryId,
+          mode: "manual",
+          weighmentIndex: i,
+          direction: "in",
+          photoIndex: p,
+          plate,
+          scaleName: inCenterName,
+        }).storagePath,
     );
 
-    const outImages =
+    const outPhotoPaths =
       category !== 0
         ? [
-            buildUniquePhotoSvgUri({
+            registerPhoto({
               factoryId: primaryFactoryId,
               mode: "manual",
               weighmentIndex: i,
@@ -238,12 +287,14 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
               photoIndex: 0,
               plate,
               scaleName: outCenterName,
-            }),
+            }).storagePath,
           ]
         : [];
 
-    manualWeighments.push({
+    manualSpecs.push({
       vehicle_number: plate,
+      in_detected_vehicle_number: null,
+      out_detected_vehicle_number: null,
       in_weight: inWeight,
       out_weight: outWeight,
       in_time: inTime,
@@ -252,8 +303,8 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       out_center_id: outCenterId,
       in_creator_id: operatorId1,
       out_creator_id: category !== 0 ? operatorId2 : null,
-      in_images: inImages,
-      out_images: outImages,
+      inPhotoPaths,
+      outPhotoPaths,
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });
@@ -287,8 +338,8 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       outWeight = inWeight;
     }
 
-    const inImages = [
-      buildUniquePhotoSvgUri({
+    const inPhotoPaths = [
+      registerPhoto({
         factoryId: secondaryFactoryId,
         mode: "manual",
         weighmentIndex: i + 20,
@@ -296,13 +347,13 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
         photoIndex: 0,
         plate,
         scaleName: inCenterName,
-      }),
+      }).storagePath,
     ];
 
-    const outImages =
+    const outPhotoPaths =
       category !== 0
         ? [
-            buildUniquePhotoSvgUri({
+            registerPhoto({
               factoryId: secondaryFactoryId,
               mode: "manual",
               weighmentIndex: i + 20,
@@ -310,12 +361,14 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
               photoIndex: 0,
               plate,
               scaleName: outCenterName,
-            }),
+            }).storagePath,
           ]
         : [];
 
-    manualWeighments.push({
+    manualSpecs.push({
       vehicle_number: plate,
+      in_detected_vehicle_number: null,
+      out_detected_vehicle_number: null,
       in_weight: inWeight,
       out_weight: outWeight,
       in_time: inTime,
@@ -324,14 +377,50 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       out_center_id: outCenterId,
       in_creator_id: operatorApexId,
       out_creator_id: category !== 0 ? operatorApexId : null,
-      in_images: inImages,
-      out_images: outImages,
+      inPhotoPaths,
+      outPhotoPaths,
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });
   }
 
-  // Verify 100% uniqueness of every seeded weighment photo
+  // Upload or fallback all photos in parallel
+  const resolvedPhotoUrls = await uploadOrFallbackPhotos(pendingPhotos);
+
+  // Transform specs into final database insert records
+  const autoWeighments = autoSpecs.map((spec) => ({
+    vehicle_number: spec.vehicle_number,
+    in_detected_vehicle_number: spec.in_detected_vehicle_number,
+    out_detected_vehicle_number: spec.out_detected_vehicle_number,
+    in_weight: spec.in_weight,
+    out_weight: spec.out_weight,
+    in_time: spec.in_time,
+    out_time: spec.out_time,
+    in_center_id: spec.in_center_id,
+    out_center_id: spec.out_center_id,
+    in_images: spec.inPhotoPaths.map((p) => resolvedPhotoUrls.get(p)!),
+    out_images: spec.outPhotoPaths.map((p) => resolvedPhotoUrls.get(p)!),
+    created_at: spec.created_at,
+    updated_at: spec.updated_at,
+  }));
+
+  const manualWeighments = manualSpecs.map((spec) => ({
+    vehicle_number: spec.vehicle_number,
+    in_weight: spec.in_weight,
+    out_weight: spec.out_weight,
+    in_time: spec.in_time,
+    out_time: spec.out_time,
+    in_center_id: spec.in_center_id,
+    out_center_id: spec.out_center_id,
+    in_creator_id: spec.in_creator_id!,
+    out_creator_id: spec.out_creator_id,
+    in_images: spec.inPhotoPaths.map((p) => resolvedPhotoUrls.get(p)!),
+    out_images: spec.outPhotoPaths.map((p) => resolvedPhotoUrls.get(p)!),
+    created_at: spec.created_at,
+    updated_at: spec.updated_at,
+  }));
+
+  // Verify 100% uniqueness of every seeded photo across all 70 weighments
   const allAssignedPhotos = new Set<string>();
   let duplicatePhotoCount = 0;
   for (const w of [...autoWeighments, ...manualWeighments]) {
@@ -345,7 +434,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     throw new Error(`Duplicate photos detected: ${duplicatePhotoCount} duplicate URLs found!`);
   }
   console.log(
-    `  ✓ Verified ${allAssignedPhotos.size} unique SVG photos across 70 weighments (0 duplicates).`,
+    `  ✓ Verified ${allAssignedPhotos.size} unique photos across 70 weighments (0 duplicates).`,
   );
 
   const { data: createdAuto, error: autoErr } = await supabase

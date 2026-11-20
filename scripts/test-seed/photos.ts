@@ -1,10 +1,19 @@
 /**
  * @file scripts/test-seed/photos.ts
- * @description Generates 100% valid, self-contained SVG Data URI inspection photo cards.
- * Zero network dependencies, zero 403 Forbidden errors, instant local rendering.
+ * @description Generates 100% valid, self-contained SVG scale inspection photo cards
+ * and uploads them to the Supabase Storage 'mesto' bucket with resilient fallback.
  */
 
-export function buildUniquePhotoSvgUri({
+import { SUPABASE_URL, supabase } from "../supabase.ts";
+
+export interface GeneratedPhotoMetadata {
+  svgContent: string;
+  storagePath: string;
+  publicUrl: string;
+  dataUri: string;
+}
+
+export function generateWeighmentPhotoSvg({
   factoryId,
   mode,
   weighmentIndex,
@@ -20,7 +29,7 @@ export function buildUniquePhotoSvgUri({
   photoIndex: number;
   plate: string;
   scaleName: string;
-}): string {
+}): GeneratedPhotoMetadata {
   const isOut = direction === "out";
   const headerColor = isOut ? "#ea580c" : "#0284c7";
   const headerText = isOut ? "OUTBOUND SCALE DEPARTURE" : "INBOUND SCALE INSPECTION";
@@ -28,8 +37,10 @@ export function buildUniquePhotoSvgUri({
   const cameraLabel = `CAM-0${photoIndex + 1} • ${isOut ? "EXIT LANE" : "ENTRY PLATFORM"}`;
   const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
   const transitId = `TR-${mode.toUpperCase()}-${factoryId}-${String(weighmentIndex + 1).padStart(3, "0")}-${photoIndex + 1}`;
+  const filename = `weighment_${mode}_${weighmentIndex}_${direction}_${photoIndex}.svg`;
+  const storagePath = `${factoryId}/${filename}`;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0f172a" />
@@ -87,5 +98,77 @@ export function buildUniquePhotoSvgUri({
   <text x="540" y="444" fill="#38bdf8" font-family="ui-monospace, monospace" font-size="12" font-weight="700">${transitId} • ${timestamp}</text>
 </svg>`;
 
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  const dataUri = `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/mesto/${storagePath}`;
+
+  return {
+    svgContent,
+    storagePath,
+    publicUrl,
+    dataUri,
+  };
+}
+
+/**
+ * Uploads generated SVG photos to the 'mesto' Supabase Storage bucket in parallel batches.
+ * If storage upload succeeds, returns the public bucket URL.
+ * If storage is unreachable or offline, returns the self-contained SVG Data URI.
+ */
+export async function uploadOrFallbackPhotos(
+  photos: GeneratedPhotoMetadata[],
+): Promise<Map<string, string>> {
+  const urlMap = new Map<string, string>();
+  if (photos.length === 0) return urlMap;
+
+  console.log(
+    `\n📸 Synchronizing ${photos.length} weighment photos with Supabase Storage ('mesto' bucket)...`,
+  );
+
+  let storageAccessible = true;
+  const BATCH_SIZE = 10;
+
+  for (let i = 0; i < photos.length; i += BATCH_SIZE) {
+    const batch = photos.slice(i, i + BATCH_SIZE);
+
+    if (storageAccessible) {
+      const uploadPromises = batch.map(async (photo) => {
+        try {
+          const { error } = await supabase.storage
+            .from("mesto")
+            .upload(photo.storagePath, Buffer.from(photo.svgContent), {
+              contentType: "image/svg+xml",
+              upsert: true,
+            });
+
+          if (!error) {
+            urlMap.set(photo.storagePath, photo.publicUrl);
+          } else {
+            urlMap.set(photo.storagePath, photo.dataUri);
+          }
+        } catch {
+          storageAccessible = false;
+          urlMap.set(photo.storagePath, photo.dataUri);
+        }
+      });
+
+      await Promise.all(uploadPromises);
+    } else {
+      for (const photo of batch) {
+        urlMap.set(photo.storagePath, photo.dataUri);
+      }
+    }
+  }
+
+  const uploadedCount = Array.from(urlMap.values()).filter((u) => !u.startsWith("data:")).length;
+  if (uploadedCount > 0) {
+    console.log(
+      `  ✓ Successfully uploaded ${uploadedCount} photos to Supabase Storage 'mesto' bucket.`,
+    );
+  } else {
+    console.log(
+      "  ℹ️ Storage offline or sandbox network isolated; using 100% valid self-contained SVG Data URIs.",
+    );
+  }
+
+  return urlMap;
 }

@@ -80,10 +80,23 @@ export function PhotosDialog({
             <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
               <HugeiconsIcon icon={Image01Icon} className="size-4" />
             </div>
-            <div className="flex flex-col min-w-0">
-              <DialogTitle className="text-sm font-semibold truncate">
-                Weighment #{weighmentId} {vehicleNumber} {directionLabel}
-              </DialogTitle>
+            <div className="flex flex-col min-w-0 gap-0.5">
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-sm font-semibold truncate">
+                  Weighment #{weighmentId} {vehicleNumber}
+                </DialogTitle>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-2xs font-medium shrink-0",
+                    directionLabel === "Inbound"
+                      ? "text-primary border-primary/40 bg-primary/10"
+                      : "text-orange-600 border-orange-500/40 bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/30 dark:bg-orange-950/30",
+                  )}
+                >
+                  {directionLabel}
+                </Badge>
+              </div>
               <div className="text-xs text-muted-foreground truncate">{subtitle}</div>
             </div>
           </div>

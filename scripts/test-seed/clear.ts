@@ -1,6 +1,7 @@
 /**
  * @file scripts/test-seed/clear.ts
- * @description Clears existing records in topological order and resets database sequences.
+ * @description Clears existing records in topological order, resets sequences,
+ * and clears test storage assets in the 'mesto' bucket.
  */
 
 import { supabase } from "../supabase.ts";
@@ -22,5 +23,21 @@ export async function clearDatabase(): Promise<void> {
     console.warn("  ⚠️ Could not invoke reset_all_sequences RPC:", resetErr.message);
   } else {
     console.log("  ✓ Reset all auto-increment sequences via reset_all_sequences().");
+  }
+
+  // Clear existing storage files in 'mesto' bucket for factory prefixes 1 and 2
+  try {
+    for (const prefix of ["1", "2"]) {
+      const { data: files } = await supabase.storage.from("mesto").list(prefix);
+      if (files && files.length > 0) {
+        const filePaths = files.map((f) => `${prefix}/${f.name}`);
+        await supabase.storage.from("mesto").remove(filePaths);
+        console.log(
+          `  ✓ Cleared ${filePaths.length} objects from 'mesto' bucket prefix: ${prefix}/`,
+        );
+      }
+    }
+  } catch {
+    // Non-fatal if storage is offline or unreachable
   }
 }
