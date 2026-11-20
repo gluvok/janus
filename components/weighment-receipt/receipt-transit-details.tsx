@@ -8,8 +8,8 @@ interface ReceiptTransitDetailsProps {
 
 export function ReceiptTransitDetails({ weighment }: ReceiptTransitDetailsProps) {
   return (
-    <div className="border border-zinc-200/80 rounded-md p-3 bg-zinc-50/40">
-      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-zinc-200/80 items-center">
+    <div className="py-2.5 border-b border-zinc-200/80 rounded-none">
+      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-zinc-200/60 items-center">
         {/* Col 1: Vehicle Identifier */}
         <div className="col-span-12 sm:col-span-4 sm:pr-4 flex flex-col gap-1 min-w-0">
           <span className="text-3xs uppercase tracking-widest text-zinc-400 font-bold">

@@ -47,20 +47,20 @@ export function ReceiptPhotos({
           return (
             <div
               key={`${photo.url}-${idx}`}
-              className="group relative aspect-video rounded overflow-hidden border border-zinc-200/80 bg-zinc-100 flex flex-col"
+              className="group relative aspect-video rounded-none overflow-hidden bg-zinc-100 flex flex-col border-0"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photo.url}
                 alt={`Scale photo ${photoNumber}`}
                 crossOrigin="anonymous"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-none"
               />
 
               {/* Minimalist IN / OUT Badge */}
               <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
                 <span
-                  className={`font-mono text-3xs font-black px-1.5 py-0.5 rounded tracking-widest uppercase ${
+                  className={`font-mono text-3xs font-black px-1.5 py-0.5 rounded-none tracking-widest uppercase ${
                     isEntry ? "bg-[#66684f] text-white" : "bg-zinc-950 text-white"
                   }`}
                 >

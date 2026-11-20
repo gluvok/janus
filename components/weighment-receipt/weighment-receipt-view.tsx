@@ -78,7 +78,7 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
           return (
             <div
               key={`receipt-page-${pageIdx + 1}`}
-              className="receipt-page bg-white text-zinc-950 border border-zinc-200/80 p-7 flex flex-col gap-4 font-sans text-xs relative box-border"
+              className="receipt-page bg-white text-zinc-950 rounded-none border border-zinc-200/80 p-7 flex flex-col gap-4 font-sans text-xs relative box-border"
               style={{
                 width: "794px",
                 height: "1123px",
@@ -124,7 +124,7 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
               {/* Minimalist Scale Slip Footer & Tabular Page Number */}
               <div className="mt-auto pt-3 border-t border-zinc-200/80 flex items-center justify-between gap-3 text-3xs text-zinc-400">
                 <span className="font-semibold uppercase tracking-wider text-zinc-500">
-                  Official Scale Slip • Mesto Industrial Automations
+                  Official Scale Slip &bull; Mesto Industrial Automations
                 </span>
                 <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-600">
                   <span>Page</span>
