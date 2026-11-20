@@ -42,6 +42,7 @@ export interface WeighmentsTableMeta {
     outCenter: { id: number; name: string } | null;
     images: PhotoItem[];
   }) => void;
+  onDownloadReceipt?: (weighment: Weighment) => void;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -292,10 +293,17 @@ const photosColumn = columnHelper.display({
   enableSorting: false,
 });
 
-const actionsColumn = createCopyActionsColumn(columnHelper, ({ row }) => ({
-  copyText: row.original.vehicle_number,
-  copyLabel: "Copy Vehicle No.",
-}));
+const actionsColumn = createCopyActionsColumn<Weighment>(columnHelper, ({ row, table }) => {
+  const meta = table.options.meta as WeighmentsTableMeta | undefined;
+  const isCompleted = row.original.type !== "pending";
+
+  return {
+    copyText: row.original.vehicle_number,
+    copyLabel: "Copy Vehicle No.",
+    onDownloadReceipt: isCompleted ? () => meta?.onDownloadReceipt?.(row.original) : undefined,
+    receiptLabel: "Receipt",
+  };
+});
 
 /* -------------------------------------------------------------------------- */
 /* Specialized Columns (Automatic vs. Manual)                                 */

@@ -168,36 +168,57 @@ export function buildStoragePath({
 }
 
 // In-memory cache for downloaded base images to avoid repeated network calls
-const baseImageBufferCache = new Map<number, Buffer>();
+const baseImagePromiseCache = new Map<number, Promise<Buffer | null>>();
+let wikimediaUnreachable = false;
+let consecutiveFetchFailures = 0;
 
 async function getBaseImageBuffer(assetIndex: number): Promise<Buffer | null> {
-  if (baseImageBufferCache.has(assetIndex)) {
-    return baseImageBufferCache.get(assetIndex)!;
+  const normalizedIndex = assetIndex % COMMONS_PHOTOS.length;
+  if (baseImagePromiseCache.has(normalizedIndex)) {
+    return baseImagePromiseCache.get(normalizedIndex)!;
   }
 
-  const asset = COMMONS_PHOTOS[assetIndex % COMMONS_PHOTOS.length];
-  try {
-    const res = await fetch(asset.url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
-      signal: AbortSignal.timeout(6000),
-    });
-
-    if (!res.ok) {
-      console.warn(`  ⚠️ Failed to fetch base asset from Wikimedia (${res.status}): ${asset.url}`);
-      return null;
-    }
-
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    baseImageBufferCache.set(assetIndex, buffer);
-    return buffer;
-  } catch (err) {
-    console.warn(`  ⚠️ Network timeout fetching ${asset.url}:`, (err as Error).message);
+  if (wikimediaUnreachable) {
     return null;
   }
+
+  const fetchPromise = (async () => {
+    const asset = COMMONS_PHOTOS[normalizedIndex];
+    try {
+      const res = await fetch(asset.url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        signal: AbortSignal.timeout(4000),
+      });
+
+      if (!res.ok) {
+        consecutiveFetchFailures++;
+        if (consecutiveFetchFailures >= 3) {
+          wikimediaUnreachable = true;
+          console.warn(
+            "  ℹ️ Wikimedia rate-limited or unreachable; using direct open-license URLs.",
+          );
+        }
+        return null;
+      }
+
+      consecutiveFetchFailures = 0;
+      const arrayBuffer = await res.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch {
+      consecutiveFetchFailures++;
+      if (consecutiveFetchFailures >= 3) {
+        wikimediaUnreachable = true;
+        console.warn("  ℹ️ Wikimedia network timeout; switching to direct open-license URLs.");
+      }
+      return null;
+    }
+  })();
+
+  baseImagePromiseCache.set(normalizedIndex, fetchPromise);
+  return fetchPromise;
 }
 
 /**

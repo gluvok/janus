@@ -16,6 +16,7 @@ import {
   Copy01Icon,
   Delete02Icon,
   Edit01Icon,
+  Invoice01Icon,
   MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 
@@ -54,9 +55,16 @@ function ActionsTrigger() {
 export interface CopyRowActionProps {
   copyText: string;
   copyLabel: string;
+  onDownloadReceipt?: () => void;
+  receiptLabel?: string;
 }
 
-export function CopyRowAction({ copyText, copyLabel }: CopyRowActionProps) {
+export function CopyRowAction({
+  copyText,
+  copyLabel,
+  onDownloadReceipt,
+  receiptLabel = "Receipt",
+}: CopyRowActionProps) {
   const handleCopy = useCopyAction(copyText, copyLabel);
 
   return (
@@ -70,6 +78,15 @@ export function CopyRowAction({ copyText, copyLabel }: CopyRowActionProps) {
               <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
               <span>{copyLabel}</span>
             </DropdownMenuItem>
+            {onDownloadReceipt && (
+              <DropdownMenuItem
+                onClick={onDownloadReceipt}
+                className="gap-2 text-xs cursor-pointer"
+              >
+                <HugeiconsIcon icon={Invoice01Icon} className="size-3.5 text-muted-foreground" />
+                <span>{receiptLabel}</span>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

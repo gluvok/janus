@@ -80,7 +80,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       inDetected = plate.slice(0, -1) + (plate.endsWith("4") ? "A" : "B");
     }
 
-    const inCount = (i % 2) + 1;
+    const inCount = 3;
     const inPhotoPaths = Array.from({ length: inCount }, (_, p) =>
       registerPhoto({
         factoryId: primaryFactoryId,
@@ -92,7 +92,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       }),
     );
 
-    const outCount = category !== 0 ? ((i + 1) % 2) + 1 : 0;
+    const outCount = category !== 0 ? 3 : 0;
     const outPhotoPaths =
       category !== 0
         ? Array.from({ length: outCount }, (_, p) =>
@@ -148,7 +148,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       outWeight = inWeight;
     }
 
-    const inCount = (i % 2) + 1;
+    const inCount = 3;
     const inPhotoPaths = Array.from({ length: inCount }, (_, p) =>
       registerPhoto({
         factoryId: secondaryFactoryId,
@@ -160,7 +160,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       }),
     );
 
-    const outCount = category !== 0 ? (i % 2) + 1 : 0;
+    const outCount = category !== 0 ? 3 : 0;
     const outPhotoPaths =
       category !== 0
         ? Array.from({ length: outCount }, (_, p) =>
@@ -220,7 +220,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       outWeight = inWeight;
     }
 
-    const inCount = (i % 2) + 1;
+    const inCount = 3;
     const inPhotoPaths = Array.from({ length: inCount }, (_, p) =>
       registerPhoto({
         factoryId: primaryFactoryId,
@@ -232,18 +232,19 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       }),
     );
 
+    const outCount = category !== 0 ? 3 : 0;
     const outPhotoPaths =
       category !== 0
-        ? [
+        ? Array.from({ length: outCount }, (_, p) =>
             registerPhoto({
               factoryId: primaryFactoryId,
               mode: "manual",
               weighmentIndex: i,
               direction: "out",
-              photoIndex: 0,
+              photoIndex: p,
               plate,
             }),
-          ]
+          )
         : [];
 
     manualSpecs.push({
@@ -289,29 +290,31 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       outWeight = inWeight;
     }
 
-    const inPhotoPaths = [
+    const inCount = 3;
+    const inPhotoPaths = Array.from({ length: inCount }, (_, p) =>
       registerPhoto({
         factoryId: secondaryFactoryId,
         mode: "manual",
         weighmentIndex: i + 20,
         direction: "in",
-        photoIndex: 0,
+        photoIndex: p,
         plate,
       }),
-    ];
+    );
 
+    const outCount = category !== 0 ? 3 : 0;
     const outPhotoPaths =
       category !== 0
-        ? [
+        ? Array.from({ length: outCount }, (_, p) =>
             registerPhoto({
               factoryId: secondaryFactoryId,
               mode: "manual",
               weighmentIndex: i + 20,
               direction: "out",
-              photoIndex: 0,
+              photoIndex: p,
               plate,
             }),
-          ]
+          )
         : [];
 
     manualSpecs.push({
