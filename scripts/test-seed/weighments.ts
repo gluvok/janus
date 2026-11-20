@@ -1,15 +1,11 @@
 /**
  * @file scripts/test-seed/weighments.ts
- * @description Generates automatic and manual weighments with Supabase Storage photos / SVG fallback.
+ * @description Generates automatic and manual weighments with verified open-license photos in Supabase Storage.
  */
 
 import { supabase } from "../supabase.ts";
 import { SAMPLE_PLATES, daysAgo } from "./constants.ts";
-import {
-  generateWeighmentPhotoSvg,
-  uploadOrFallbackPhotos,
-  type GeneratedPhotoMetadata,
-} from "./photos.ts";
+import { buildStoragePath, uploadAndVerifyPhotos, type PhotoTarget } from "./photos.ts";
 import type { SeedContext } from "./types.ts";
 
 export async function seedWeighments(ctx: SeedContext): Promise<{
@@ -24,33 +20,16 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     "\n🚛 [4/5] Seeding Tenant-Isolated Weighments covering all 4 weighment_type outcomes...",
   );
 
-  const {
-    primaryFactoryId,
-    secondaryFactoryId,
-    userMap,
-    primaryCenterIds,
-    secondaryCenterIds,
-    centerNameMap,
-  } = ctx;
+  const { primaryFactoryId, secondaryFactoryId, userMap, primaryCenterIds, secondaryCenterIds } =
+    ctx;
 
-  const pendingPhotos: GeneratedPhotoMetadata[] = [];
+  const photoTargets: PhotoTarget[] = [];
 
-  // Helper to register photo metadata
-  function registerPhoto(params: {
-    factoryId: number;
-    mode: "auto" | "manual";
-    weighmentIndex: number;
-    direction: "in" | "out";
-    photoIndex: number;
-    plate: string;
-    scaleName: string;
-  }): GeneratedPhotoMetadata {
-    const meta = generateWeighmentPhotoSvg(params);
-    pendingPhotos.push(meta);
-    return meta;
+  function registerPhoto(target: PhotoTarget): string {
+    photoTargets.push(target);
+    return buildStoragePath(target);
   }
 
-  // Intermediate descriptor for building final database rows
   interface WeighmentSpec {
     vehicle_number: string;
     in_detected_vehicle_number: string | null;
@@ -78,8 +57,6 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     const category = i % 5;
     const inCenterId = primaryCenterIds[i % primaryCenterIds.length];
     const outCenterId = category !== 0 ? primaryCenterIds[(i + 1) % primaryCenterIds.length] : null;
-    const inCenterName = centerNameMap.get(inCenterId) ?? "Primary Scale";
-    const outCenterName = outCenterId ? (centerNameMap.get(outCenterId) ?? "Secondary Scale") : "";
 
     const inTime = daysAgo(Math.floor(i / 3), (i % 24) * 20);
     const outTime = category !== 0 ? daysAgo(Math.floor(i / 3), (i % 24) * 20 - 45) : null;
@@ -104,35 +81,29 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     }
 
     const inCount = (i % 2) + 1;
-    const inPhotoPaths = Array.from(
-      { length: inCount },
-      (_, p) =>
-        registerPhoto({
-          factoryId: primaryFactoryId,
-          mode: "auto",
-          weighmentIndex: i,
-          direction: "in",
-          photoIndex: p,
-          plate,
-          scaleName: inCenterName,
-        }).storagePath,
+    const inPhotoPaths = Array.from({ length: inCount }, (_, p) =>
+      registerPhoto({
+        factoryId: primaryFactoryId,
+        mode: "auto",
+        weighmentIndex: i,
+        direction: "in",
+        photoIndex: p,
+        plate,
+      }),
     );
 
     const outCount = category !== 0 ? ((i + 1) % 2) + 1 : 0;
     const outPhotoPaths =
       category !== 0
-        ? Array.from(
-            { length: outCount },
-            (_, p) =>
-              registerPhoto({
-                factoryId: primaryFactoryId,
-                mode: "auto",
-                weighmentIndex: i,
-                direction: "out",
-                photoIndex: p,
-                plate,
-                scaleName: outCenterName,
-              }).storagePath,
+        ? Array.from({ length: outCount }, (_, p) =>
+            registerPhoto({
+              factoryId: primaryFactoryId,
+              mode: "auto",
+              weighmentIndex: i,
+              direction: "out",
+              photoIndex: p,
+              plate,
+            }),
           )
         : [];
 
@@ -160,10 +131,6 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     const inCenterId = secondaryCenterIds[i % secondaryCenterIds.length];
     const outCenterId =
       category !== 0 ? secondaryCenterIds[(i + 1) % secondaryCenterIds.length] : null;
-    const inCenterName = centerNameMap.get(inCenterId) ?? "Apex Inbound Scale";
-    const outCenterName = outCenterId
-      ? (centerNameMap.get(outCenterId) ?? "Apex Outbound Scale")
-      : "";
 
     const inTime = daysAgo(Math.floor(i / 2), (i % 18) * 25);
     const outTime = category !== 0 ? daysAgo(Math.floor(i / 2), (i % 18) * 25 - 40) : null;
@@ -182,35 +149,29 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     }
 
     const inCount = (i % 2) + 1;
-    const inPhotoPaths = Array.from(
-      { length: inCount },
-      (_, p) =>
-        registerPhoto({
-          factoryId: secondaryFactoryId,
-          mode: "auto",
-          weighmentIndex: i + 30,
-          direction: "in",
-          photoIndex: p,
-          plate,
-          scaleName: inCenterName,
-        }).storagePath,
+    const inPhotoPaths = Array.from({ length: inCount }, (_, p) =>
+      registerPhoto({
+        factoryId: secondaryFactoryId,
+        mode: "auto",
+        weighmentIndex: i + 30,
+        direction: "in",
+        photoIndex: p,
+        plate,
+      }),
     );
 
     const outCount = category !== 0 ? (i % 2) + 1 : 0;
     const outPhotoPaths =
       category !== 0
-        ? Array.from(
-            { length: outCount },
-            (_, p) =>
-              registerPhoto({
-                factoryId: secondaryFactoryId,
-                mode: "auto",
-                weighmentIndex: i + 30,
-                direction: "out",
-                photoIndex: p,
-                plate,
-                scaleName: outCenterName,
-              }).storagePath,
+        ? Array.from({ length: outCount }, (_, p) =>
+            registerPhoto({
+              factoryId: secondaryFactoryId,
+              mode: "auto",
+              weighmentIndex: i + 30,
+              direction: "out",
+              photoIndex: p,
+              plate,
+            }),
           )
         : [];
 
@@ -242,8 +203,6 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     const category = i % 4;
     const inCenterId = primaryCenterIds[i % primaryCenterIds.length];
     const outCenterId = category !== 0 ? primaryCenterIds[(i + 2) % primaryCenterIds.length] : null;
-    const inCenterName = centerNameMap.get(inCenterId) ?? "Primary Scale";
-    const outCenterName = outCenterId ? (centerNameMap.get(outCenterId) ?? "Secondary Scale") : "";
 
     const inTime = daysAgo(Math.floor(i / 2), (i % 12) * 35);
     const outTime = category !== 0 ? daysAgo(Math.floor(i / 2), (i % 12) * 35 - 50) : null;
@@ -262,18 +221,15 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     }
 
     const inCount = (i % 2) + 1;
-    const inPhotoPaths = Array.from(
-      { length: inCount },
-      (_, p) =>
-        registerPhoto({
-          factoryId: primaryFactoryId,
-          mode: "manual",
-          weighmentIndex: i,
-          direction: "in",
-          photoIndex: p,
-          plate,
-          scaleName: inCenterName,
-        }).storagePath,
+    const inPhotoPaths = Array.from({ length: inCount }, (_, p) =>
+      registerPhoto({
+        factoryId: primaryFactoryId,
+        mode: "manual",
+        weighmentIndex: i,
+        direction: "in",
+        photoIndex: p,
+        plate,
+      }),
     );
 
     const outPhotoPaths =
@@ -286,8 +242,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
               direction: "out",
               photoIndex: 0,
               plate,
-              scaleName: outCenterName,
-            }).storagePath,
+            }),
           ]
         : [];
 
@@ -317,10 +272,6 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     const inCenterId = secondaryCenterIds[i % secondaryCenterIds.length];
     const outCenterId =
       category !== 0 ? secondaryCenterIds[(i + 1) % secondaryCenterIds.length] : null;
-    const inCenterName = centerNameMap.get(inCenterId) ?? "Apex Inbound Scale";
-    const outCenterName = outCenterId
-      ? (centerNameMap.get(outCenterId) ?? "Apex Outbound Scale")
-      : "";
 
     const inTime = daysAgo(Math.floor(i / 2), (i % 14) * 30);
     const outTime = category !== 0 ? daysAgo(Math.floor(i / 2), (i % 14) * 30 - 45) : null;
@@ -346,8 +297,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
         direction: "in",
         photoIndex: 0,
         plate,
-        scaleName: inCenterName,
-      }).storagePath,
+      }),
     ];
 
     const outPhotoPaths =
@@ -360,8 +310,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
               direction: "out",
               photoIndex: 0,
               plate,
-              scaleName: outCenterName,
-            }).storagePath,
+            }),
           ]
         : [];
 
@@ -384,8 +333,8 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     });
   }
 
-  // Upload or fallback all photos in parallel
-  const resolvedPhotoUrls = await uploadOrFallbackPhotos(pendingPhotos);
+  // Upload or fallback all photos in parallel and verify live HTTP 200
+  const resolvedPhotoUrls = await uploadAndVerifyPhotos(photoTargets);
 
   // Transform specs into final database insert records
   const autoWeighments = autoSpecs.map((spec) => ({

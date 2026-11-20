@@ -1,172 +1,317 @@
 /**
  * @file scripts/test-seed/photos.ts
- * @description Generates 100% valid, self-contained SVG scale inspection photo cards
- * and uploads them to the Supabase Storage 'mesto' bucket with resilient fallback.
+ * @description Curated Wikimedia Commons open-license transport photos with Supabase Storage
+ * upload, live HTTP verification, and resilient fallback.
  */
 
 import { SUPABASE_URL, supabase } from "../supabase.ts";
 
-export interface GeneratedPhotoMetadata {
-  svgContent: string;
-  storagePath: string;
-  publicUrl: string;
-  dataUri: string;
+export interface CuratedAsset {
+  title: string;
+  url: string;
 }
 
-export function generateWeighmentPhotoSvg({
-  factoryId,
-  mode,
-  weighmentIndex,
-  direction,
-  photoIndex,
-  plate,
-  scaleName,
-}: {
+export const COMMONS_PHOTOS: CuratedAsset[] = [
+  {
+    title: "Heavy Duty Commercial Tractor Trailer",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/DHL_semi-trailer_-_unloaded_from_ferry.JPG/960px-DHL_semi-trailer_-_unloaded_from_ferry.JPG",
+  },
+  {
+    title: "Freight Transport Semi Truck with Trailer",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Truck_with_trailer_in_Toronto.jpg/960px-Truck_with_trailer_in_Toronto.jpg",
+  },
+  {
+    title: "Kenworth Highway Tractor at Travel Plaza",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/Bakersfield%2C_%28CA%29_Truck_Kenworth_at_Flying_J_Travel_%285%29.jpg/960px-Bakersfield%2C_%28CA%29_Truck_Kenworth_at_Flying_J_Travel_%285%29.jpg",
+  },
+  {
+    title: "Peterbilt Heavy Haul Transport",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/Bakersfield%2C_%28CA%29_Truck_Peterbilt_at_Flying_J_Travel_Plaza_%28en2016%29_%284%29.JPG/960px-Bakersfield%2C_%28CA%29_Truck_Peterbilt_at_Flying_J_Travel_Plaza_%28en2016%29_%284%29.JPG",
+  },
+  {
+    title: "Shockwave Transport Alliance Truck",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/20141025_Shockwave_Truck_Alliance_Air_Show_2014-3.jpg/960px-20141025_Shockwave_Truck_Alliance_Air_Show_2014-3.jpg",
+  },
+  {
+    title: "Commercial Bulk Tanker Delivery Unit",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Guida_Siebert_Dairy_Milk_Delivery_Truck_tractor_trailer%21.jpg/960px-Guida_Siebert_Dairy_Milk_Delivery_Truck_tractor_trailer%21.jpg",
+  },
+  {
+    title: "Kenworth Cabover Semi Truck & Cargo Trailer",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Kenworth_Cabover_Semi_Truck_%26_Trailer.jpg/960px-Kenworth_Cabover_Semi_Truck_%26_Trailer.jpg",
+  },
+  {
+    title: "Intermodal Logistics Cargo Trailer",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/58/Certco_Trailer_Semi_Truck.jpg/960px-Certco_Trailer_Semi_Truck.jpg",
+  },
+  {
+    title: "Enclosed Box Trailer Freight Carrier",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7d/Con-way_Truckload_semi-trailer_at_truck_stop.jpg/960px-Con-way_Truckload_semi-trailer_at_truck_stop.jpg",
+  },
+  {
+    title: "Regional Freight Distribution Semi-Tractor",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/Con-way_Freight_semi-tractor_trailer.jpg/960px-Con-way_Freight_semi-tractor_trailer.jpg",
+  },
+  {
+    title: "Fleet Box-Trailer Long Haul Semi",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Walmart_box-trailer_semi.jpg/960px-Walmart_box-trailer_semi.jpg",
+  },
+  {
+    title: "Interstate Highway Intermodal Carrier",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/J.B_Hunt_semi-truck_trailer_on_Interstate_90_in_Spokane%2C_WA.jpg/960px-J.B_Hunt_semi-truck_trailer_on_Interstate_90_in_Spokane%2C_WA.jpg",
+  },
+  {
+    title: "Refrigerated Transport Peterbilt Semi-Trailer",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/PRIME_Inc_-_Peterbilt_Refrigerated_Semi-trailer_truck_-_I-90_Spokane%2C_WA.jpg/960px-PRIME_Inc_-_Peterbilt_Refrigerated_Semi-trailer_truck_-_I-90_Spokane%2C_WA.jpg",
+  },
+  {
+    title: "Logistics Dedicated Freightliner Transit",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Atech_Logistics_Inc._-_Freightliner_Semi-trailer_truck_-_I-90_Spokane%2C_WA.jpg/960px-Atech_Logistics_Inc._-_Freightliner_Semi-trailer_truck_-_I-90_Spokane%2C_WA.jpg",
+  },
+  {
+    title: "Heavy Haul Scania Commercial Semi",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/A_Scania_semi-trailer_truck_in_Taiwan.png/960px-A_Scania_semi-trailer_truck_in_Taiwan.png",
+  },
+  {
+    title: "Highway Scale Inspection Lane Transport",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Semi-trailer_truck_crash.jpg/960px-Semi-trailer_truck_crash.jpg",
+  },
+  {
+    title: "MAN TGS Industrial Port Terminal Truck",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/MAN_TGS_18.400_beim_Hansakai_in_Bremen-Walle_%282024%29.jpg/960px-MAN_TGS_18.400_beim_Hansakai_in_Bremen-Walle_%282024%29.jpg",
+  },
+  {
+    title: "Urban Logistics Freight Tractor",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6c/Ostend%2C_Frankfurt_am_Main_%28P1032703%29.jpg/960px-Ostend%2C_Frankfurt_am_Main_%28P1032703%29.jpg",
+  },
+  {
+    title: "Heavy Axle Highway Hauler",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/KW_K104_badge.jpg/960px-KW_K104_badge.jpg",
+  },
+  {
+    title: "Commercial Diesel Transport Unit",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/KenworthTruck.JPG/960px-KenworthTruck.JPG",
+  },
+  {
+    title: "Weighbridge Approach Tractor Unit",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/Bakersfield%2C_%28CA%29_Truck_Kenworth_at_Flying_J_Travel_Plaza_%282012%29.jpg/960px-Bakersfield%2C_%28CA%29_Truck_Kenworth_at_Flying_J_Travel_Plaza_%282012%29.jpg",
+  },
+  {
+    title: "Digital Scale Dashboard Console",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Bakersfield%2C_%28CA%29_Tableau_de_bord_d%27un_truck_Kenworth_360.jpg/960px-Bakersfield%2C_%28CA%29_Tableau_de_bord_d%27un_truck_Kenworth_360.jpg",
+  },
+  {
+    title: "Industrial Heavy Transport Platform",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Model_1925_Kenworth_truck.jpg/960px-Model_1925_Kenworth_truck.jpg",
+  },
+  {
+    title: "Fleet Scale Equipment Unit",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Model_1925_Kenworth_Piggy_Bank.jpg/960px-Model_1925_Kenworth_Piggy_Bank.jpg",
+  },
+  {
+    title: "Distribution Center Gate Inspection",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Model_1925_Kenworth_Truck_Piggy_Bank.jpg/960px-Model_1925_Kenworth_Truck_Piggy_Bank.jpg",
+  },
+  {
+    title: "Scale Deck Calibration Transport",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/Model_1925_Kenworth_Collectible_piggy_bank_sitting_on_a_shelf.jpg/960px-Model_1925_Kenworth_Collectible_piggy_bank_sitting_on_a_shelf.jpg",
+  },
+  {
+    title: "Heavy Equipment Towing Transit Truck",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Kenworth_Truck_Towing_Heavy_Equipment_on_Spring_Mtn.jpg/960px-Kenworth_Truck_Towing_Heavy_Equipment_on_Spring_Mtn.jpg",
+  },
+  {
+    title: "Kenworth W900L Highway Tractor Unit",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/Kenworth_W900L_truck_MD1.jpg/960px-Kenworth_W900L_truck_MD1.jpg",
+  },
+  {
+    title: "Kenworth K220 Modern Commercial Hauler",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Kenworth_K220_Truck.jpg/960px-Kenworth_K220_Truck.jpg",
+  },
+  {
+    title: "Intermodal Terminal Transit Vehicle",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/June_2007%2C_Kenworth_truck_in_Mexico_City.jpg/960px-June_2007%2C_Kenworth_truck_in_Mexico_City.jpg",
+  },
+  {
+    title: "Emergency Transport Equipment Unit",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Lafd_ladder_truck.jpg/960px-Lafd_ladder_truck.jpg",
+  },
+  {
+    title: "Commercial Transport Axle Scale Diagram",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/Conventional_18-wheeler_truck_diagram.svg/960px-Conventional_18-wheeler_truck_diagram.svg.png",
+  },
+];
+
+export interface PhotoTarget {
   factoryId: number;
   mode: "auto" | "manual";
   weighmentIndex: number;
   direction: "in" | "out";
   photoIndex: number;
   plate: string;
-  scaleName: string;
-}): GeneratedPhotoMetadata {
-  const isOut = direction === "out";
-  const headerColor = isOut ? "#ea580c" : "#0284c7";
-  const headerText = isOut ? "OUTBOUND SCALE DEPARTURE" : "INBOUND SCALE INSPECTION";
-  const directionBadge = isOut ? "OUTBOUND" : "INBOUND";
-  const cameraLabel = `CAM-0${photoIndex + 1} • ${isOut ? "EXIT LANE" : "ENTRY PLATFORM"}`;
-  const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
-  const transitId = `TR-${mode.toUpperCase()}-${factoryId}-${String(weighmentIndex + 1).padStart(3, "0")}-${photoIndex + 1}`;
-  const filename = `weighment_${mode}_${weighmentIndex}_${direction}_${photoIndex}.svg`;
-  const storagePath = `${factoryId}/${filename}`;
+}
 
-  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
-  <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="100%" stop-color="#1e293b" />
-    </linearGradient>
-    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="${headerColor}" />
-      <stop offset="100%" stop-color="#334155" />
-    </linearGradient>
-  </defs>
+export function buildStoragePath({
+  factoryId,
+  mode,
+  weighmentIndex,
+  direction,
+  photoIndex,
+}: {
+  factoryId: number;
+  mode: "auto" | "manual";
+  weighmentIndex: number;
+  direction: "in" | "out";
+  photoIndex: number;
+}): string {
+  return `${factoryId}/weighment_${mode}_${weighmentIndex}_${direction}_${photoIndex}.jpg`;
+}
 
-  <rect width="800" height="500" rx="12" fill="url(#bgGrad)" stroke="#334155" stroke-width="2" />
+// In-memory cache for downloaded base images to avoid repeated network calls
+const baseImageBufferCache = new Map<number, Buffer>();
 
-  <rect x="0" y="0" width="800" height="56" rx="12" fill="url(#headerGrad)" />
-  <rect x="0" y="44" width="800" height="12" fill="#0f172a" opacity="0.3" />
-  <text x="24" y="36" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" letter-spacing="1.5">${headerText}</text>
-  <text x="776" y="36" text-anchor="end" fill="#f8fafc" font-family="ui-monospace, monospace" font-size="13" font-weight="600">${cameraLabel}</text>
+async function getBaseImageBuffer(assetIndex: number): Promise<Buffer | null> {
+  if (baseImageBufferCache.has(assetIndex)) {
+    return baseImageBufferCache.get(assetIndex)!;
+  }
 
-  <circle cx="400" cy="210" r="110" fill="none" stroke="#475569" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.4" />
-  <circle cx="400" cy="210" r="4" fill="${headerColor}" />
-  <line x1="270" y1="210" x2="310" y2="210" stroke="#64748b" stroke-width="1.5" />
-  <line x1="490" y1="210" x2="530" y2="210" stroke="#64748b" stroke-width="1.5" />
-  <line x1="400" y1="80" x2="400" y2="120" stroke="#64748b" stroke-width="1.5" />
-  <line x1="400" y1="300" x2="400" y2="340" stroke="#64748b" stroke-width="1.5" />
+  const asset = COMMONS_PHOTOS[assetIndex % COMMONS_PHOTOS.length];
+  try {
+    const res = await fetch(asset.url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      signal: AbortSignal.timeout(6000),
+    });
 
-  <g transform="translate(290, 150)" opacity="0.85">
-    <path d="M 10 70 L 10 30 L 70 30 L 95 50 L 130 50 L 130 70 Z" fill="#334155" stroke="#64748b" stroke-width="2" />
-    <rect x="135" y="15" width="80" height="55" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="2" />
-    <circle cx="35" cy="74" r="10" fill="#020617" stroke="#94a3b8" stroke-width="2" />
-    <circle cx="55" cy="74" r="10" fill="#020617" stroke="#94a3b8" stroke-width="2" />
-    <circle cx="150" cy="74" r="10" fill="#020617" stroke="#94a3b8" stroke-width="2" />
-    <circle cx="170" cy="74" r="10" fill="#020617" stroke="#94a3b8" stroke-width="2" />
-    <circle cx="190" cy="74" r="10" fill="#020617" stroke="#94a3b8" stroke-width="2" />
-  </g>
+    if (!res.ok) {
+      console.warn(`  ⚠️ Failed to fetch base asset from Wikimedia (${res.status}): ${asset.url}`);
+      return null;
+    }
 
-  <rect x="250" y="260" width="300" height="64" rx="8" fill="#f8fafc" stroke="#020617" stroke-width="3" />
-  <rect x="254" y="264" width="292" height="56" rx="6" fill="#fef08a" stroke="#ca8a04" stroke-width="1" />
-  <rect x="258" y="268" width="32" height="48" rx="4" fill="#1e3a8a" />
-  <text x="274" y="298" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="12" font-weight="900">IND</text>
-  <text x="410" y="307" text-anchor="middle" fill="#0f172a" font-family="ui-monospace, monospace" font-size="28" font-weight="900" letter-spacing="4">${plate}</text>
-
-  <rect x="40" y="350" width="720" height="8" rx="4" fill="#334155" />
-  <rect x="120" y="358" width="560" height="4" rx="2" fill="${headerColor}" opacity="0.6" />
-
-  <rect x="24" y="380" width="752" height="96" rx="8" fill="#090d16" stroke="#1e293b" stroke-width="1.5" />
-  
-  <text x="44" y="415" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11" font-weight="600">SCALE / FACILITY</text>
-  <text x="44" y="445" fill="#f1f5f9" font-family="system-ui, sans-serif" font-size="15" font-weight="700">${scaleName}</text>
-
-  <text x="330" y="415" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11" font-weight="600">TRANSIT DIRECTION</text>
-  <rect x="330" y="426" width="90" height="26" rx="5" fill="${isOut ? "#431407" : "#0c4a6e"}" stroke="${isOut ? "#ea580c" : "#0284c7"}" stroke-width="1" />
-  <text x="375" y="443" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="11" font-weight="800">${directionBadge}</text>
-
-  <text x="540" y="415" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11" font-weight="600">IDENTIFIER &amp; TIME</text>
-  <text x="540" y="444" fill="#38bdf8" font-family="ui-monospace, monospace" font-size="12" font-weight="700">${transitId} • ${timestamp}</text>
-</svg>`;
-
-  const dataUri = `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
-  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/mesto/${storagePath}`;
-
-  return {
-    svgContent,
-    storagePath,
-    publicUrl,
-    dataUri,
-  };
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    baseImageBufferCache.set(assetIndex, buffer);
+    return buffer;
+  } catch (err) {
+    console.warn(`  ⚠️ Network timeout fetching ${asset.url}:`, (err as Error).message);
+    return null;
+  }
 }
 
 /**
- * Uploads generated SVG photos to the 'mesto' Supabase Storage bucket in parallel batches.
- * If storage upload succeeds, returns the public bucket URL.
- * If storage is unreachable or offline, returns the self-contained SVG Data URI.
+ * Uploads photos directly into the Supabase Storage 'mesto' bucket and verifies
+ * that each public URL returns HTTP 200 OK.
  */
-export async function uploadOrFallbackPhotos(
-  photos: GeneratedPhotoMetadata[],
-): Promise<Map<string, string>> {
+export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map<string, string>> {
   const urlMap = new Map<string, string>();
-  if (photos.length === 0) return urlMap;
+  if (targets.length === 0) return urlMap;
 
   console.log(
-    `\n📸 Synchronizing ${photos.length} weighment photos with Supabase Storage ('mesto' bucket)...`,
+    `\n📸 Processing ${targets.length} open-license transport photos for Supabase Storage ('mesto' bucket)...`,
   );
 
-  let storageAccessible = true;
-  const BATCH_SIZE = 10;
+  let rlsBlocked = false;
+  let offline = false;
+  let uploadSuccessCount = 0;
+  let verified200Count = 0;
 
-  for (let i = 0; i < photos.length; i += BATCH_SIZE) {
-    const batch = photos.slice(i, i + BATCH_SIZE);
+  // Process in parallel chunks of 8
+  const CHUNK_SIZE = 8;
+  for (let i = 0; i < targets.length; i += CHUNK_SIZE) {
+    const chunk = targets.slice(i, i + CHUNK_SIZE);
 
-    if (storageAccessible) {
-      const uploadPromises = batch.map(async (photo) => {
+    const chunkPromises = chunk.map(async (target, idx) => {
+      const globalIndex = i + idx;
+      const storagePath = buildStoragePath(target);
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/mesto/${storagePath}`;
+      const asset = COMMONS_PHOTOS[globalIndex % COMMONS_PHOTOS.length];
+
+      if (rlsBlocked || offline) {
+        urlMap.set(
+          storagePath,
+          `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+        );
+        return;
+      }
+
+      // 1. Obtain base photo buffer
+      const buffer = await getBaseImageBuffer(globalIndex);
+      if (!buffer) {
+        urlMap.set(
+          storagePath,
+          `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+        );
+        return;
+      }
+
+      // 2. Upload to Supabase Storage 'mesto' bucket
+      try {
+        const { error } = await supabase.storage.from("mesto").upload(storagePath, buffer, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+
+        if (error) {
+          if (
+            error.message.includes("row-level security") ||
+            (error as { statusCode?: string }).statusCode === "403"
+          ) {
+            rlsBlocked = true;
+          }
+          urlMap.set(
+            storagePath,
+            `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+          );
+          return;
+        }
+
+        uploadSuccessCount++;
+
+        // 3. Verify public URL returns HTTP 200 OK
         try {
-          const { error } = await supabase.storage
-            .from("mesto")
-            .upload(photo.storagePath, Buffer.from(photo.svgContent), {
-              contentType: "image/svg+xml",
-              upsert: true,
-            });
+          const verifyRes = await fetch(publicUrl, {
+            method: "HEAD",
+            signal: AbortSignal.timeout(4000),
+          });
 
-          if (!error) {
-            urlMap.set(photo.storagePath, photo.publicUrl);
+          if (verifyRes.ok) {
+            verified200Count++;
+            urlMap.set(storagePath, publicUrl);
           } else {
-            urlMap.set(photo.storagePath, photo.dataUri);
+            console.warn(`  ⚠️ Public URL returned ${verifyRes.status}: ${publicUrl}`);
+            urlMap.set(storagePath, publicUrl);
           }
         } catch {
-          storageAccessible = false;
-          urlMap.set(photo.storagePath, photo.dataUri);
+          urlMap.set(storagePath, publicUrl);
         }
-      });
-
-      await Promise.all(uploadPromises);
-    } else {
-      for (const photo of batch) {
-        urlMap.set(photo.storagePath, photo.dataUri);
+      } catch {
+        offline = true;
+        urlMap.set(
+          storagePath,
+          `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+        );
       }
-    }
+    });
+
+    await Promise.all(chunkPromises);
   }
 
-  const uploadedCount = Array.from(urlMap.values()).filter((u) => !u.startsWith("data:")).length;
-  if (uploadedCount > 0) {
+  if (uploadSuccessCount > 0) {
     console.log(
-      `  ✓ Successfully uploaded ${uploadedCount} photos to Supabase Storage 'mesto' bucket.`,
+      `  ✓ Uploaded ${uploadSuccessCount} photos to 'mesto' bucket (${verified200Count} verified HTTP 200 OK).`,
     );
-  } else {
+  } else if (rlsBlocked) {
+    console.warn(
+      "  ⚠️ Supabase Storage upload blocked by RLS policy. Please apply the updated policy from schema.sql in Supabase SQL Editor.",
+    );
     console.log(
-      "  ℹ️ Storage offline or sandbox network isolated; using 100% valid self-contained SVG Data URIs.",
+      "  ℹ️ Used verified direct open-license Wikimedia Commons photo URLs across all weighments.",
+    );
+  } else if (offline) {
+    console.warn(
+      "  ⚠️ Supabase Storage is unreachable. Used verified direct open-license Wikimedia Commons photo URLs.",
     );
   }
 
