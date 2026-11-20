@@ -78,7 +78,7 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
           return (
             <div
               key={`receipt-page-${pageIdx + 1}`}
-              className="receipt-page bg-white text-zinc-950 border border-zinc-200 p-6 flex flex-col gap-3.5 font-sans text-xs relative box-border"
+              className="receipt-page bg-white text-zinc-950 border border-zinc-200/80 p-7 flex flex-col gap-4 font-sans text-xs relative box-border"
               style={{ width: "794px", height: "1123px", minHeight: "1123px", maxHeight: "1123px" }}
             >
               {isFirstPage ? (
@@ -86,10 +86,10 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
                   {/* Primary Header with High-Impact Branding, Material In/Out & Auto/Manual */}
                   <ReceiptHeader weighment={weighment} factoryName={factoryName} />
 
-                  {/* Clean Transit Route Details (Vehicle No. ➔ Centers & Timestamps) */}
+                  {/* Clean 3-Column Structured Transit Details */}
                   <ReceiptTransitDetails weighment={weighment} />
 
-                  {/* Weight Readout Cards (Hero Net Card) */}
+                  {/* Open 3-Column Balance Bar (Hero Matcha Net Weight) */}
                   <ReceiptWeights weighment={weighment} />
 
                   {/* Page 1 Transit Photos with Minimalist IN / OUT Badges */}
@@ -115,19 +115,16 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
                 </>
               )}
 
-              {/* Legal Scale Slip Footer & Tabular Page Number */}
-              <div className="mt-auto pt-3 border-t border-zinc-200/90 flex items-center justify-between gap-3 text-3xs text-zinc-500">
-                <div className="flex items-center gap-2">
-                  <span className="size-1.5 rounded-full bg-[#66684f]" />
-                  <span className="font-semibold uppercase tracking-wider text-zinc-600">
-                    Official Scale Slip • Mesto Industrial Automations
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-700">
+              {/* Minimalist Scale Slip Footer & Tabular Page Number */}
+              <div className="mt-auto pt-3 border-t border-zinc-200/80 flex items-center justify-between gap-3 text-3xs text-zinc-400">
+                <span className="font-semibold uppercase tracking-wider text-zinc-500">
+                  Official Scale Slip • Mesto Industrial Automations
+                </span>
+                <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-600">
                   <span>Page</span>
-                  <strong className="text-zinc-950 font-bold">{pageIdx + 1}</strong>
+                  <strong className="text-zinc-900 font-bold">{pageIdx + 1}</strong>
                   <span>of</span>
-                  <strong className="text-zinc-950 font-bold">{totalPages}</strong>
+                  <strong className="text-zinc-900 font-bold">{totalPages}</strong>
                 </div>
               </div>
             </div>

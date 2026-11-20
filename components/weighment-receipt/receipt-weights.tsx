@@ -51,9 +51,7 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
             </span>
             <span className="text-xs font-bold text-[#66684f]/80">kg</span>
           </div>
-          <span className="text-3xs font-semibold text-[#66684f]/80">
-            Certified Net Payload
-          </span>
+          <span className="text-3xs font-semibold text-[#66684f]/80">Certified Net Payload</span>
         </div>
       </div>
 
@@ -66,12 +64,14 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
           <div className="flex items-center gap-3">
             {weighment.in_creator && (
               <span>
-                Scale In: <strong className="font-bold text-zinc-900">{weighment.in_creator.name}</strong>
+                Scale In:{" "}
+                <strong className="font-bold text-zinc-900">{weighment.in_creator.name}</strong>
               </span>
             )}
             {weighment.out_creator && (
               <span>
-                Scale Out: <strong className="font-bold text-zinc-900">{weighment.out_creator.name}</strong>
+                Scale Out:{" "}
+                <strong className="font-bold text-zinc-900">{weighment.out_creator.name}</strong>
               </span>
             )}
           </div>

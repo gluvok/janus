@@ -103,9 +103,7 @@ export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHea
         </span>
       </div>
       <div className="flex items-center gap-2 text-right shrink-0">
-        <span className="font-mono text-3xs font-bold text-zinc-700 uppercase">
-          {modeLabel}
-        </span>
+        <span className="font-mono text-3xs font-bold text-zinc-700 uppercase">{modeLabel}</span>
         <span className="font-mono text-3xs font-bold text-zinc-900 tabular-nums">
           SLIP #{weighment.id}
         </span>
