@@ -43,6 +43,7 @@ function partitionPhotos(photos: ReceiptPhotoItem[], imagesPerRow: number): Rece
 
 export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentReceiptViewProps>(
   function WeighmentReceiptView({ weighment, factoryName, imagesPerRow = 3 }, ref) {
+    // Specifically extract in_images and out_images to ensure accurate weighment attribution
     const inPhotos: ReceiptPhotoItem[] = (weighment.in_images ?? []).map((url) => ({
       url,
       direction: "in" as const,
@@ -51,15 +52,28 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
       url,
       direction: "out" as const,
     }));
-    const allPhotos = [...inPhotos, ...outPhotos].filter((p) => Boolean(p.url));
+    const allPhotos: ReceiptPhotoItem[] = [...inPhotos, ...outPhotos].filter((p) => Boolean(p.url));
+
+    // Fallback if in_images/out_images arrays are empty but weighment.images has URLs
+    if (allPhotos.length === 0 && Array.isArray(weighment.images)) {
+      for (const url of weighment.images) {
+        if (url) {
+          allPhotos.push({ url, direction: "in" });
+        }
+      }
+    }
 
     const photoPages = partitionPhotos(allPhotos, imagesPerRow);
     const totalPages = photoPages.length;
+
+    let cumulativePhotoIndex = 0;
 
     return (
       <div id="printable-receipt-wrapper" ref={ref} className="flex flex-col gap-6">
         {photoPages.map((pagePhotos, pageIdx) => {
           const isFirstPage = pageIdx === 0;
+          const currentStartIndex = cumulativePhotoIndex;
+          cumulativePhotoIndex += pagePhotos.length;
 
           return (
             <div
@@ -69,20 +83,21 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
             >
               {isFirstPage ? (
                 <>
-                  {/* Primary Header with High-Impact Branding */}
+                  {/* Primary Header with High-Impact Branding, Material In/Out & Auto/Manual */}
                   <ReceiptHeader weighment={weighment} factoryName={factoryName} />
 
-                  {/* Single-Row 3-Column Transit Details */}
+                  {/* Clean Transit Route Details (Vehicle No. ➔ Centers & Timestamps) */}
                   <ReceiptTransitDetails weighment={weighment} />
 
                   {/* Weight Readout Cards (Hero Net Card) */}
                   <ReceiptWeights weighment={weighment} />
 
-                  {/* Page 1 Transit Photos */}
+                  {/* Page 1 Transit Photos with Minimalist IN / OUT Badges */}
                   <ReceiptPhotos
                     photos={pagePhotos}
                     imagesPerRow={imagesPerRow}
                     totalPhotosCount={allPhotos.length}
+                    startIndex={currentStartIndex}
                   />
                 </>
               ) : (
@@ -90,21 +105,22 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
                   {/* Clean Continuation Header */}
                   <ReceiptContinuationHeader weighment={weighment} factoryName={factoryName} />
 
-                  {/* Page N Transit Photos */}
+                  {/* Page N Transit Photos with Minimalist IN / OUT Badges */}
                   <ReceiptPhotos
                     photos={pagePhotos}
                     imagesPerRow={imagesPerRow}
                     totalPhotosCount={allPhotos.length}
+                    startIndex={currentStartIndex}
                   />
                 </>
               )}
 
-              {/* Legal Certification Footer & Tabular Page Number */}
+              {/* Legal Scale Slip Footer & Tabular Page Number */}
               <div className="mt-auto pt-3 border-t border-zinc-200/90 flex items-center justify-between gap-3 text-3xs text-zinc-500">
                 <div className="flex items-center gap-2">
                   <span className="size-1.5 rounded-full bg-[#66684f]" />
                   <span className="font-semibold uppercase tracking-wider text-zinc-600">
-                    Official Scale Slip • Mesto Industrial Automations • Non-Tamper Record
+                    Official Scale Slip • Mesto Industrial Automations
                   </span>
                 </div>
                 <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-700">

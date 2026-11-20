@@ -32,7 +32,10 @@ export function useWeighmentPdfDownload() {
         params: { id: weighment.id },
       });
 
-      const verifiedWeighment = response.data?.data?.[0] ?? weighment;
+      const verifiedWeighment =
+        response.data?.data?.find((w) => w.id === weighment.id) ??
+        response.data?.data?.[0] ??
+        weighment;
       const factory = useFactoryStore.getState().factory;
 
       // 2. Mount receipt view off-screen

@@ -132,6 +132,15 @@ export async function executeWeighmentsGetQuery(
     applyCustomFilters: (query, searchParams) => {
       let filteredQuery = query;
 
+      // Filter by single weighment id if explicitly provided
+      const idParam = searchParams.get("id")?.trim();
+      if (idParam) {
+        const parsedId = Number(idParam);
+        if (!Number.isNaN(parsedId) && parsedId > 0) {
+          filteredQuery = filteredQuery.eq("id", parsedId);
+        }
+      }
+
       // Filter by type ('pending' | 'in' | 'out' | 'unassigned')
       const typeParam = searchParams.get("type")?.trim();
       if (typeParam && typeParam !== "all") {
