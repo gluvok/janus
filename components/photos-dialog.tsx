@@ -24,14 +24,24 @@ export interface PhotoItem {
 export interface PhotosDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: string;
-  subtitle: string;
+  weighmentId: number;
+  vehicleNumber: string;
+  inCenter: { id: number; name: string };
+  outCenter?: { id: number; name: string } | null;
   images: PhotoItem[];
 }
 
-export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: PhotosDialogProps) {
+export function PhotosDialog({
+  open,
+  onOpenChange,
+  weighmentId,
+  vehicleNumber,
+  inCenter,
+  outCenter,
+  images,
+}: PhotosDialogProps) {
   const [api, setApi] = React.useState<CarouselApi>();
-  const [current, setCurrent] = React.useState(0);
+  const [current, setCurrent] = React.useState(1);
   const [count, setCount] = React.useState(0);
 
   React.useEffect(() => {
@@ -57,6 +67,11 @@ export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: Ph
     }
   }, [open, api, images]);
 
+  const activePhoto = images[current - 1] ?? images[0];
+  const directionLabel = activePhoto?.direction === "out" ? "Outbound" : "Inbound";
+
+  const subtitle = `#${inCenter.id} ${inCenter.name}${outCenter ? ` ➔ #${outCenter.id} ${outCenter.name}` : ""}`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl gap-4 p-5">
@@ -66,7 +81,9 @@ export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: Ph
               <HugeiconsIcon icon={Image01Icon} className="size-4" />
             </div>
             <div className="flex flex-col min-w-0">
-              <DialogTitle className="text-sm font-semibold truncate">{title}</DialogTitle>
+              <DialogTitle className="text-sm font-semibold truncate">
+                Weighment #{weighmentId} {vehicleNumber} {directionLabel}
+              </DialogTitle>
               <div className="text-xs text-muted-foreground truncate">{subtitle}</div>
             </div>
           </div>
@@ -95,21 +112,10 @@ export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: Ph
                       <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
                         <img
                           src={item.url}
-                          alt={`${title} photo ${idx + 1} of ${images.length}`}
+                          alt={`Weighment #${weighmentId} ${vehicleNumber} photo ${idx + 1} of ${images.length}`}
                           className="h-full w-full object-contain"
                           loading="lazy"
                         />
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "absolute top-2 left-2 text-2xs font-medium backdrop-blur-md",
-                            item.direction === "in"
-                              ? "text-primary border-primary/40 bg-primary/15 dark:bg-primary/25"
-                              : "text-orange-900 border-orange-300/80 bg-orange-600/15 dark:text-orange-200 dark:border-orange-800/60 dark:bg-orange-950/40",
-                          )}
-                        >
-                          {item.direction === "in" ? "Inbound" : "Outbound"}
-                        </Badge>
                       </div>
                     </CarouselItem>
                   ))}

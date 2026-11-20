@@ -38,6 +38,7 @@ A centralized operational platform and automation management system for weighbri
 ### Advanced Multi-Column Search
 
 Search queries across data tables dynamically evaluate type-aware multi-column matching:
+
 - **Centers**: `name` (text ILIKE) and `id` (integer exact match).
 - **Weighments**: `vehicle_number` (text ILIKE), `id` (integer exact match), weights: `net`, `gross`, `tare`, `in_weight`, `out_weight` (numeric match), and `in_center`/`out_center` facility names (subquery match).
 - **Tickets**: `concern`, `reply` (text ILIKE), `id`, `automatic_weighment_id` (integer match), and linked weighment vehicle registration plate (subquery match).
@@ -100,7 +101,6 @@ pnpm run build
 
 # Seed database
 pnpm run seed              # Onboard factory & admin (--factory, --receipt-images-per-row, --centers)
-pnpm run seed:test         # High-volume tenant-isolated test seeding (0 N+1 queries, full enum coverage)
-pnpm run seed:test:clean   # Clean reset & seed high-volume test data (resets sequences)
-pnpm run seed:photos       # Seed weighment transport photos to 'mesto' storage bucket
+pnpm run test-seed         # High-volume test seeding with unique weighment photos
+pnpm run test-seed --clean # Clean reset & seed high-volume test data with unique weighment photos
 ```

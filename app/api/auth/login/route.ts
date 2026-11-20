@@ -26,15 +26,15 @@ export async function POST(request: Request) {
 
     const { username, password } = validation.data;
 
-    const { data: user, error } = await supabase
+    const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, username, password_hash, name, role, factory_id, created_at, updated_at")
       .eq("username", username)
       .maybeSingle();
 
-    if (error) {
+    if (userError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: userError.message },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
     }
@@ -58,8 +58,13 @@ export async function POST(request: Request) {
       .select("*")
       .eq("id", user.factory_id)
       .single();
-
-    if (factoryError || !factory) {
+    if (factoryError) {
+      return NextResponse.json(
+        { error: factoryError.message },
+        { status: StatusCodes.INTERNAL_SERVER_ERROR },
+      );
+    }
+    if (!factory) {
       return NextResponse.json(
         { error: "Factory not found for user." },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },

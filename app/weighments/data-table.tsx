@@ -151,24 +151,35 @@ export function WeighmentsDataTable() {
   const activeLoadIdRef = useRef<number>(0);
   const [photosDialogState, setPhotosDialogState] = useState<{
     open: boolean;
-    title: string;
-    subtitle: string;
+    weighmentId: number;
+    vehicleNumber: string;
+    inCenter: { id: number; name: string };
+    outCenter: { id: number; name: string } | null;
     images: PhotoItem[];
   }>({
     open: false,
-    title: "",
-    subtitle: "",
+    weighmentId: 0,
+    vehicleNumber: "",
+    inCenter: { id: 0, name: "" },
+    outCenter: null,
     images: [],
   });
 
-  const handleViewPhotos = useCallback((title: string, subtitle: string, images: PhotoItem[]) => {
-    setPhotosDialogState({
-      open: true,
-      title,
-      subtitle,
-      images,
-    });
-  }, []);
+  const handleViewPhotos = useCallback(
+    (payload: {
+      weighmentId: number;
+      vehicleNumber: string;
+      inCenter: { id: number; name: string };
+      outCenter: { id: number; name: string } | null;
+      images: PhotoItem[];
+    }) => {
+      setPhotosDialogState({
+        open: true,
+        ...payload,
+      });
+    },
+    [],
+  );
 
   const tableMeta: WeighmentsTableMeta = useMemo(
     () => ({
@@ -329,8 +340,10 @@ export function WeighmentsDataTable() {
       <PhotosDialog
         open={photosDialogState.open}
         onOpenChange={(open) => setPhotosDialogState((prev) => ({ ...prev, open }))}
-        title={photosDialogState.title}
-        subtitle={photosDialogState.subtitle}
+        weighmentId={photosDialogState.weighmentId}
+        vehicleNumber={photosDialogState.vehicleNumber}
+        inCenter={photosDialogState.inCenter}
+        outCenter={photosDialogState.outCenter}
         images={photosDialogState.images}
       />
     </div>

@@ -35,7 +35,13 @@ import type { Weighment, WeighmentMode } from "./types";
 const columnHelper = createColumnHelper<DataTableFeatures, Weighment>();
 
 export interface WeighmentsTableMeta {
-  onViewPhotos: (title: string, subtitle: string, images: PhotoItem[]) => void;
+  onViewPhotos: (payload: {
+    weighmentId: number;
+    vehicleNumber: string;
+    inCenter: { id: number; name: string };
+    outCenter: { id: number; name: string } | null;
+    images: PhotoItem[];
+  }) => void;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -263,11 +269,13 @@ const photosColumn = columnHelper.display({
         variant="outline"
         size="xs"
         onClick={() =>
-          meta?.onViewPhotos(
-            `Weighment #${row.original.id} Photos`,
-            `${row.original.vehicle_number} • ${row.original.in_center.name}${row.original.out_center ? ` ➔ ${row.original.out_center.name}` : ""}`,
-            photos,
-          )
+          meta?.onViewPhotos({
+            weighmentId: row.original.id,
+            vehicleNumber: row.original.vehicle_number,
+            inCenter: row.original.in_center,
+            outCenter: row.original.out_center,
+            images: photos,
+          })
         }
         className="h-5 gap-1 rounded-full px-2 py-0 text-2xs text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors cursor-pointer"
         title={`View ${totalCount} photo${totalCount > 1 ? "s" : ""}`}
@@ -298,23 +306,9 @@ const automaticVehicleNumberColumn = columnHelper.accessor("vehicle_number", {
     <DataTableColumnHeader column={column} title="Vehicle No." icon={TruckIcon} />
   ),
   cell: ({ row }) => (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-mono text-xs font-semibold text-foreground">
-        {row.original.vehicle_number}
-      </span>
-      {row.original.in_detected_vehicle_number &&
-        row.original.in_detected_vehicle_number !== row.original.vehicle_number && (
-          <span className="font-mono text-3xs text-muted-foreground">
-            In ANPR: {row.original.in_detected_vehicle_number}
-          </span>
-        )}
-      {row.original.out_detected_vehicle_number &&
-        row.original.out_detected_vehicle_number !== row.original.vehicle_number && (
-          <span className="font-mono text-3xs text-muted-foreground">
-            Out ANPR: {row.original.out_detected_vehicle_number}
-          </span>
-        )}
-    </div>
+    <span className="font-mono text-xs font-semibold text-foreground">
+      {row.original.vehicle_number}
+    </span>
   ),
   meta: {
     title: "Vehicle No.",
