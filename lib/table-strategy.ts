@@ -148,7 +148,7 @@ export const weighmentsStrategy: TableStrategy<WeighmentsTableState, WeighmentsP
   schema: weighmentsPrunedSchema,
   defaultState: {
     ...hydrateBaseState(undefined, [{ id: "updated_at", desc: true }]),
-    columnVisibility: { in_weight: false, out_weight: false },
+    columnVisibility: { created_at: false, updated_at: false },
     mode: "automatic",
   },
   prune: (state) => {
@@ -164,7 +164,7 @@ export const weighmentsStrategy: TableStrategy<WeighmentsTableState, WeighmentsP
   },
   hydrate: (pruned) => ({
     ...hydrateBaseState(pruned, [{ id: "updated_at", desc: true }]),
-    columnVisibility: { in_weight: false, out_weight: false, ...pruned?.columnVisibility },
+    columnVisibility: { created_at: false, updated_at: false, ...pruned?.columnVisibility },
     mode: pruned?.mode ?? "automatic",
     filters: pruned?.filters ?? {},
   }),
