@@ -60,7 +60,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       ? getFactoryFormValues(storeFactory)
       : {
           name: "",
-          receipt_images_per_row: 3,
+          receipt_images_per_row: 2,
         },
   });
 

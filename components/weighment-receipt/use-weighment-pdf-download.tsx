@@ -52,7 +52,7 @@ export function useWeighmentPdfDownload() {
         <WeighmentReceiptView
           weighment={verifiedWeighment}
           factoryName={factory?.name}
-          imagesPerRow={factory?.receipt_images_per_row ?? 3}
+          imagesPerRow={factory?.receipt_images_per_row ?? 2}
         />,
       );
 

@@ -4,7 +4,7 @@ export const factorySchema = z
   .object({
     id: z.number().int(),
     name: z.string().min(1, "Factory name cannot be empty"),
-    receipt_images_per_row: z.number().int().min(1).max(6),
+    receipt_images_per_row: z.number().int().min(1).max(2),
     created_at: z.string(),
     updated_at: z.string(),
   })
@@ -17,7 +17,7 @@ export const updateFactorySchema = z
       .number()
       .int("Must be an integer")
       .min(1, "Must be at least 1")
-      .max(6, "Cannot exceed 6")
+      .max(2, "Cannot exceed 2")
       .optional(),
   })
   .strict()
@@ -32,7 +32,7 @@ export const factoryFormSchema = z
       .number()
       .int("Must be an integer")
       .min(1, "Must be at least 1")
-      .max(6, "Cannot exceed 6"),
+      .max(2, "Cannot exceed 2"),
   })
   .strict();
 

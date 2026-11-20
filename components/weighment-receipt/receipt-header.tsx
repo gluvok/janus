@@ -41,15 +41,15 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-zinc-200/80 pb-3">
+    <div className="flex items-center justify-between gap-4 border-b border-zinc-200/80 pb-1.5">
       {/* Factory Branding (Zero Truncation, Mesto Automations Header) */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logo.png"
           alt="Mesto Logo"
           crossOrigin="anonymous"
-          className="size-10 object-contain shrink-0"
+          className="size-8 object-contain shrink-0"
         />
         <div className="flex flex-col min-w-0">
           <span
@@ -95,7 +95,7 @@ export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHea
   const modeLabel = isManual ? "Manual" : "Auto";
 
   return (
-    <div className="flex items-center justify-between border-b border-zinc-200/80 pb-2.5">
+    <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1.5">
       <div className="flex items-center gap-2.5 min-w-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

@@ -15,7 +15,7 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
   const tareSourceLabel = isGrossIn ? "Out Weight" : "In Weight";
 
   return (
-    <div className="py-3 border-b border-zinc-200/80 rounded-none bg-white flex flex-col gap-3">
+    <div className="py-1.5 border-b border-zinc-200/80 rounded-none bg-white flex flex-col gap-1.5">
       {/* 3-Column Open Balance Bar */}
       <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-zinc-200/60 items-start">
         {/* Gross Weight */}

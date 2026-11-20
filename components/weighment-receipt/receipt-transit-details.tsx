@@ -8,10 +8,10 @@ interface ReceiptTransitDetailsProps {
 
 export function ReceiptTransitDetails({ weighment }: ReceiptTransitDetailsProps) {
   return (
-    <div className="py-2.5 border-b border-zinc-200/80 rounded-none">
+    <div className="py-1.5 border-b border-zinc-200/80 rounded-none">
       <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-zinc-200/60 items-center">
         {/* Col 1: Vehicle Identifier */}
-        <div className="col-span-12 sm:col-span-4 sm:pr-4 flex flex-col gap-1 min-w-0">
+        <div className="col-span-12 sm:col-span-4 sm:pr-4 flex flex-col gap-0.5 min-w-0">
           <span className="text-3xs uppercase tracking-widest text-zinc-400 font-bold">
             Vehicle No.
           </span>
@@ -23,40 +23,40 @@ export function ReceiptTransitDetails({ weighment }: ReceiptTransitDetailsProps)
           </span>
         </div>
 
-        {/* Col 2: Scale In Location & Timestamp */}
-        <div className="col-span-12 sm:col-span-4 sm:px-4 flex flex-col gap-1 min-w-0">
+        {/* Col 2: Scale In Timestamp & Location (Swapped) */}
+        <div className="col-span-12 sm:col-span-4 sm:px-4 flex flex-col gap-0.5 min-w-0">
           <span className="text-3xs uppercase tracking-widest text-zinc-400 font-bold">
             Scale In
           </span>
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-bold text-zinc-900 truncate">
-              [#{weighment.in_center.id}] {weighment.in_center.name}
-            </span>
             <span
-              className="font-mono text-3xs text-zinc-500 tabular-nums"
+              className="font-mono text-xs font-bold text-zinc-900 tabular-nums"
               style={{ fontFamily: "var(--font-mono), monospace" }}
             >
               {formatDateTime(weighment.in_time)}
             </span>
+            <span className="text-3xs text-zinc-500 truncate">
+              [#{weighment.in_center.id}] {weighment.in_center.name}
+            </span>
           </div>
         </div>
 
-        {/* Col 3: Scale Out Location & Timestamp */}
-        <div className="col-span-12 sm:col-span-4 sm:pl-4 flex flex-col gap-1 min-w-0">
+        {/* Col 3: Scale Out Timestamp & Location (Swapped) */}
+        <div className="col-span-12 sm:col-span-4 sm:pl-4 flex flex-col gap-0.5 min-w-0">
           <span className="text-3xs uppercase tracking-widest text-zinc-400 font-bold">
             Scale Out
           </span>
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-bold text-zinc-900 truncate">
-              {weighment.out_center
-                ? `[#${weighment.out_center.id}] ${weighment.out_center.name}`
-                : "—"}
-            </span>
             <span
-              className="font-mono text-3xs text-zinc-500 tabular-nums"
+              className="font-mono text-xs font-bold text-zinc-900 tabular-nums"
               style={{ fontFamily: "var(--font-mono), monospace" }}
             >
               {weighment.out_time ? formatDateTime(weighment.out_time) : "—"}
+            </span>
+            <span className="text-3xs text-zinc-500 truncate">
+              {weighment.out_center
+                ? `[#${weighment.out_center.id}] ${weighment.out_center.name}`
+                : "—"}
             </span>
           </div>
         </div>

@@ -14,35 +14,22 @@ interface WeighmentReceiptViewProps {
 function partitionPhotos(photos: ReceiptPhotoItem[], imagesPerRow: number): ReceiptPhotoItem[][] {
   if (photos.length === 0) return [[]];
 
-  let page1Limit: number;
-  let subsequentLimit: number;
-
-  if (imagesPerRow === 1) {
-    page1Limit = 1;
-    subsequentLimit = 2;
-  } else if (imagesPerRow === 2) {
-    page1Limit = 4;
-    subsequentLimit = 4;
-  } else {
-    page1Limit = 6;
-    subsequentLimit = 6;
-  }
+  // Option 1: 1 per row -> exactly 2 images per page (2x1 grid)
+  // Option 2: 2 per row -> up to 3 rows (up to 6 images per page: 2x2 for 4, 3x2 for 6)
+  const pageLimit = imagesPerRow === 1 ? 2 : 6;
 
   const pages: ReceiptPhotoItem[][] = [];
-  const page1 = photos.slice(0, page1Limit);
-  pages.push(page1);
-
-  let remaining = photos.slice(page1Limit);
+  let remaining = [...photos];
   while (remaining.length > 0) {
-    pages.push(remaining.slice(0, subsequentLimit));
-    remaining = remaining.slice(subsequentLimit);
+    pages.push(remaining.slice(0, pageLimit));
+    remaining = remaining.slice(pageLimit);
   }
 
   return pages;
 }
 
 export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentReceiptViewProps>(
-  function WeighmentReceiptView({ weighment, factoryName, imagesPerRow = 3 }, ref) {
+  function WeighmentReceiptView({ weighment, factoryName, imagesPerRow = 2 }, ref) {
     // Specifically extract in_images and out_images to ensure accurate weighment attribution
     const inPhotos: ReceiptPhotoItem[] = (weighment.in_images ?? []).map((url) => ({
       url,
@@ -78,7 +65,7 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
           return (
             <div
               key={`receipt-page-${pageIdx + 1}`}
-              className="receipt-page bg-white text-zinc-950 rounded-none border border-zinc-200/80 p-7 flex flex-col gap-4 font-sans text-xs relative box-border"
+              className="receipt-page bg-white text-zinc-950 rounded-none border border-zinc-200/80 p-5 flex flex-col gap-2 font-sans text-xs relative box-border"
               style={{
                 width: "794px",
                 height: "1123px",
@@ -122,7 +109,7 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
               )}
 
               {/* Minimalist Scale Slip Footer & Tabular Page Number */}
-              <div className="mt-auto pt-3 border-t border-zinc-200/80 flex items-center justify-between gap-3 text-3xs text-zinc-400">
+              <div className="mt-auto pt-2 border-t border-zinc-200/80 flex items-center justify-between gap-3 text-3xs text-zinc-400">
                 <span className="font-semibold uppercase tracking-wider text-zinc-500">
                   Official Scale Slip &bull; Mesto Industrial Automations
                 </span>

@@ -14,7 +14,7 @@ interface ReceiptPhotosProps {
 
 export function ReceiptPhotos({
   photos,
-  imagesPerRow = 3,
+  imagesPerRow = 2,
   totalPhotosCount,
   startIndex = 0,
 }: ReceiptPhotosProps) {
@@ -25,9 +25,9 @@ export function ReceiptPhotos({
   const effectiveTotal = totalPhotosCount ?? photos.length;
 
   return (
-    <div className="flex flex-col gap-2 pt-1">
+    <div className="flex flex-col gap-1.5 pt-0.5">
       {/* Evidence Section Header */}
-      <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1.5">
+      <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1">
         <span className="text-3xs font-black uppercase tracking-widest text-zinc-400">
           Transit Evidence ({effectiveTotal})
         </span>
@@ -35,7 +35,7 @@ export function ReceiptPhotos({
 
       {/* Responsive Grid */}
       <div
-        className="grid gap-2.5"
+        className="grid gap-2"
         style={{
           gridTemplateColumns: `repeat(${imagesPerRow}, minmax(0, 1fr))`,
         }}
