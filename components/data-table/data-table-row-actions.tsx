@@ -70,32 +70,32 @@ export function CopyRowAction({
   const handleCopy = useCopyAction(copyText, copyLabel);
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
-      {onDownloadPdf && (
-        <Button
-          variant="default"
-          size="xs"
-          onClick={onDownloadPdf}
-          disabled={isDownloadingPdf}
-          className="h-6 gap-1 px-2 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <HugeiconsIcon
-            icon={isDownloadingPdf ? Loading03Icon : Download01Icon}
-            className={cn("size-3", isDownloadingPdf && "animate-spin")}
-          />
-          <span>Download PDF</span>
-        </Button>
-      )}
-
+    <div className="flex items-center justify-end">
       <DropdownMenu>
         <ActionsTrigger />
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuGroup>
             <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={handleCopy} className="gap-2 text-xs cursor-pointer">
               <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
               <span>{copyLabel}</span>
             </DropdownMenuItem>
+            {onDownloadPdf && (
+              <DropdownMenuItem
+                onClick={onDownloadPdf}
+                disabled={isDownloadingPdf}
+                className="gap-2 text-xs cursor-pointer focus:bg-accent focus:text-accent-foreground"
+              >
+                <HugeiconsIcon
+                  icon={isDownloadingPdf ? Loading03Icon : Download01Icon}
+                  className={cn(
+                    "size-3.5 shrink-0 text-[#66684f] dark:text-[#8a8d6e]",
+                    isDownloadingPdf && "animate-spin",
+                  )}
+                />
+                <span>Download PDF</span>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -64,21 +64,21 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
           return (
             <div
               key={`receipt-page-${pageIdx + 1}`}
-              className="receipt-page bg-white text-zinc-900 border border-zinc-200 p-6 flex flex-col gap-3 font-sans text-xs relative box-border"
+              className="receipt-page bg-white text-zinc-950 border border-zinc-200 p-6 flex flex-col gap-3.5 font-sans text-xs relative box-border"
               style={{ width: "794px", height: "1123px", minHeight: "1123px", maxHeight: "1123px" }}
             >
               {isFirstPage ? (
                 <>
-                  {/* Header Branding (Bigger Factory Name & Metadata) */}
+                  {/* Primary Header with High-Impact Branding */}
                   <ReceiptHeader weighment={weighment} factoryName={factoryName} />
 
                   {/* Single-Row 3-Column Transit Details */}
                   <ReceiptTransitDetails weighment={weighment} />
 
-                  {/* Weight Figures & Operators (Compact) */}
+                  {/* Weight Readout Cards (Hero Net Card) */}
                   <ReceiptWeights weighment={weighment} />
 
-                  {/* Page 1 Photos */}
+                  {/* Page 1 Transit Photos */}
                   <ReceiptPhotos
                     photos={pagePhotos}
                     imagesPerRow={imagesPerRow}
@@ -87,10 +87,10 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
                 </>
               ) : (
                 <>
-                  {/* Continuation Header */}
+                  {/* Clean Continuation Header */}
                   <ReceiptContinuationHeader weighment={weighment} factoryName={factoryName} />
 
-                  {/* Page N Photos */}
+                  {/* Page N Transit Photos */}
                   <ReceiptPhotos
                     photos={pagePhotos}
                     imagesPerRow={imagesPerRow}
@@ -99,14 +99,20 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
                 </>
               )}
 
-              {/* Footer Notice & Page Stamp */}
-              <div className="mt-auto pt-2.5 border-t border-zinc-200 flex items-center justify-between gap-2 text-3xs text-zinc-500">
-                <span className="font-medium">
-                  Official Computer Generated Weighment Record • Mesto Automations Platform
-                </span>
-                <span className="font-mono">
-                  Page {pageIdx + 1} of {totalPages}
-                </span>
+              {/* Legal Certification Footer & Tabular Page Number */}
+              <div className="mt-auto pt-3 border-t border-zinc-200/90 flex items-center justify-between gap-3 text-3xs text-zinc-500">
+                <div className="flex items-center gap-2">
+                  <span className="size-1.5 rounded-full bg-[#66684f]" />
+                  <span className="font-semibold uppercase tracking-wider text-zinc-600">
+                    Official Scale Slip • Mesto Industrial Automations • Non-Tamper Record
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-700">
+                  <span>Page</span>
+                  <strong className="text-zinc-950 font-bold">{pageIdx + 1}</strong>
+                  <span>of</span>
+                  <strong className="text-zinc-950 font-bold">{totalPages}</strong>
+                </div>
               </div>
             </div>
           );
