@@ -1,11 +1,4 @@
 import * as React from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ContainerTruck01Icon,
-  PackageOpenIcon,
-  ScaleIcon,
-  UserIcon,
-} from "@hugeicons/core-free-icons";
 import type { Weighment } from "@/app/weighments/types";
 
 interface ReceiptWeightsProps {
@@ -16,81 +9,69 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
   const hasOperators = Boolean(weighment.in_creator || weighment.out_creator);
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* Weight Readout Grid (Industrial Modern with Matcha Hero Card) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+    <div className="border border-zinc-200/80 rounded-md p-3.5 bg-white flex flex-col gap-3">
+      {/* 3-Column Open Balance Bar */}
+      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-zinc-200/80 items-start">
         {/* Gross Weight */}
-        <div className="border border-zinc-200/90 rounded-md p-2.5 bg-white flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-500">
-            <span className="text-3xs font-bold uppercase tracking-wider text-zinc-500">
-              Gross Weight
-            </span>
-            <HugeiconsIcon icon={ContainerTruck01Icon} className="size-3.5 text-zinc-400" />
-          </div>
-          <div className="flex items-baseline gap-1 mt-1.5">
+        <div className="col-span-12 sm:col-span-4 sm:pr-4 flex flex-col gap-1 min-w-0">
+          <span className="text-3xs uppercase tracking-widest text-zinc-400 font-bold">
+            Gross Weight
+          </span>
+          <div className="flex items-baseline gap-1">
             <span className="font-mono text-base sm:text-lg font-bold text-zinc-950 tabular-nums">
               {weighment.gross.toLocaleString()}
             </span>
-            <span className="text-3xs font-semibold text-zinc-500">kg</span>
+            <span className="text-3xs font-semibold text-zinc-400">kg</span>
           </div>
-          <span className="text-3xs text-zinc-400 mt-0.5">Initial Entry Scale</span>
+          <span className="text-3xs text-zinc-400">Entry Scale Total</span>
         </div>
 
         {/* Tare Weight */}
-        <div className="border border-zinc-200/90 rounded-md p-2.5 bg-white flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-500">
-            <span className="text-3xs font-bold uppercase tracking-wider text-zinc-500">
-              Tare Weight
-            </span>
-            <HugeiconsIcon icon={PackageOpenIcon} className="size-3.5 text-zinc-400" />
-          </div>
-          <div className="flex items-baseline gap-1 mt-1.5">
+        <div className="col-span-12 sm:col-span-4 sm:px-4 flex flex-col gap-1 min-w-0">
+          <span className="text-3xs uppercase tracking-widest text-zinc-400 font-bold">
+            Tare Weight
+          </span>
+          <div className="flex items-baseline gap-1">
             <span className="font-mono text-base sm:text-lg font-bold text-zinc-950 tabular-nums">
               {weighment.tare !== null ? weighment.tare.toLocaleString() : "—"}
             </span>
-            <span className="text-3xs font-semibold text-zinc-500">kg</span>
+            <span className="text-3xs font-semibold text-zinc-400">kg</span>
           </div>
-          <span className="text-3xs text-zinc-400 mt-0.5">Final Tare Scale</span>
+          <span className="text-3xs text-zinc-400">Exit Vehicle Tare</span>
         </div>
 
-        {/* Net Weight (Hero Matcha Card) */}
-        <div className="border border-[#52543d] rounded-md p-2.5 bg-[#66684f] text-white flex flex-col justify-between">
-          <div className="flex items-center justify-between text-white/90">
-            <span className="text-3xs font-bold uppercase tracking-wider">Net Weight</span>
-            <HugeiconsIcon icon={ScaleIcon} className="size-3.5 text-white/90" />
-          </div>
-          <div className="flex items-baseline gap-1 mt-1.5">
-            <span className="font-mono text-base sm:text-lg font-black text-white tabular-nums">
+        {/* Net Weight (Hero Value in Matcha) */}
+        <div className="col-span-12 sm:col-span-4 sm:pl-4 flex flex-col gap-1 min-w-0">
+          <span className="text-3xs uppercase tracking-widest text-[#66684f] font-black">
+            Net Weight (Gross - Tare)
+          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="font-mono text-xl sm:text-2xl font-black text-[#66684f] tabular-nums tracking-tight">
               {weighment.net !== null ? weighment.net.toLocaleString() : "—"}
             </span>
-            <span className="text-3xs font-semibold text-white/90">kg</span>
+            <span className="text-xs font-bold text-[#66684f]/80">kg</span>
           </div>
-          <span className="font-mono text-3xs font-bold text-white/80 uppercase tracking-wider mt-0.5">
-            Formula: Net = Gross - Tare
+          <span className="text-3xs font-semibold text-[#66684f]/80">
+            Certified Net Payload
           </span>
         </div>
       </div>
 
-      {/* Operator Sign-off Row (Manual Weighment Audit) */}
+      {/* Discrete Operator Audit Line (Manual Scale) */}
       {hasOperators && (
-        <div className="flex items-center justify-between gap-3 border border-zinc-200/90 rounded-md px-3 py-1.5 bg-zinc-50 text-2xs text-zinc-600">
-          <div className="flex items-center gap-1.5">
-            <HugeiconsIcon icon={UserIcon} className="size-3.5 text-[#66684f]" />
-            <span className="text-3xs font-bold uppercase tracking-wider text-zinc-600">
-              Certified Scale Operators:
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-right text-3xs">
+        <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-3xs text-zinc-500">
+          <span className="font-semibold uppercase tracking-wider text-zinc-400">
+            Scale Operators:
+          </span>
+          <div className="flex items-center gap-3">
             {weighment.in_creator && (
               <span>
-                Scale In:{" "}
-                <strong className="font-bold text-zinc-950">{weighment.in_creator.name}</strong>
+                Scale In: <strong className="font-bold text-zinc-900">{weighment.in_creator.name}</strong>
               </span>
             )}
             {weighment.out_creator && (
               <span>
-                Scale Out:{" "}
-                <strong className="font-bold text-zinc-950">{weighment.out_creator.name}</strong>
+                Scale Out: <strong className="font-bold text-zinc-900">{weighment.out_creator.name}</strong>
               </span>
             )}
           </div>

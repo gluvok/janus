@@ -1,6 +1,4 @@
 import * as React from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Camera01Icon } from "@hugeicons/core-free-icons";
 
 export interface ReceiptPhotoItem {
   url: string;
@@ -28,11 +26,10 @@ export function ReceiptPhotos({
 
   return (
     <div className="flex flex-col gap-2 pt-1">
-      {/* Evidence Section Header (No Grid: 3 per row text) */}
-      <div className="flex items-center gap-1.5 border-b border-zinc-200/90 pb-1.5">
-        <HugeiconsIcon icon={Camera01Icon} className="size-3.5 text-[#66684f]" />
-        <span className="text-3xs font-black uppercase tracking-wider text-zinc-900">
-          Scale Deck Camera Evidence ({effectiveTotal} Total Captured)
+      {/* Evidence Section Header */}
+      <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1.5">
+        <span className="text-3xs font-black uppercase tracking-widest text-zinc-400">
+          Transit Evidence ({effectiveTotal})
         </span>
       </div>
 
@@ -50,7 +47,7 @@ export function ReceiptPhotos({
           return (
             <div
               key={`${photo.url}-${idx}`}
-              className="group relative aspect-video rounded-md overflow-hidden border border-zinc-200 bg-zinc-100 flex flex-col"
+              className="group relative aspect-video rounded overflow-hidden border border-zinc-200/80 bg-zinc-100 flex flex-col"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
