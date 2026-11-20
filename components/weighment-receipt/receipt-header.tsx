@@ -15,25 +15,25 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
     switch (weighment.type) {
       case "in":
         return (
-          <span className="inline-flex items-center gap-1 font-mono text-3xs font-bold px-2 py-0.5 rounded-none bg-[#66684f]/15 text-[#66684f] uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 font-mono text-3xs font-semibold px-2 py-0.5 rounded-none bg-[#66684f]/15 text-[#66684f] uppercase tracking-wider">
             &bull; Material In
           </span>
         );
       case "out":
         return (
-          <span className="inline-flex items-center gap-1 font-mono text-3xs font-bold px-2 py-0.5 rounded-none bg-zinc-900 text-white uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 font-mono text-3xs font-semibold px-2 py-0.5 rounded-none bg-zinc-900 text-white uppercase tracking-wider">
             &bull; Material Out
           </span>
         );
       case "unassigned":
         return (
-          <span className="inline-flex items-center gap-1 font-mono text-3xs font-bold px-2 py-0.5 rounded-none bg-zinc-100 text-zinc-700 uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 font-mono text-3xs font-semibold px-2 py-0.5 rounded-none bg-zinc-100 text-zinc-700 uppercase tracking-wider">
             &bull; Unassigned
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 font-mono text-3xs font-bold px-2 py-0.5 rounded-none bg-amber-50 text-amber-800 uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 font-mono text-3xs font-semibold px-2 py-0.5 rounded-none bg-amber-50 text-amber-800 uppercase tracking-wider">
             &bull; Pending
           </span>
         );
@@ -53,7 +53,7 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
         />
         <div className="flex flex-col min-w-0">
           <span
-            className="font-heading text-lg sm:text-xl font-black tracking-tight text-zinc-950 uppercase whitespace-normal leading-tight"
+            className="font-heading text-lg sm:text-xl font-semibold tracking-tight text-zinc-950 uppercase whitespace-normal leading-tight"
             style={{ fontFamily: "var(--font-heading), var(--font-sans), sans-serif" }}
           >
             Mesto Automations
@@ -70,7 +70,7 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
       {/* Slip Metadata & Status Badges */}
       <div className="flex flex-col items-end text-right shrink-0 gap-1.5">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-black text-zinc-950 tabular-nums">
+          <span className="font-mono text-xs font-semibold text-zinc-950 tabular-nums">
             SLIP #{weighment.id}
           </span>
           <span className="text-zinc-300 font-mono">&bull;</span>
@@ -81,7 +81,7 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
 
         <div className="flex items-center gap-1.5">
           {getDirectionBadge()}
-          <span className="inline-flex items-center font-mono text-3xs font-bold px-2 py-0.5 rounded-none bg-zinc-100 text-zinc-800 uppercase tracking-wider">
+          <span className="inline-flex items-center font-mono text-3xs font-semibold px-2 py-0.5 rounded-none bg-zinc-100 text-zinc-800 uppercase tracking-wider">
             {modeLabel}
           </span>
         </div>
@@ -106,7 +106,7 @@ export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHea
         />
         <div className="flex items-baseline gap-2 min-w-0">
           <span
-            className="font-heading text-xs font-black tracking-tight text-zinc-950 uppercase whitespace-normal"
+            className="font-heading text-xs font-semibold tracking-tight text-zinc-950 uppercase whitespace-normal"
             style={{ fontFamily: "var(--font-heading), var(--font-sans), sans-serif" }}
           >
             Mesto Automations
@@ -124,11 +124,13 @@ export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHea
         </div>
       </div>
       <div className="flex items-center gap-2 text-right shrink-0">
-        <span className="font-mono text-3xs font-bold text-zinc-700 uppercase">{modeLabel}</span>
-        <span className="font-mono text-3xs font-bold text-zinc-900 tabular-nums">
+        <span className="font-mono text-3xs font-semibold text-zinc-700 uppercase">
+          {modeLabel}
+        </span>
+        <span className="font-mono text-3xs font-semibold text-zinc-900 tabular-nums">
           SLIP #{weighment.id}
         </span>
-        <span className="font-mono text-3xs font-bold text-zinc-600 bg-zinc-100 px-1 py-0.5 rounded-none">
+        <span className="font-mono text-3xs font-semibold text-zinc-600 bg-zinc-100 px-1 py-0.5 rounded-none">
           {weighment.vehicle_number}
         </span>
       </div>
