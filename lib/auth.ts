@@ -48,7 +48,7 @@ export function updateFactorySessionCache(factoryId: number, updatedFactory: Fac
 export class AuthError extends Error {
   statusCode: number;
 
-  constructor(message: string, statusCode: number = StatusCodes.UNAUTHORIZED) {
+  constructor(message: string, statusCode: number) {
     super(message);
     this.name = "AuthError";
     this.statusCode = statusCode;
@@ -233,12 +233,7 @@ export function getAuthFactory(req: Request): Factory {
  * Extracts and verifies the current session in Next.js Server Components.
  * Reads request headers set by proxy.ts; falls back to session lookup only if headers are not set.
  */
-export async function getServerSession(req?: Request): Promise<SessionData | null> {
-  if (req) {
-    const session = parseSessionHeaders(req.headers);
-    if (session) return session;
-  }
-
+export async function getServerSession(): Promise<SessionData | null> {
   try {
     const headerList = await headers();
     const session = parseSessionHeaders(headerList);
@@ -260,10 +255,10 @@ export async function getServerSession(req?: Request): Promise<SessionData | nul
 }
 
 /**
- * Asserts an authenticated user session, throwing AuthError (401) if invalid or expired.
+ * Asserts an authenticated user session in Server Components, throwing AuthError (401) if invalid or expired.
  */
-export async function requireServerSession(req?: Request): Promise<SessionData> {
-  const session = await getServerSession(req);
+export async function requireServerSession(): Promise<SessionData> {
+  const session = await getServerSession();
   if (!session) {
     throw new AuthError(
       "Session expired or invalid. Please log in again.",

@@ -290,10 +290,18 @@ async function main() {
     "MP09ST2222",
   ];
 
-  const sampleImages = [
+  const sampleInImages = [
     `${SUPABASE_URL}/storage/v1/object/public/mesto/1/weighment_truck_front.jpg`,
-    `${SUPABASE_URL}/storage/v1/object/public/mesto/1/weighment_scale_platform.jpg`,
     "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80",
+  ];
+
+  const sampleOutImages = [
+    `${SUPABASE_URL}/storage/v1/object/public/mesto/1/weighment_scale_platform.jpg`,
+    "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1501700493788-fa1a4fc9fe62?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80",
   ];
 
   // 4A. Automatic Weighments: Realistic enum generation
@@ -348,7 +356,8 @@ async function main() {
       out_time: outTime,
       in_center_id: inCenterId,
       out_center_id: outCenterId,
-      images: sampleImages,
+      in_images: sampleInImages.slice(0, (i % 3) + 1),
+      out_images: category !== 0 ? sampleOutImages.slice(0, ((i + 1) % 3) + 1) : [],
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });
@@ -387,7 +396,8 @@ async function main() {
       out_time: outTime,
       in_center_id: inCenterId,
       out_center_id: outCenterId,
-      images: sampleImages,
+      in_images: sampleInImages.slice(0, (i % 2) + 1),
+      out_images: category !== 0 ? sampleOutImages.slice(0, (i % 2) + 1) : [],
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });
@@ -442,7 +452,8 @@ async function main() {
       out_center_id: outCenterId,
       in_creator_id: operatorId1,
       out_creator_id: category !== 0 ? operatorId2 : null,
-      images: sampleImages.slice(0, 1),
+      in_images: sampleInImages.slice(0, (i % 2) + 1),
+      out_images: category !== 0 ? sampleOutImages.slice(0, 1) : [],
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });
@@ -481,7 +492,8 @@ async function main() {
       out_center_id: outCenterId,
       in_creator_id: operatorApexId,
       out_creator_id: category !== 0 ? operatorApexId : null,
-      images: sampleImages.slice(0, 1),
+      in_images: sampleInImages.slice(0, 1),
+      out_images: category !== 0 ? sampleOutImages.slice(0, 1) : [],
       created_at: inTime,
       updated_at: outTime ?? inTime,
     });

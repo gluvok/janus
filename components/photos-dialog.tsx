@@ -16,12 +16,17 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Image01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
+export interface PhotoItem {
+  url: string;
+  direction: "in" | "out";
+}
+
 export interface PhotosDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  subtitle?: string;
-  images: string[];
+  subtitle: string;
+  images: PhotoItem[];
 }
 
 export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: PhotosDialogProps) {
@@ -62,7 +67,7 @@ export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: Ph
             </div>
             <div className="flex flex-col min-w-0">
               <DialogTitle className="text-sm font-semibold truncate">{title}</DialogTitle>
-              {subtitle && <div className="text-xs text-muted-foreground truncate">{subtitle}</div>}
+              <div className="text-xs text-muted-foreground truncate">{subtitle}</div>
             </div>
           </div>
           {count > 0 && (
@@ -85,15 +90,26 @@ export function PhotosDialog({ open, onOpenChange, title, subtitle, images }: Ph
             <div className="relative px-12">
               <Carousel setApi={setApi} className="w-full">
                 <CarouselContent>
-                  {images.map((src, idx) => (
-                    <CarouselItem key={`${src}-${idx}`}>
-                      <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
+                  {images.map((item, idx) => (
+                    <CarouselItem key={`${item.url}-${idx}`}>
+                      <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
                         <img
-                          src={src}
+                          src={item.url}
                           alt={`${title} photo ${idx + 1} of ${images.length}`}
                           className="h-full w-full object-contain"
                           loading="lazy"
                         />
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "absolute top-2 left-2 text-2xs font-medium backdrop-blur-md",
+                            item.direction === "in"
+                              ? "text-primary border-primary/40 bg-primary/15 dark:bg-primary/25"
+                              : "text-orange-900 border-orange-300/80 bg-orange-600/15 dark:text-orange-200 dark:border-orange-800/60 dark:bg-orange-950/40",
+                          )}
+                        >
+                          {item.direction === "in" ? "Inbound" : "Outbound"}
+                        </Badge>
                       </div>
                     </CarouselItem>
                   ))}

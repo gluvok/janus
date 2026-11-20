@@ -16,6 +16,7 @@ export const GET = handleApiRoute(async (request: Request) => {
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
     defaultSort: { col: "id" as const, ascending: false },
     searchColumns: ["name"],
+    integerColumns: ["id"],
   };
 
   if (searchParams.get("all") === "true") {

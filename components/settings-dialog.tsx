@@ -51,7 +51,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setValue,
     watch,
     reset,
-    formState: { isDirty, isValid, isSubmitting, errors },
+    formState: { isDirty, isSubmitting, errors },
   } = useForm<FactoryFormInput>({
     resolver: zodResolver(factoryFormSchema),
     mode: "onSubmit",
@@ -155,7 +155,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
             <DialogActionFooter
               isDirty={isDirty}
-              isValid={isValid}
               isSubmitting={isSubmitting}
               onCancel={() => onOpenChange(false)}
               submitLabel="Save Changes"

@@ -6,6 +6,7 @@ import {
   DataTablePagination,
   DataTableToolbar,
   useDataTable,
+  endpointFetcher,
 } from "@/components/data-table";
 import { columns } from "./columns";
 import { CenterEditDialog } from "./edit-dialog";
@@ -19,7 +20,7 @@ export function CentersDataTable() {
   const dataTable = useDataTable<Center>({
     tableId: TABLE_ID,
     columns,
-    endpoint: "/api/centers",
+    fetchData: endpointFetcher("/api/centers"),
     meta: {
       onEditCenter: setEditingCenter,
     },
@@ -41,11 +42,7 @@ export function CentersDataTable() {
 
       {/* Pagination Controls */}
       <div className="shrink-0">
-        <DataTablePagination
-          table={dataTable.table}
-          loading={dataTable.loading}
-          error={dataTable.error}
-        />
+        <DataTablePagination table={dataTable.table} loading={dataTable.loading} />
       </div>
 
       {/* Center Edit Dialog */}

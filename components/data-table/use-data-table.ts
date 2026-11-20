@@ -26,20 +26,27 @@ import {
 export interface UseDataTableOptions<TData extends RowData> {
   tableId: string;
   columns: TableOptions<DataTableFeatures, TData>["columns"];
-  endpoint?: string;
+  fetchData: (params: Record<string, unknown>) => Promise<{ data: TData[]; totalCount: number }>;
   extraParams?: Record<string, unknown>;
-  fetchData?: (params: Record<string, unknown>) => Promise<{ data: TData[]; totalCount: number }>;
   meta?: TableMeta<DataTableFeatures, TData>;
   enabled?: boolean;
   initialData?: { data: TData[]; totalCount: number };
 }
 
+export function endpointFetcher<TData>(endpoint: string) {
+  return async (
+    params: Record<string, unknown>,
+  ): Promise<{ data: TData[]; totalCount: number }> => {
+    const res = await axios.get<{ data: TData[]; totalCount: number }>(endpoint, { params });
+    return res.data;
+  };
+}
+
 export function useDataTable<TData extends RowData>({
   tableId,
   columns,
-  endpoint,
-  extraParams,
   fetchData,
+  extraParams,
   meta,
   enabled = true,
   initialData,
@@ -154,20 +161,10 @@ export function useDataTable<TData extends RowData>({
     setError(null);
 
     try {
-      if (fetchData) {
-        const res = await fetchData(queryParams);
-        if (currentRequestId === requestIdRef.current) {
-          setData(res.data ?? []);
-          setTotalCount(res.totalCount ?? 0);
-        }
-      } else if (endpoint) {
-        const res = await axios.get<{ data: TData[]; totalCount: number }>(endpoint, {
-          params: queryParams,
-        });
-        if (currentRequestId === requestIdRef.current) {
-          setData(res.data.data ?? []);
-          setTotalCount(res.data.totalCount ?? 0);
-        }
+      const res = await fetchData(queryParams);
+      if (currentRequestId === requestIdRef.current) {
+        setData(res.data ?? []);
+        setTotalCount(res.totalCount ?? 0);
       }
     } catch (err) {
       if (currentRequestId === requestIdRef.current) {
@@ -185,7 +182,6 @@ export function useDataTable<TData extends RowData>({
     debouncedSearch,
     fromIso,
     toIso,
-    endpoint,
     fetchData,
     filtersKey,
     extraParamsKey,

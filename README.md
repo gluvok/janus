@@ -12,12 +12,14 @@ A centralized operational platform and automation management system for weighbri
 - **Centers**: Processing facilities and scale locations. Each center has an authenticated `api_key` for hardware scale and camera integration (hidden during `GET` requests).
 - **Users**: System operators, managers, and administrators with argon2 password hashing.
 - **Sessions**: Database-backed user authentication sessions with 400-day persistent rolling HTTP-only cookies (`mesto_session`).
-- **Automatic Weighments**: Hardware/ANPR camera-captured vehicle weighments. Features PostgreSQL stored generated columns (`gross`, `tare`, `net`, `type`), inbound/outbound weights, timestamps, and camera image URLs.
-- **Manual Weighments**: Operator-recorded weighments with full creator accountability (`in_creator_id`, `out_creator_id`).
+- **Automatic Weighments**: Hardware/ANPR camera-captured vehicle weighments. Features PostgreSQL stored generated columns (`gross`, `tare`, `net`, `type`), inbound/outbound weights, timestamps, and separate inbound/outbound photo arrays (`in_images`, `out_images`) unified via stored generated column `images = in_images || out_images`.
+- **Manual Weighments**: Operator-recorded weighments with full creator accountability (`in_creator_id`, `out_creator_id`), inbound/outbound weights, and photo arrays (`in_images`, `out_images`).
 - **Tickets**: Support and discrepancy tickets linked directly to `automatic_weighments` via `automatic_weighment_id`.
+- **Support & Services**: Common reusable `UnderConstruction` placeholder pages at `/support` and `/services`.
 
 ### Stored Generated Columns (`automatic_weighments` & `manual_weighments`)
 
+- `images`: `in_images || out_images` (PostgreSQL stored concatenation of inbound and outbound camera photos)
 - `gross`: `CASE WHEN out_weight IS NULL THEN in_weight ELSE GREATEST(in_weight, out_weight) END`
 - `tare`: `CASE WHEN out_weight IS NULL THEN NULL ELSE LEAST(in_weight, out_weight) END`
 - `net`: `CASE WHEN out_weight IS NULL THEN NULL ELSE ABS(in_weight - out_weight) END`
@@ -32,6 +34,14 @@ A centralized operational platform and automation management system for weighbri
   ```
 - **UI Invariant**: In the UI data table, `gross`, `net`, and `tare` display dashes (`-`) whenever either `in_weight` or `out_weight` is null; formatted kg values render only when both scale weights are present.
 - **Mode-Specific Layout**: Automatic weighments omit the Operator column and show In/Out ANPR camera badges. Manual weighments include the Operator column (`in_creator` / `out_creator`). The table defaults to `updated_at DESC`.
+
+### Advanced Multi-Column Search
+
+Search queries across data tables dynamically evaluate type-aware multi-column matching:
+- **Centers**: `name` (text ILIKE) and `id` (integer exact match).
+- **Weighments**: `vehicle_number` (text ILIKE), `id` (integer exact match), weights: `net`, `gross`, `tare`, `in_weight`, `out_weight` (numeric match), and `in_center`/`out_center` facility names (subquery match).
+- **Tickets**: `concern`, `reply` (text ILIKE), `id`, `automatic_weighment_id` (integer match), and linked weighment vehicle registration plate (subquery match).
+- **Users**: `name`, `username` (text ILIKE), and `id` (integer match).
 
 ---
 

@@ -9,7 +9,7 @@ import {
   createUpdatedAtColumn,
   createIdColumn,
   createSelectColumn,
-  createActionsColumn,
+  createCopyActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { formatDateTime } from "@/lib/utils";
@@ -29,12 +29,13 @@ import {
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
+import type { PhotoItem } from "@/components/photos-dialog";
 import type { Weighment, WeighmentMode } from "./types";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Weighment>();
 
 export interface WeighmentsTableMeta {
-  onViewPhotos?: (title: string, subtitle: string, images: string[]) => void;
+  onViewPhotos: (title: string, subtitle: string, images: PhotoItem[]) => void;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -243,12 +244,17 @@ const photosColumn = columnHelper.display({
     <DataTableColumnHeader column={column} title="Photos" icon={Image01Icon} />
   ),
   cell: ({ row, table }) => {
-    const images = row.original.images;
-    const count = images.length;
+    const inImages = row.original.in_images ?? [];
+    const outImages = row.original.out_images ?? [];
+    const totalCount = inImages.length + outImages.length;
 
-    if (count === 0) {
+    if (totalCount === 0) {
       return <span className="text-2xs text-muted-foreground">0</span>;
     }
+
+    const inPhotos: PhotoItem[] = inImages.map((url) => ({ url, direction: "in" }));
+    const outPhotos: PhotoItem[] = outImages.map((url) => ({ url, direction: "out" }));
+    const photos: PhotoItem[] = [...inPhotos, ...outPhotos];
 
     const meta = table.options.meta as WeighmentsTableMeta | undefined;
     return (
@@ -257,17 +263,17 @@ const photosColumn = columnHelper.display({
         variant="outline"
         size="xs"
         onClick={() =>
-          meta?.onViewPhotos?.(
+          meta?.onViewPhotos(
             `Weighment #${row.original.id} Photos`,
             `${row.original.vehicle_number} • ${row.original.in_center.name}${row.original.out_center ? ` ➔ ${row.original.out_center.name}` : ""}`,
-            images,
+            photos,
           )
         }
         className="h-5 gap-1 rounded-full px-2 py-0 text-2xs text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors cursor-pointer"
-        title={`View ${count} photo${count > 1 ? "s" : ""}`}
+        title={`View ${totalCount} photo${totalCount > 1 ? "s" : ""}`}
       >
         <HugeiconsIcon icon={Image01Icon} className="size-3" />
-        <span>{count}</span>
+        <span>{totalCount}</span>
       </Button>
     );
   },
@@ -278,7 +284,7 @@ const photosColumn = columnHelper.display({
   enableSorting: false,
 });
 
-const actionsColumn = createActionsColumn(columnHelper, ({ row }) => ({
+const actionsColumn = createCopyActionsColumn(columnHelper, ({ row }) => ({
   copyText: row.original.vehicle_number,
   copyLabel: "Copy Vehicle No.",
 }));

@@ -13,8 +13,7 @@ export interface ApiContext {
 export class ServiceError extends Error {
   constructor(
     message: string,
-    public statusCode: number = StatusCodes.BAD_REQUEST,
-    public details?: unknown,
+    public statusCode: number,
   ) {
     super(message);
     this.name = "ServiceError";

@@ -87,17 +87,36 @@ async function seedPhotos() {
     console.warn("⚠️ No automatic weighments found to link photos.");
   } else {
     const autoAssignments = [
-      { id: autoWeighments[0]?.id, images: uploadedUrls.slice(0, 3) },
-      { id: autoWeighments[1]?.id, images: uploadedUrls.slice(0, 2) },
-      { id: autoWeighments[2]?.id, images: uploadedUrls },
-      { id: autoWeighments[3]?.id, images: uploadedUrls.slice(0, 1) },
+      {
+        id: autoWeighments[0]?.id,
+        in_images: uploadedUrls.slice(0, 2),
+        out_images: uploadedUrls.slice(2, 4),
+      },
+      {
+        id: autoWeighments[1]?.id,
+        in_images: uploadedUrls.slice(0, 1),
+        out_images: uploadedUrls.slice(1, 3),
+      },
+      {
+        id: autoWeighments[2]?.id,
+        in_images: uploadedUrls.slice(0, 2),
+        out_images: uploadedUrls.slice(2, 3),
+      },
+      {
+        id: autoWeighments[3]?.id,
+        in_images: uploadedUrls.slice(0, 1),
+        out_images: [],
+      },
     ].filter(
-      (item): item is { id: number; images: string[] } =>
-        item.id !== undefined && item.images.length > 0,
+      (item): item is { id: number; in_images: string[]; out_images: string[] } =>
+        item.id !== undefined && item.in_images.length > 0,
     );
 
     const updatePromises = autoAssignments.map((item) =>
-      supabase.from("automatic_weighments").update({ images: item.images }).eq("id", item.id),
+      supabase
+        .from("automatic_weighments")
+        .update({ in_images: item.in_images, out_images: item.out_images })
+        .eq("id", item.id),
     );
 
     const results = await Promise.all(updatePromises);
@@ -108,7 +127,7 @@ async function seedPhotos() {
         console.error(`❌ Failed to update Automatic Weighment #${item.id}:`, res.error.message);
       } else {
         console.log(
-          `📸 Updated Automatic Weighment #${item.id} with ${item.images.length} photo(s).`,
+          `📸 Updated Automatic Weighment #${item.id} with ${item.in_images.length + item.out_images.length} photo(s).`,
         );
       }
     }
@@ -126,16 +145,31 @@ async function seedPhotos() {
     console.warn("⚠️ No manual weighments found to link photos.");
   } else {
     const manualAssignments = [
-      { id: manualWeighments[0]?.id, images: uploadedUrls.slice(0, 2) },
-      { id: manualWeighments[1]?.id, images: uploadedUrls.slice(1, 3) },
-      { id: manualWeighments[2]?.id, images: uploadedUrls.slice(0, 1) },
+      {
+        id: manualWeighments[0]?.id,
+        in_images: uploadedUrls.slice(0, 1),
+        out_images: uploadedUrls.slice(1, 2),
+      },
+      {
+        id: manualWeighments[1]?.id,
+        in_images: uploadedUrls.slice(1, 2),
+        out_images: uploadedUrls.slice(2, 4),
+      },
+      {
+        id: manualWeighments[2]?.id,
+        in_images: uploadedUrls.slice(0, 1),
+        out_images: [],
+      },
     ].filter(
-      (item): item is { id: number; images: string[] } =>
-        item.id !== undefined && item.images.length > 0,
+      (item): item is { id: number; in_images: string[]; out_images: string[] } =>
+        item.id !== undefined && item.in_images.length > 0,
     );
 
     const updatePromises = manualAssignments.map((item) =>
-      supabase.from("manual_weighments").update({ images: item.images }).eq("id", item.id),
+      supabase
+        .from("manual_weighments")
+        .update({ in_images: item.in_images, out_images: item.out_images })
+        .eq("id", item.id),
     );
 
     const results = await Promise.all(updatePromises);
@@ -145,7 +179,9 @@ async function seedPhotos() {
       if (res.error) {
         console.error(`❌ Failed to update Manual Weighment #${item.id}:`, res.error.message);
       } else {
-        console.log(`📸 Updated Manual Weighment #${item.id} with ${item.images.length} photo(s).`);
+        console.log(
+          `📸 Updated Manual Weighment #${item.id} with ${item.in_images.length + item.out_images.length} photo(s).`,
+        );
       }
     }
   }

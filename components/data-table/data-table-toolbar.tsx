@@ -22,7 +22,7 @@ export interface DataTableFilterConfig {
 
 export interface DataTableToolbarProps<TData extends RowData> {
   instance: UseDataTableReturn<TData>;
-  searchPlaceholder?: string;
+  searchPlaceholder: string;
   actions?: React.ReactNode;
   loading?: boolean;
   filterConfigs?: DataTableFilterConfig[];
@@ -30,7 +30,7 @@ export interface DataTableToolbarProps<TData extends RowData> {
 
 export function DataTableToolbar<TData extends RowData>({
   instance,
-  searchPlaceholder = "Search records...",
+  searchPlaceholder,
   actions,
   loading: customLoading,
   filterConfigs = [],
@@ -52,7 +52,6 @@ export function DataTableToolbar<TData extends RowData>({
     setSorting,
     removeSort,
     resetSorting,
-    resetAllCriteria,
   } = instance;
 
   const loading = customLoading ?? instanceLoading;
@@ -103,7 +102,6 @@ export function DataTableToolbar<TData extends RowData>({
             onSortingChange={setSorting}
             onRemoveSort={removeSort}
             onResetSorts={resetSorting}
-            onResetAll={resetAllCriteria}
           />
         </div>
       )}

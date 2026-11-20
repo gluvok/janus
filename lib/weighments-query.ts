@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
 import type { Weighment, WeighmentMode } from "@/app/weighments/types";
 
@@ -36,6 +37,8 @@ const AUTOMATIC_PROJECTION = `
   out_time,
   in_center_id,
   out_center_id,
+  in_images,
+  out_images,
   images,
   gross,
   tare,
@@ -56,6 +59,8 @@ const MANUAL_PROJECTION = `
   out_time,
   in_center_id,
   out_center_id,
+  in_images,
+  out_images,
   images,
   gross,
   tare,
@@ -97,6 +102,22 @@ export async function executeWeighmentsGetQuery(
 ): Promise<NextResponse> {
   const table = TABLES[mode];
   const select = PROJECTIONS[mode];
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get("search")?.trim();
+  const extraOrConditions: string[] = [];
+
+  if (search) {
+    const { data: matchedCenters } = await supabase
+      .from("centers")
+      .select("id")
+      .ilike("name", `%${search}%`)
+      .limit(100);
+
+    if (matchedCenters && matchedCenters.length > 0) {
+      const ids = matchedCenters.map((c) => c.id).join(",");
+      extraOrConditions.push(`in_center_id.in.(${ids})`, `out_center_id.in.(${ids})`);
+    }
+  }
 
   return executePaginatedEntityQuery<WeighmentSortColumn, Weighment>({
     request,
@@ -105,6 +126,9 @@ export async function executeWeighmentsGetQuery(
     allowedSortColumns: ALLOWED_WEIGHMENT_SORT_COLUMNS,
     defaultSort: { col: "updated_at", ascending: false },
     searchColumns: ["vehicle_number"],
+    integerColumns: ["id"],
+    numericColumns: ["net", "gross", "tare", "in_weight", "out_weight"],
+    extraOrConditions,
     applyCustomFilters: (query, searchParams) => {
       let filteredQuery = query;
 

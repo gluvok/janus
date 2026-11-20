@@ -5,7 +5,7 @@ export { cn } from "cn";
  * Extracts a user-facing error message from an unknown error, prioritizing
  * Axios response error payloads and Error message properties with a fallback.
  */
-export function getErrorMessage(err: unknown, fallback = "An unexpected error occurred."): string {
+export function getErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {
     return err.response?.data?.error || err.message || fallback;
   }
@@ -18,7 +18,7 @@ export function getErrorMessage(err: unknown, fallback = "An unexpected error oc
 /**
  * Standardizes ISO date-time string formatting across tables, cards, and audit logs.
  */
-export function formatDateTime(isoString?: string | null): string {
+export function formatDateTime(isoString: string | null): string {
   if (!isoString) return "—";
   try {
     return new Intl.DateTimeFormat("en-US", {

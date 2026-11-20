@@ -33,6 +33,7 @@ export const GET = handleApiRoute(async (request: Request) => {
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
     defaultSort: { col: "id", ascending: false },
     searchColumns: ["name", "username"],
+    integerColumns: ["id"],
     applyCustomFilters: (query, searchParams) => {
       const roleParam = searchParams.get("role")?.trim();
       if (roleParam && roleParam !== "all") {

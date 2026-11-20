@@ -27,21 +27,19 @@ import { DEFAULT_COLUMN_METADATA } from "./data-table-columns";
 import { DataTableClearButton } from "./data-table-clear-button";
 
 export interface DataTableCriteriaBarProps {
-  hasActiveSorts?: boolean;
-  sorting?: SortingState;
-  onSortingChange?: (updater: Updater<SortingState>) => void;
-  onRemoveSort?: (columnId: string) => void;
-  onResetSorts?: () => void;
-  onResetAll?: () => void;
+  hasActiveSorts: boolean;
+  sorting: SortingState;
+  onSortingChange: (updater: Updater<SortingState>) => void;
+  onRemoveSort: (columnId: string) => void;
+  onResetSorts: () => void;
 }
 
 export function DataTableCriteriaBar({
-  hasActiveSorts = false,
-  sorting = [],
+  hasActiveSorts,
+  sorting,
   onSortingChange,
   onRemoveSort,
   onResetSorts,
-  onResetAll,
 }: DataTableCriteriaBarProps) {
   const [activeSortId, setActiveSortId] = React.useState<string | null>(null);
 
@@ -131,16 +129,14 @@ export function DataTableCriteriaBar({
                     colIcon={meta.icon}
                     isDraggable={sorting.length > 1}
                     onRemove={(columnId) => {
-                      onRemoveSort?.(columnId);
+                      onRemoveSort(columnId);
                     }}
                   />
                 );
               })}
             </SortableContext>
 
-            {(onResetSorts || onResetAll) && (
-              <DataTableClearButton label="Clear sorts" onClick={onResetSorts ?? onResetAll!} />
-            )}
+            <DataTableClearButton label="Clear sorts" onClick={onResetSorts} />
 
             <DragOverlay>
               {activeSortRule && activeSortIndex !== -1 ? (

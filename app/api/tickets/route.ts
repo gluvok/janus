@@ -48,6 +48,23 @@ async function findTicketForFactory(id: number, factoryId: number) {
 }
 
 export const GET = handleApiRoute(async (request: Request) => {
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get("search")?.trim();
+  const extraOrConditions: string[] = [];
+
+  if (search) {
+    const { data: matchedWeighments } = await supabase
+      .from("automatic_weighments")
+      .select("id")
+      .ilike("vehicle_number", `%${search}%`)
+      .limit(100);
+
+    if (matchedWeighments && matchedWeighments.length > 0) {
+      const ids = matchedWeighments.map((w) => w.id).join(",");
+      extraOrConditions.push(`automatic_weighment_id.in.(${ids})`);
+    }
+  }
+
   return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], Ticket>({
     request,
     table: "tickets",
@@ -55,6 +72,8 @@ export const GET = handleApiRoute(async (request: Request) => {
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
     defaultSort: { col: "created_at", ascending: false },
     searchColumns: ["concern", "reply"],
+    integerColumns: ["id", "automatic_weighment_id"],
+    extraOrConditions,
     applyCustomFilters: (query, searchParams) => {
       const statusParam = searchParams.get("status")?.trim();
       if (statusParam && statusParam !== "all") {

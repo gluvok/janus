@@ -7,9 +7,9 @@ import {
   createIdColumn,
   createSelectColumn,
   createUpdatedAtColumn,
-  createActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
+import { EditableRowActions, FullRowActions } from "@/components/data-table/data-table-row-actions";
 import {
   HelpCircleIcon,
   Message01Icon,
@@ -21,8 +21,8 @@ import { TicketStatusBadge } from "./status-badge";
 import type { Ticket } from "./types";
 
 export interface TicketsTableMeta {
-  onEditTicket?: (ticket: Ticket) => void;
-  onDeleteTicket?: (ticket: Ticket) => void;
+  onEditTicket: (ticket: Ticket) => void;
+  onDeleteTicket: (ticket: Ticket) => void;
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, Ticket>();
@@ -82,13 +82,9 @@ export const columns = columnHelper.columns([
     cell: ({ row }) => {
       const ticket = row.original;
       return (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-xs font-semibold text-foreground">
-            {ticket.weighment.vehicle_number}
-          </span>
-          <span className="font-mono text-2xs text-muted-foreground">
-            #{ticket.automatic_weighment_id}
-          </span>
+        <div className="flex items-center gap-1.5 font-mono text-xs">
+          <span className="font-semibold text-foreground">{ticket.weighment.vehicle_number}</span>
+          <span className="text-2xs text-muted-foreground">#{ticket.automatic_weighment_id}</span>
         </div>
       );
     },
@@ -108,22 +104,36 @@ export const columns = columnHelper.columns([
   }),
   createCreatedAtColumn(columnHelper),
   createUpdatedAtColumn(columnHelper),
-  createActionsColumn(columnHelper, ({ row, table }) => {
-    const ticket = row.original;
-    const meta = table.options.meta as TicketsTableMeta | undefined;
-    const isPending = ticket.status === "pending";
+  columnHelper.display({
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row, table }) => {
+      const ticket = row.original;
+      const meta = table.options.meta as TicketsTableMeta | undefined;
 
-    return {
-      copyText: String(ticket.id),
-      copyLabel: "Copy Ticket ID",
-      onEdit: () => meta?.onEditTicket?.(ticket),
-      editLabel: "Update Ticket",
-      ...(isPending
-        ? {
-            onDelete: () => meta?.onDeleteTicket?.(ticket),
-            deleteLabel: "Delete Ticket",
-          }
-        : {}),
-    };
+      if (ticket.status === "pending") {
+        return (
+          <FullRowActions
+            copyText={String(ticket.id)}
+            copyLabel="Copy Ticket ID"
+            onEdit={() => meta?.onEditTicket(ticket)}
+            editLabel="Update Ticket"
+            onDelete={() => meta?.onDeleteTicket(ticket)}
+            deleteLabel="Delete Ticket"
+          />
+        );
+      }
+
+      return (
+        <EditableRowActions
+          copyText={String(ticket.id)}
+          copyLabel="Copy Ticket ID"
+          onEdit={() => meta?.onEditTicket(ticket)}
+          editLabel="Update Ticket"
+        />
+      );
+    },
+    enableSorting: false,
+    enableHiding: false,
   }),
 ]);

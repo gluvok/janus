@@ -47,6 +47,8 @@ export const weighmentSchema = z
     out_creator_id: z.number().int().positive().nullable().optional(),
     in_creator: weighmentUserSchema.nullable().optional(),
     out_creator: weighmentUserSchema.nullable().optional(),
+    in_images: z.array(z.string()),
+    out_images: z.array(z.string()),
     images: z.array(z.string()),
     gross: z.number(),
     tare: z.number().nullable(),

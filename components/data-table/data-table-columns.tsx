@@ -3,7 +3,14 @@
 import type { ColumnDef, ColumnHelper, Row, RowData, Table } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "./data-table-column-header";
-import { DataTableRowActions, type DataTableRowActionsProps } from "./data-table-row-actions";
+import {
+  CopyRowAction,
+  EditableRowActions,
+  FullRowActions,
+  type CopyRowActionProps,
+  type EditableRowActionsProps,
+  type FullRowActionsProps,
+} from "./data-table-row-actions";
 import { formatDateTime } from "@/lib/utils";
 import {
   AtIcon,
@@ -186,20 +193,57 @@ export function createNameColumn<TData extends { name: string }>(
   });
 }
 
-export function createActionsColumn<TData extends RowData>(
+export function createCopyActionsColumn<TData extends RowData>(
   columnHelper: ColumnHelper<DataTableFeatures, TData>,
   getActionProps: (props: {
     row: Row<DataTableFeatures, TData>;
     table: Table<DataTableFeatures, TData>;
-  }) => DataTableRowActionsProps | null,
+  }) => CopyRowActionProps,
 ) {
   return columnHelper.display({
     id: "actions",
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row, table }) => {
       const actionProps = getActionProps({ row, table });
-      if (!actionProps) return null;
-      return <DataTableRowActions {...actionProps} />;
+      return <CopyRowAction {...actionProps} />;
+    },
+    enableSorting: false,
+    enableHiding: false,
+  });
+}
+
+export function createEditableActionsColumn<TData extends RowData>(
+  columnHelper: ColumnHelper<DataTableFeatures, TData>,
+  getActionProps: (props: {
+    row: Row<DataTableFeatures, TData>;
+    table: Table<DataTableFeatures, TData>;
+  }) => EditableRowActionsProps,
+) {
+  return columnHelper.display({
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row, table }) => {
+      const actionProps = getActionProps({ row, table });
+      return <EditableRowActions {...actionProps} />;
+    },
+    enableSorting: false,
+    enableHiding: false,
+  });
+}
+
+export function createFullActionsColumn<TData extends RowData>(
+  columnHelper: ColumnHelper<DataTableFeatures, TData>,
+  getActionProps: (props: {
+    row: Row<DataTableFeatures, TData>;
+    table: Table<DataTableFeatures, TData>;
+  }) => FullRowActionsProps,
+) {
+  return columnHelper.display({
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row, table }) => {
+      const actionProps = getActionProps({ row, table });
+      return <FullRowActions {...actionProps} />;
     },
     enableSorting: false,
     enableHiding: false,

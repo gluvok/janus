@@ -107,7 +107,6 @@ export function UserDialogShell({
 
           <DialogActionFooter
             isDirty={isDirty}
-            isValid={isValid}
             isSubmitting={isSubmitting}
             onCancel={() => onOpenChange(false)}
             submitLabel={submitLabel}
@@ -125,16 +124,16 @@ export function UserDialogShell({
 interface FullNameFieldProps {
   value: string;
   onChange: (val: string) => void;
-  placeholder?: string;
-  description?: string;
+  placeholder: string;
+  description: string;
   error?: string;
 }
 
 export function FullNameField({
   value,
   onChange,
-  placeholder = "e.g. Alex Morgan",
-  description = "Account holder or enterprise name.",
+  placeholder,
+  description,
   error,
 }: FullNameFieldProps) {
   return (

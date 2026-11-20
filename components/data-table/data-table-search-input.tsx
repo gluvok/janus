@@ -9,14 +9,10 @@ import { cn } from "@/lib/utils";
 export interface DataTableSearchInputProps {
   value: string;
   onChange: (value: string) => void;
-  placeholder?: string;
+  placeholder: string;
 }
 
-export function DataTableSearchInput({
-  value,
-  onChange,
-  placeholder = "Search...",
-}: DataTableSearchInputProps) {
+export function DataTableSearchInput({ value, onChange, placeholder }: DataTableSearchInputProps) {
   return (
     <div className="relative w-full sm:w-60">
       <HugeiconsIcon

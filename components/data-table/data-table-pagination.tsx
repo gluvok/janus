@@ -22,21 +22,15 @@ const PAGE_SIZE_OPTIONS = [
   { label: "60", value: 60 },
 ];
 
-interface DataTablePaginationProps<TData extends RowData> {
+export interface DataTablePaginationProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;
-  loading?: boolean;
-  error?: string | null;
+  loading: boolean;
 }
 
 export function DataTablePagination<TData extends RowData>({
   table,
-  loading = false,
-  error = null,
+  loading,
 }: DataTablePaginationProps<TData>) {
-  if (error) {
-    return null;
-  }
-
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
   // Number of rows currently rendered in datatable on the current page
   const currentRowsCount = table.getRowModel().rows.length;

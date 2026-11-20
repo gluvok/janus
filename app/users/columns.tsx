@@ -8,7 +8,7 @@ import {
   createNameColumn,
   createSelectColumn,
   createUpdatedAtColumn,
-  createActionsColumn,
+  createFullActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
 import { RoleBadge } from "@/components/role-badge";
@@ -16,8 +16,8 @@ import { AtIcon, SecurityCheckIcon } from "@hugeicons/core-free-icons";
 import { type User } from "./types";
 
 export interface UsersTableMeta {
-  onEditUser?: (user: User) => void;
-  onDeleteUser?: (user: User) => void;
+  onEditUser: (user: User) => void;
+  onDeleteUser: (user: User) => void;
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, User>();
@@ -59,16 +59,16 @@ export function getColumns(options: { showRole: boolean; entityLabel: string }) 
       : []),
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),
-    createActionsColumn(columnHelper, ({ row, table }) => {
+    createFullActionsColumn(columnHelper, ({ row, table }) => {
       const user = row.original;
       const meta = table.options.meta as UsersTableMeta | undefined;
 
       return {
         copyText: user.username,
         copyLabel: "Copy Username",
-        onEdit: () => meta?.onEditUser?.(user),
+        onEdit: () => meta?.onEditUser(user),
         editLabel: `Edit ${entityLabel}`,
-        onDelete: () => meta?.onDeleteUser?.(user),
+        onDelete: () => meta?.onDeleteUser(user),
         deleteLabel: `Delete ${entityLabel}`,
       };
     }),

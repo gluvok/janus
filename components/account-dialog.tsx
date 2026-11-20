@@ -63,7 +63,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
     setValue,
     watch,
     reset,
-    formState: { isDirty, isValid, isSubmitting, errors },
+    formState: { isDirty, isSubmitting, errors },
   } = useForm<AccountFormInput>({
     resolver: zodResolver(accountFormSchema),
     mode: "onSubmit",
@@ -191,8 +191,9 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
                 onChange={(val) =>
                   setValue("name", val, { shouldValidate: true, shouldDirty: true })
                 }
-                error={errors.name?.message}
+                placeholder="e.g. Alex Morgan"
                 description="Your display name."
+                error={errors.name?.message}
               />
 
               <CredentialsFields
@@ -213,7 +214,6 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
 
               <DialogActionFooter
                 isDirty={isDirty}
-                isValid={isValid}
                 isSubmitting={isSubmitting}
                 onCancel={() => onOpenChange(false)}
                 submitLabel="Save Changes"

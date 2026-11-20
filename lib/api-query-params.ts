@@ -75,7 +75,7 @@ export function createSortRulesSchema<T extends string>(allowedColumns: readonly
 export function parseSorting<T extends string>(
   searchParams: URLSearchParams,
   allowedColumns: readonly T[],
-  defaultSort?: SortRule<T>,
+  defaultSort: SortRule<T>,
 ): SortRule<T>[] {
   const requestedSort = searchParams.get("sort")?.trim();
   if (requestedSort === "none") {
@@ -89,7 +89,7 @@ export function parseSorting<T extends string>(
     }
   }
 
-  return defaultSort ? [defaultSort] : [];
+  return [defaultSort];
 }
 
 /**

@@ -46,7 +46,7 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
     register,
     handleSubmit,
     reset,
-    formState: { errors, isDirty, isValid, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
   } = useForm<UpdateCenterInput>({
     resolver: zodResolver(updateCenterSchema),
     mode: "onSubmit",
@@ -115,7 +115,6 @@ export function CenterEditDialog({ open, onOpenChange, center, onSuccess }: Cent
           <DialogActionFooter
             onCancel={() => onOpenChange(false)}
             isSubmitting={isSubmitting}
-            isValid={isValid}
             isDirty={isDirty}
             submitLabel="Save Changes"
           />

@@ -64,8 +64,12 @@ export interface PaginatedEntityQueryOptions<TCol extends string> {
   table: string;
   select?: string;
   allowedSortColumns: readonly TCol[];
-  defaultSort?: SortRule<TCol>;
+  defaultSort: SortRule<TCol>;
   searchColumns?: readonly string[];
+  textColumns?: readonly string[];
+  integerColumns?: readonly string[];
+  numericColumns?: readonly string[];
+  extraOrConditions?: readonly string[];
   applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
 }
 
@@ -76,18 +80,26 @@ export function buildBaseEntityQuery({
   table,
   select = "*",
   searchColumns = [],
+  textColumns = [],
+  integerColumns = [],
+  numericColumns = [],
+  extraOrConditions = [],
   applyCustomFilters,
   factoryId,
   searchParams,
-  countExact = false,
+  countExact,
 }: {
   table: string;
   select?: string;
   searchColumns?: readonly string[];
+  textColumns?: readonly string[];
+  integerColumns?: readonly string[];
+  numericColumns?: readonly string[];
+  extraOrConditions?: readonly string[];
   applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
   factoryId: number;
   searchParams: URLSearchParams;
-  countExact?: boolean;
+  countExact: boolean;
 }) {
   let query: any = countExact
     ? supabase.from(table).select(select, { count: "exact" })
@@ -99,12 +111,46 @@ export function buildBaseEntityQuery({
   }
 
   const search = searchParams.get("search")?.trim();
-  if (search && searchColumns.length > 0) {
-    if (searchColumns.length === 1) {
-      query = query.ilike(searchColumns[0], `%${search}%`);
-    } else {
-      const orConditions = searchColumns.map((col) => `${col}.ilike.%${search}%`).join(",");
-      query = query.or(orConditions);
+  if (search) {
+    const conditions: string[] = [];
+
+    // Text columns with ILIKE
+    const allTextCols = [...textColumns, ...searchColumns];
+    for (const col of allTextCols) {
+      conditions.push(`${col}.ilike.%${search}%`);
+    }
+
+    // Integer columns with EQ
+    if (integerColumns.length > 0 && /^\d+$/.test(search)) {
+      for (const col of integerColumns) {
+        conditions.push(`${col}.eq.${search}`);
+      }
+    }
+
+    // Numeric columns with EQ
+    if (numericColumns.length > 0 && !Number.isNaN(Number(search))) {
+      const num = Number(search);
+      for (const col of numericColumns) {
+        conditions.push(`${col}.eq.${num}`);
+      }
+    }
+
+    // Extra OR conditions (e.g. relations subquery matches)
+    if (extraOrConditions.length > 0) {
+      conditions.push(...extraOrConditions);
+    }
+
+    if (conditions.length === 1) {
+      const parts = conditions[0].split(".");
+      if (parts.length === 3 && parts[1] === "ilike") {
+        query = query.ilike(parts[0], parts[2]);
+      } else if (parts.length === 3 && parts[1] === "eq") {
+        query = query.eq(parts[0], parts[2]);
+      } else {
+        query = query.or(conditions[0]);
+      }
+    } else if (conditions.length > 1) {
+      query = query.or(conditions.join(","));
     }
   }
 
@@ -127,6 +173,10 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   allowedSortColumns,
   defaultSort,
   searchColumns = [],
+  textColumns = [],
+  integerColumns = [],
+  numericColumns = [],
+  extraOrConditions = [],
   applyCustomFilters,
   factoryId,
 }: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
@@ -140,6 +190,10 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
     table,
     select,
     searchColumns,
+    textColumns,
+    integerColumns,
+    numericColumns,
+    extraOrConditions,
     applyCustomFilters,
     factoryId,
     searchParams,
@@ -166,6 +220,10 @@ export async function buildAllEntityResult<TCol extends string, TData = unknown>
   allowedSortColumns,
   defaultSort,
   searchColumns = [],
+  textColumns = [],
+  integerColumns = [],
+  numericColumns = [],
+  extraOrConditions = [],
   applyCustomFilters,
   factoryId,
 }: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
@@ -178,13 +236,17 @@ export async function buildAllEntityResult<TCol extends string, TData = unknown>
     table,
     select,
     searchColumns,
+    textColumns,
+    integerColumns,
+    numericColumns,
+    extraOrConditions,
     applyCustomFilters,
     factoryId,
     searchParams,
     countExact: false,
   });
 
-  const activeSort = sortRules.length > 0 ? sortRules : defaultSort ? [defaultSort] : [];
+  const activeSort = sortRules.length > 0 ? sortRules : [defaultSort];
   query = applySorting(query, activeSort);
 
   const { data, error } = await query;

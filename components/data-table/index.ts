@@ -10,7 +10,9 @@ export {
   createCreatedAtColumn,
   createUpdatedAtColumn,
   createNameColumn,
-  createActionsColumn,
+  createCopyActionsColumn,
+  createEditableActionsColumn,
+  createFullActionsColumn,
   DEFAULT_COLUMN_METADATA,
   type ColumnMetaConfig,
 } from "./data-table-columns";
@@ -54,4 +56,4 @@ export {
 
 export { DataTableErrorState, type DataTableErrorStateProps } from "./data-table-error-state";
 
-export { useDataTable, type UseDataTableReturn } from "./use-data-table";
+export { useDataTable, endpointFetcher, type UseDataTableReturn } from "./use-data-table";

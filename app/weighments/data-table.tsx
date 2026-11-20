@@ -25,17 +25,17 @@ import { appIcons } from "@/lib/icons";
 import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-strategy";
-import { PhotosDialog } from "@/components/photos-dialog";
+import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
 import { WEIGHMENT_COLUMNS, type WeighmentsTableMeta } from "./columns";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
 
 const TYPE_OPTIONS: FacetedFilterOption[] = [
-  { label: "All Types", value: "all", icon: Layers01Icon },
-  { label: "PENDING", value: "pending", icon: Clock01Icon },
-  { label: "IN", value: "in", icon: ArrowDownRight01Icon },
-  { label: "OUT", value: "out", icon: ArrowUpRight01Icon },
-  { label: "UNASSIGNED", value: "unassigned", icon: CircleMinusIcon },
+  { label: "All types", value: "all", icon: Layers01Icon },
+  { label: "Pending", value: "pending", icon: Clock01Icon },
+  { label: "In", value: "in", icon: ArrowDownRight01Icon },
+  { label: "Out", value: "out", icon: ArrowUpRight01Icon },
+  { label: "Unassigned", value: "unassigned", icon: CircleMinusIcon },
 ];
 
 const WEIGHMENT_ENDPOINTS: Record<WeighmentMode, string> = {
@@ -112,19 +112,18 @@ function validateAndSanitizeFilters(
 function buildWeighmentsQueryParams(
   tableState: TableItemState,
   mode: WeighmentMode,
-  pageOverride?: number,
-  filtersOverride?: Record<string, string>,
+  page: number,
+  filters: Record<string, string>,
 ): Record<string, unknown> {
   const pagination = tableState.pagination;
   const sorting = tableState.sorting;
   const search = tableState.search;
   const fromIso = tableState.dateRange?.from;
   const toIso = tableState.dateRange?.to;
-  const filters = filtersOverride ?? tableState.filters;
 
   return {
     mode,
-    page: pageOverride ?? pagination.pageIndex + 1,
+    page,
     pageSize: pagination.pageSize,
     ...(sorting.length > 0 && {
       sort: sorting.map((s) => `${s.id}.${s.desc ? "desc" : "asc"}`).join(","),
@@ -153,16 +152,16 @@ export function WeighmentsDataTable() {
   const [photosDialogState, setPhotosDialogState] = useState<{
     open: boolean;
     title: string;
-    subtitle?: string;
-    images: string[];
+    subtitle: string;
+    images: PhotoItem[];
   }>({
     open: false,
     title: "",
-    subtitle: undefined,
+    subtitle: "",
     images: [],
   });
 
-  const handleViewPhotos = useCallback((title: string, subtitle: string, images: string[]) => {
+  const handleViewPhotos = useCallback((title: string, subtitle: string, images: PhotoItem[]) => {
     setPhotosDialogState({
       open: true,
       title,
@@ -194,7 +193,12 @@ export function WeighmentsDataTable() {
     try {
       const tableState = useDataTableStore.getState().getTableState("weighments");
       const mode = (tableState.mode ?? "automatic") as WeighmentMode;
-      const initialQueryParams = buildWeighmentsQueryParams(tableState, mode);
+      const initialQueryParams = buildWeighmentsQueryParams(
+        tableState,
+        mode,
+        tableState.pagination.pageIndex + 1,
+        tableState.filters,
+      );
       const initialEndpoint = WEIGHMENT_ENDPOINTS[mode];
 
       const [optionsResult, weighmentsResult] = await Promise.all([

@@ -36,7 +36,6 @@ export function DialogIconBadge({ icon }: { icon: Parameters<typeof HugeiconsIco
 
 export interface DialogActionFooterProps {
   isDirty: boolean;
-  isValid?: boolean;
   isSubmitting: boolean;
   onCancel: () => void;
   submitLabel: string;

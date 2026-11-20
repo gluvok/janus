@@ -74,7 +74,7 @@ export function TicketEditDialog({ open, onOpenChange, ticket, onSuccess }: Tick
     handleSubmit,
     control,
     reset,
-    formState: { errors, isDirty, isValid, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
   } = useForm<TicketFormInput>({
     resolver: zodResolver(ticketFormSchema),
     mode: "onSubmit",
@@ -238,7 +238,6 @@ export function TicketEditDialog({ open, onOpenChange, ticket, onSuccess }: Tick
             submitLabel="Save Changes"
             isSubmitting={isSubmitting}
             isDirty={isDirty}
-            isValid={isValid}
           />
         </form>
       </DialogContent>

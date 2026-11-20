@@ -5,16 +5,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon } from "@hugeicons/core-free-icons";
 
 export interface DataTableErrorStateProps {
-  title?: string;
+  title: string;
   error: string;
   onRetry: () => void;
 }
 
-export function DataTableErrorState({
-  title = "Failed to load data",
-  error,
-  onRetry,
-}: DataTableErrorStateProps) {
+export function DataTableErrorState({ title, error, onRetry }: DataTableErrorStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center min-h-64">
       <div className="flex flex-col items-center gap-3 max-w-sm">

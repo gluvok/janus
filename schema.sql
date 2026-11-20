@@ -99,7 +99,9 @@ CREATE TABLE automatic_weighments (
     out_time TIMESTAMPTZ,
     in_center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
     out_center_id INT REFERENCES centers(id) ON DELETE RESTRICT,
-    images TEXT[] NOT NULL DEFAULT '{}',
+    in_images TEXT[] NOT NULL DEFAULT '{}',
+    out_images TEXT[] NOT NULL DEFAULT '{}',
+    images TEXT[] GENERATED ALWAYS AS (in_images || out_images) STORED,
     gross NUMERIC(10, 2) GENERATED ALWAYS AS (
         CASE
             WHEN out_weight IS NULL THEN in_weight
@@ -153,7 +155,9 @@ CREATE TABLE manual_weighments (
     out_center_id INT REFERENCES centers(id) ON DELETE RESTRICT,
     in_creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     out_creator_id INT REFERENCES users(id) ON DELETE RESTRICT,
-    images TEXT[] NOT NULL DEFAULT '{}',
+    in_images TEXT[] NOT NULL DEFAULT '{}',
+    out_images TEXT[] NOT NULL DEFAULT '{}',
+    images TEXT[] GENERATED ALWAYS AS (in_images || out_images) STORED,
     gross NUMERIC(10, 2) GENERATED ALWAYS AS (
         CASE
             WHEN out_weight IS NULL THEN in_weight

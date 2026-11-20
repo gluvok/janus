@@ -11,10 +11,8 @@ export type FilterChipVariant = "stone" | "emerald" | "orange" | "amber" | "prim
 interface DataTableFilterChipProps {
   label: string;
   value: string;
-  categoryIcon?: unknown;
-  valueIcon?: unknown;
-  icon?: unknown;
-  variant?: FilterChipVariant;
+  icon: Parameters<typeof HugeiconsIcon>[0]["icon"];
+  variant: FilterChipVariant;
   onRemove: () => void;
 }
 
@@ -73,14 +71,11 @@ const VARIANT_STYLES: Record<
 export function DataTableFilterChip({
   label,
   value,
-  categoryIcon,
-  valueIcon,
   icon,
-  variant = "stone",
+  variant,
   onRemove,
 }: DataTableFilterChipProps) {
   const styles = VARIANT_STYLES[variant];
-  const catIcon = categoryIcon ?? icon;
 
   return (
     <Badge
@@ -90,21 +85,12 @@ export function DataTableFilterChip({
         styles.container,
       )}
     >
-      {catIcon ? (
-        <HugeiconsIcon
-          icon={catIcon as Parameters<typeof HugeiconsIcon>[0]["icon"]}
-          className="size-2.5 shrink-0 text-muted-foreground"
-          data-icon="inline-start"
-        />
-      ) : null}
+      <HugeiconsIcon
+        icon={icon}
+        className="size-2.5 shrink-0 text-muted-foreground"
+        data-icon="inline-start"
+      />
       <span className="text-muted-foreground">{label}:</span>
-      {valueIcon ? (
-        <HugeiconsIcon
-          icon={valueIcon as Parameters<typeof HugeiconsIcon>[0]["icon"]}
-          className={cn("size-2.5 shrink-0", styles.valueIcon)}
-          data-icon="inline-start"
-        />
-      ) : null}
       <span className={cn("font-medium", styles.value)}>{value}</span>
       <Button
         type="button"

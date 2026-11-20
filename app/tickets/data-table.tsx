@@ -7,6 +7,7 @@ import {
   DataTableToolbar,
   type DataTableFilterConfig,
   useDataTable,
+  endpointFetcher,
 } from "@/components/data-table";
 import {
   CancelCircleIcon,
@@ -53,7 +54,7 @@ export function TicketsDataTable() {
   const dataTable = useDataTable<Ticket>({
     tableId: "tickets",
     columns,
-    endpoint: "/api/tickets",
+    fetchData: endpointFetcher("/api/tickets"),
     meta: tableMeta,
   });
 

@@ -8,6 +8,7 @@ import {
   DataTableToolbar,
   type DataTableFilterConfig,
   useDataTable,
+  endpointFetcher,
 } from "@/components/data-table";
 import { Delete02Icon, SecurityCheckIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -55,7 +56,7 @@ export function UsersDataTable() {
   const dataTable = useDataTable<User>({
     tableId: "users",
     columns,
-    endpoint: "/api/users",
+    fetchData: endpointFetcher("/api/users"),
     meta: tableMeta,
   });
 
@@ -104,10 +105,25 @@ export function UsersDataTable() {
           <span className="font-medium text-muted-foreground">
             {dataTable.selectedCount} user{dataTable.selectedCount > 1 ? "s" : ""} selected
           </span>
-          <Button variant="destructive" size="xs" onClick={handleBatchDelete} className="gap-1.5">
-            <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
-            <span>Delete Selected</span>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => dataTable.setRowSelection({})}
+              className="h-6 px-2 text-2xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="xs"
+              onClick={handleBatchDelete}
+              className="h-6 gap-1.5 text-2xs"
+            >
+              <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+              <span>Delete Selected</span>
+            </Button>
+          </div>
         </div>
       )}
 
