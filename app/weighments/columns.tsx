@@ -42,7 +42,8 @@ export interface WeighmentsTableMeta {
     outCenter: { id: number; name: string } | null;
     images: PhotoItem[];
   }) => void;
-  onDownloadReceipt?: (weighment: Weighment) => void;
+  onDownloadPdf?: (weighment: Weighment) => void;
+  downloadingId?: number | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -300,8 +301,8 @@ const actionsColumn = createCopyActionsColumn<Weighment>(columnHelper, ({ row, t
   return {
     copyText: row.original.vehicle_number,
     copyLabel: "Copy Vehicle No.",
-    onDownloadReceipt: isCompleted ? () => meta?.onDownloadReceipt?.(row.original) : undefined,
-    receiptLabel: "Receipt",
+    onDownloadPdf: isCompleted ? () => meta?.onDownloadPdf?.(row.original) : undefined,
+    isDownloadingPdf: meta?.downloadingId === row.original.id,
   };
 });
 

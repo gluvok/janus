@@ -26,7 +26,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-strategy";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
-import { WeighmentReceiptDialog } from "@/components/weighment-receipt/weighment-receipt-dialog";
+import { useWeighmentPdfDownload } from "@/components/weighment-receipt/use-weighment-pdf-download";
 import { WEIGHMENT_COLUMNS, type WeighmentsTableMeta } from "./columns";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
@@ -166,7 +166,7 @@ export function WeighmentsDataTable() {
     images: [],
   });
 
-  const [receiptWeighment, setReceiptWeighment] = useState<Weighment | null>(null);
+  const { downloadPdf, downloadingId } = useWeighmentPdfDownload();
 
   const handleViewPhotos = useCallback(
     (payload: {
@@ -263,11 +263,12 @@ export function WeighmentsDataTable() {
   const tableMeta: WeighmentsTableMeta = useMemo(
     () => ({
       onViewPhotos: handleViewPhotos,
-      onDownloadReceipt: (weighment: Weighment) => {
-        setReceiptWeighment(weighment);
+      onDownloadPdf: (weighment: Weighment) => {
+        downloadPdf(weighment, mode);
       },
+      downloadingId,
     }),
-    [handleViewPhotos],
+    [handleViewPhotos, downloadPdf, mode, downloadingId],
   );
 
   const columns = useMemo(() => WEIGHMENT_COLUMNS[mode](), [mode]);
@@ -351,14 +352,6 @@ export function WeighmentsDataTable() {
         inCenter={photosDialogState.inCenter}
         outCenter={photosDialogState.outCenter}
         images={photosDialogState.images}
-      />
-
-      {/* Weighment PDF Receipt Preview Modal */}
-      <WeighmentReceiptDialog
-        open={!!receiptWeighment}
-        onOpenChange={(open) => !open && setReceiptWeighment(null)}
-        weighment={receiptWeighment}
-        mode={mode}
       />
     </div>
   );

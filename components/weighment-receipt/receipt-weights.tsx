@@ -16,11 +16,11 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
   const hasOperators = Boolean(weighment.in_creator || weighment.out_creator);
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* Weight Figures Cards (Compact Minimalist) */}
+    <div className="flex flex-col gap-1.5">
+      {/* Weight Figures Cards (Compact Minimalist, Flat Borders, No Shadows) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {/* Gross Weight */}
-        <div className="border border-zinc-200 rounded-md p-2 sm:p-2.5 bg-white flex flex-col gap-0.5">
+        <div className="border border-zinc-200 rounded-md p-2 bg-white flex flex-col gap-0.5">
           <div className="flex items-center justify-between text-zinc-500">
             <span className="text-3xs font-medium uppercase tracking-wider">Gross Weight</span>
             <HugeiconsIcon icon={ContainerTruck01Icon} className="size-3" />
@@ -34,7 +34,7 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
         </div>
 
         {/* Tare Weight */}
-        <div className="border border-zinc-200 rounded-md p-2 sm:p-2.5 bg-white flex flex-col gap-0.5">
+        <div className="border border-zinc-200 rounded-md p-2 bg-white flex flex-col gap-0.5">
           <div className="flex items-center justify-between text-zinc-500">
             <span className="text-3xs font-medium uppercase tracking-wider">Tare Weight</span>
             <HugeiconsIcon icon={PackageOpenIcon} className="size-3" />
@@ -48,7 +48,7 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
         </div>
 
         {/* Net Weight */}
-        <div className="border-2 border-zinc-900 rounded-md p-2 sm:p-2.5 bg-zinc-900 text-white flex flex-col gap-0.5 shadow-xs">
+        <div className="border border-zinc-900 rounded-md p-2 bg-zinc-900 text-white flex flex-col gap-0.5">
           <div className="flex items-center justify-between text-zinc-300">
             <span className="text-3xs font-semibold uppercase tracking-wider">Net Weight</span>
             <HugeiconsIcon icon={ScaleIcon} className="size-3" />
@@ -64,7 +64,7 @@ export function ReceiptWeights({ weighment }: ReceiptWeightsProps) {
 
       {/* Operator Sign-off (Manual Mode, Compact) */}
       {hasOperators && (
-        <div className="flex items-center justify-between gap-3 border border-zinc-200 rounded-md px-3 py-1.5 bg-zinc-50 text-2xs text-zinc-600">
+        <div className="flex items-center justify-between gap-3 border border-zinc-200 rounded-md px-2.5 py-1 bg-zinc-50 text-2xs text-zinc-600">
           <div className="flex items-center gap-1.5">
             <HugeiconsIcon icon={UserIcon} className="size-3 text-zinc-500" />
             <span className="text-3xs font-medium uppercase text-zinc-500">Operator Sign-Off:</span>

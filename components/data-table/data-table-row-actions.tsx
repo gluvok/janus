@@ -10,13 +10,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Copy01Icon,
   Delete02Icon,
+  Download01Icon,
   Edit01Icon,
-  Invoice01Icon,
+  Loading03Icon,
   MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 
@@ -55,20 +57,36 @@ function ActionsTrigger() {
 export interface CopyRowActionProps {
   copyText: string;
   copyLabel: string;
-  onDownloadReceipt?: () => void;
-  receiptLabel?: string;
+  onDownloadPdf?: () => void;
+  isDownloadingPdf?: boolean;
 }
 
 export function CopyRowAction({
   copyText,
   copyLabel,
-  onDownloadReceipt,
-  receiptLabel = "Receipt",
+  onDownloadPdf,
+  isDownloadingPdf = false,
 }: CopyRowActionProps) {
   const handleCopy = useCopyAction(copyText, copyLabel);
 
   return (
-    <div className="flex items-center justify-end">
+    <div className="flex items-center justify-end gap-1.5">
+      {onDownloadPdf && (
+        <Button
+          variant="default"
+          size="xs"
+          onClick={onDownloadPdf}
+          disabled={isDownloadingPdf}
+          className="h-6 gap-1 px-2 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <HugeiconsIcon
+            icon={isDownloadingPdf ? Loading03Icon : Download01Icon}
+            className={cn("size-3", isDownloadingPdf && "animate-spin")}
+          />
+          <span>Download PDF</span>
+        </Button>
+      )}
+
       <DropdownMenu>
         <ActionsTrigger />
         <DropdownMenuContent align="end" className="w-44">
@@ -78,15 +96,6 @@ export function CopyRowAction({
               <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
               <span>{copyLabel}</span>
             </DropdownMenuItem>
-            {onDownloadReceipt && (
-              <DropdownMenuItem
-                onClick={onDownloadReceipt}
-                className="gap-2 text-xs cursor-pointer"
-              >
-                <HugeiconsIcon icon={Invoice01Icon} className="size-3.5 text-muted-foreground" />
-                <span>{receiptLabel}</span>
-              </DropdownMenuItem>
-            )}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

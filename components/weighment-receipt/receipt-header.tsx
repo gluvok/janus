@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 import type { Weighment } from "@/app/weighments/types";
 
@@ -9,24 +8,15 @@ interface ReceiptHeaderProps {
 }
 
 export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
-  const materialDirection =
-    weighment.type === "in"
-      ? "Material In"
-      : weighment.type === "out"
-        ? "Material Out"
-        : weighment.type === "unassigned"
-          ? "Material Unassigned"
-          : "Pending";
-
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-3">
+    <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-2.5">
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logo.png"
           alt="Mesto Logo"
           crossOrigin="anonymous"
-          className="size-11 rounded-md object-contain border border-zinc-100 p-0.5 bg-zinc-50 shrink-0"
+          className="size-11 rounded-md object-contain border border-zinc-200 p-0.5 bg-zinc-50 shrink-0"
         />
         <div className="flex flex-col">
           <span className="font-heading text-lg sm:text-xl font-black tracking-tight text-zinc-950 uppercase leading-tight">
@@ -42,15 +32,59 @@ export function ReceiptHeader({ weighment, factoryName }: ReceiptHeaderProps) {
         <span className="font-mono text-xs sm:text-sm font-bold text-zinc-950">
           RECEIPT #{weighment.id}
         </span>
-        <span className="text-3xs text-zinc-400 mt-0.5">
-          Generated: {formatDateTime(new Date().toISOString())}
+        <span className="text-3xs text-zinc-500 mt-0.5">
+          Date: {formatDateTime(new Date().toISOString())}
         </span>
-        <Badge
-          variant="outline"
-          className="mt-1 font-mono text-3xs font-bold border-zinc-300 text-zinc-900 bg-zinc-100 px-1.5 py-0"
-        >
-          {materialDirection}
-        </Badge>
+      </div>
+    </div>
+  );
+}
+
+export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHeaderProps) {
+  return (
+    <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+      <div className="flex items-center gap-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt="Mesto Logo"
+          crossOrigin="anonymous"
+          className="size-6 rounded object-contain border border-zinc-200 p-0.5 bg-zinc-50 shrink-0"
+        />
+        <span className="font-heading text-xs font-black tracking-tight text-zinc-950 uppercase">
+          {factoryName}
+        </span>
+        <span className="text-3xs text-zinc-500">• Transit Photos (Continued)</span>
+      </div>
+      <div className="flex items-center gap-2 text-right">
+        <span className="font-mono text-3xs font-bold text-zinc-900">RECEIPT #{weighment.id}</span>
+        <span className="font-mono text-3xs text-zinc-500">({weighment.vehicle_number})</span>
+      </div>
+    </div>
+  );
+}
+
+export function ReceiptContinuationHeader({ weighment, factoryName }: ReceiptHeaderProps) {
+  return (
+    <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+      <div className="flex items-center gap-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt="Mesto Logo"
+          crossOrigin="anonymous"
+          className="size-6 rounded object-contain border border-zinc-200 p-0.5 bg-zinc-50 shrink-0"
+        />
+        <span className="font-heading text-xs font-black tracking-tight text-zinc-950 uppercase">
+          {factoryName ?? "Mesto Facility"}
+        </span>
+        <span className="text-3xs text-zinc-500">• Transit Photos (Continued)</span>
+      </div>
+      <div className="flex items-center gap-2 text-right">
+        <span className="font-mono text-3xs font-bold text-zinc-900">
+          RECEIPT #{weighment.id}
+        </span>
+        <span className="font-mono text-3xs text-zinc-500">({weighment.vehicle_number})</span>
       </div>
     </div>
   );

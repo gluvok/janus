@@ -12,22 +12,21 @@ import { WeighmentReceiptView } from "./weighment-receipt-view";
 import type { Weighment, WeighmentMode } from "@/app/weighments/types";
 
 export function useWeighmentPdfDownload() {
-  const [isDownloading, setIsDownloading] = React.useState(false);
+  const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
 
   const downloadPdf = React.useCallback(async (weighment: Weighment, mode: WeighmentMode) => {
-    setIsDownloading(true);
+    setDownloadingId(weighment.id);
     toast.add({
       type: "info",
       title: "Generating Receipt PDF",
       description: `Preparing receipt for ${weighment.vehicle_number}...`,
     });
 
-    // Temporary off-screen container for off-screen rendering
     let offscreenContainer: HTMLDivElement | null = null;
     let root: ReturnType<typeof createRoot> | null = null;
 
     try {
-      // 1. Query the mode-specific weighment API to validate session and get verified data
+      // 1. Query the mode-specific weighment API to validate session and get fresh data
       const endpoint = mode === "manual" ? "/api/weighments/manual" : "/api/weighments/automatic";
       const response = await axios.get<{ data: Weighment[]; totalCount: number }>(endpoint, {
         params: { id: weighment.id },
@@ -54,80 +53,33 @@ export function useWeighmentPdfDownload() {
       );
 
       // Allow DOM layout and images to settle
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
-      const element = offscreenContainer.querySelector<HTMLElement>("#printable-receipt");
-      if (!element) {
-        throw new Error("Unable to locate receipt template for rendering.");
+      const pageElements = offscreenContainer.querySelectorAll<HTMLElement>(".receipt-page");
+      if (!pageElements || pageElements.length === 0) {
+        throw new Error("Unable to locate receipt template pages for rendering.");
       }
 
-      // 3. Rasterize DOM to canvas
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-      });
-
-      // 4. Construct A4 PDF with multi-page slicing and pagination
+      // 3. Construct A4 PDF by rendering each discrete page without pixel slicing
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = 210;
       const pdfHeight = 297;
-      const pageCanvasHeight = (canvas.width * pdfHeight) / pdfWidth;
-      const totalPages = Math.ceil(canvas.height / pageCanvasHeight);
 
-      if (totalPages <= 1) {
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+        const canvas = await html2canvas(pageEl, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        const renderedHeightMm = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, renderedHeightMm);
-
-        pdf.setFontSize(8);
-        pdf.setTextColor(140, 140, 140);
-        pdf.text(
-          `Page 1 of 1 • Weighment #${verifiedWeighment.id} • Official Record • ${factory?.name ?? "Mesto"}`,
-          pdfWidth / 2,
-          pdfHeight - 6,
-          { align: "center" },
-        );
-      } else {
-        for (let i = 0; i < totalPages; i++) {
-          const pageCanvas = document.createElement("canvas");
-          pageCanvas.width = canvas.width;
-          const remainingHeight = canvas.height - i * pageCanvasHeight;
-          pageCanvas.height = Math.min(pageCanvasHeight, remainingHeight);
-
-          const ctx = pageCanvas.getContext("2d");
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-            ctx.drawImage(
-              canvas,
-              0,
-              i * pageCanvasHeight,
-              canvas.width,
-              pageCanvas.height,
-              0,
-              0,
-              canvas.width,
-              pageCanvas.height,
-            );
-
-            const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-            if (i > 0) pdf.addPage();
-            const renderedHeightMm = (pageCanvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(pageImgData, "JPEG", 0, 0, pdfWidth, renderedHeightMm);
-
-            pdf.setFontSize(8);
-            pdf.setTextColor(140, 140, 140);
-            pdf.text(
-              `Page ${i + 1} of ${totalPages} • Weighment #${verifiedWeighment.id} • Official Record • ${factory?.name ?? "Mesto"}`,
-              pdfWidth / 2,
-              pdfHeight - 6,
-              { align: "center" },
-            );
-          }
+        if (i > 0) {
+          pdf.addPage();
         }
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
       }
 
       const fileName = `weighment-receipt-${verifiedWeighment.id}-${verifiedWeighment.vehicle_number}.pdf`;
@@ -151,12 +103,13 @@ export function useWeighmentPdfDownload() {
       if (offscreenContainer && document.body.contains(offscreenContainer)) {
         document.body.removeChild(offscreenContainer);
       }
-      setIsDownloading(false);
+      setDownloadingId(null);
     }
   }, []);
 
   return {
     downloadPdf,
-    isDownloading,
+    downloadingId,
+    isDownloading: downloadingId !== null,
   };
 }
