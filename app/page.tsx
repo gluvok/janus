@@ -83,8 +83,8 @@ export default function Home() {
 
           return (
             <Link key={section.title} href={section.url} className="group outline-none flex">
-              <Card className="flex flex-col justify-between w-full border border-border/80 bg-card/70 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-xs cursor-pointer rounded-xl overflow-hidden">
-                <CardHeader className="p-4 pb-2 space-y-0 flex flex-row items-center justify-between">
+              <Card className="flex flex-col justify-between gap-0 py-0 w-full border border-border/80 bg-card/70 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-xs cursor-pointer rounded-xl overflow-hidden">
+                <CardHeader className="p-3 pb-0 space-y-0 flex flex-row items-center justify-between">
                   <div
                     className={cn(
                       "flex size-9 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105",
@@ -97,7 +97,7 @@ export default function Home() {
                     {config.category}
                   </span>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 pb-4 space-y-1.5 flex-1">
+                <CardContent className="px-3 pt-2 pb-2 space-y-1 flex-1">
                   <CardTitle className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
                     {section.title}
                   </CardTitle>
@@ -107,7 +107,7 @@ export default function Home() {
                     </CardDescription>
                   )}
                 </CardContent>
-                <CardFooter className="p-4 pt-2 border-t border-border/50 flex items-center justify-between text-2xs font-medium text-muted-foreground/80 group-hover:text-primary transition-colors">
+                <CardFooter className="px-3 pt-0 pb-3 flex items-center justify-between text-2xs font-medium text-muted-foreground/80 group-hover:text-primary transition-colors">
                   <span>{config.actionLabel}</span>
                   <HugeiconsIcon
                     icon={ArrowRight01Icon}
