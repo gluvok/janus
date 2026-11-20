@@ -1,9 +1,0 @@
-allowBuilds:
-  argon2: true
-  esbuild: true
-  msw: true
-  sharp: true
-  unrs-resolver: true
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
