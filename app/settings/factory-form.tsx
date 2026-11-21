@@ -31,7 +31,7 @@ const RECEIPT_IMAGE_OPTIONS = [
 ] as const;
 
 interface FactoryFormProps {
-  factory: Factory | null;
+  factory: Factory;
   name: string;
   onNameChange: (name: string) => void;
   nameError?: string;
@@ -141,7 +141,7 @@ export function FactoryForm({
           <div className="flex flex-col">
             <span className="text-2xs text-muted-foreground">Created On</span>
             <span className="font-medium text-foreground">
-              {factory ? formatDateTime(factory.created_at) : "—"}
+              {formatDateTime(factory.created_at)}
             </span>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function FactoryForm({
           <div className="flex flex-col">
             <span className="text-2xs text-muted-foreground">Last Modified</span>
             <span className="font-medium text-foreground">
-              {factory ? formatDateTime(factory.updated_at) : "—"}
+              {formatDateTime(factory.updated_at)}
             </span>
           </div>
         </div>
