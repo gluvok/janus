@@ -19,7 +19,7 @@ const RECEIPT_IMAGE_OPTIONS = [
   {
     value: "1",
     label: "1 per row",
-    description: "2×1 vertical photo grid",
+    description: "2x1 vertical photo grid",
     icon: Image01Icon,
   },
   {
