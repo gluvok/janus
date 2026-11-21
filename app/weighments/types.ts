@@ -21,21 +21,6 @@ export const AUTOMATIC_WEIGHMENT_TYPES = ["pending", ...COMPLETE_WEIGHMENT_TYPES
 export type AutomaticWeighmentType = (typeof AUTOMATIC_WEIGHMENT_TYPES)[number];
 export const automaticWeighmentTypeSchema = z.enum(AUTOMATIC_WEIGHMENT_TYPES);
 
-// Manual weighments are always complete
-export const MANUAL_WEIGHMENT_TYPES = COMPLETE_WEIGHMENT_TYPES;
-export type ManualWeighmentType = CompleteWeighmentType;
-export const manualWeighmentTypeSchema = completeWeighmentTypeSchema;
-
-// Unified union type for multi-mode table views
-export const WEIGHMENT_TYPES = AUTOMATIC_WEIGHMENT_TYPES;
-export type WeighmentType = AutomaticWeighmentType;
-export const weighmentTypeEnum = automaticWeighmentTypeSchema;
-
-// Completed weighments strictly use complete weighment types ('in', 'out', 'unassigned')
-export const COMPLETED_WEIGHMENT_TYPES = COMPLETE_WEIGHMENT_TYPES;
-export type CompletedWeighmentType = CompleteWeighmentType;
-export const completedWeighmentTypeEnum = completeWeighmentTypeSchema;
-
 export const weighmentCenterSchema = z
   .object({
     id: z.int().positive(),
@@ -110,48 +95,10 @@ export const manualWeighmentSchema = z
     creator: weighmentUserSchema,
     tare: z.number().positive(),
     net: z.number().nonnegative(),
-    type: manualWeighmentTypeSchema,
+    type: completeWeighmentTypeSchema,
   })
   .strict();
 export type ManualWeighment = z.infer<typeof manualWeighmentSchema>;
-
-/**
- * Unified Weighment schema used in TanStack table views covering both automatic & manual modes.
- */
-export const weighmentSchema = z
-  .object({
-    ...baseWeighmentFields,
-    idempotency_key: z.string().min(1).optional(),
-    in_detected_vehicle_number: z.string().nullable().optional(),
-    out_detected_vehicle_number: z.string().nullable().optional(),
-    out_weight: z.number().positive().nullable(),
-    out_time: z.string().nullable(),
-    out_center_id: z.int().positive().nullable(),
-    out_center: weighmentCenterSchema.nullable(),
-    creator_id: z.int().positive().nullable().optional(),
-    creator: weighmentUserSchema.nullable().optional(),
-    tare: z.number().positive().nullable(),
-    net: z.number().nonnegative().nullable(),
-    type: automaticWeighmentTypeSchema,
-  })
-  .strict();
-
-export type Weighment = z.infer<typeof weighmentSchema>;
-
-/**
- * CompletedWeighment: Strict non-null schema required for official weighment receipt slips.
- */
-export const completedWeighmentSchema = weighmentSchema.extend({
-  out_weight: z.number().positive(),
-  out_time: z.string(),
-  out_center_id: z.int().positive(),
-  out_center: weighmentCenterSchema,
-  tare: z.number().positive(),
-  net: z.number().nonnegative(),
-  type: manualWeighmentTypeSchema,
-});
-
-export type CompletedWeighment = z.infer<typeof completedWeighmentSchema>;
 
 /**
  * CompletedAutomaticWeighment: Strict non-null schema required for completed automatic weighment receipt slips.
@@ -163,7 +110,7 @@ export const completedAutomaticWeighmentSchema = automaticWeighmentSchema.extend
   out_center: weighmentCenterSchema,
   tare: z.number().positive(),
   net: z.number().nonnegative(),
-  type: manualWeighmentTypeSchema,
+  type: completeWeighmentTypeSchema,
 });
 
 export type CompletedAutomaticWeighment = z.infer<typeof completedAutomaticWeighmentSchema>;

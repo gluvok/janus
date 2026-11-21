@@ -1,15 +1,15 @@
 import * as React from "react";
 import { formatDateTime, cn } from "@/lib/utils";
 import type { Factory } from "@/app/settings/types";
-import type { CompletedWeighmentType } from "@/app/weighments/types";
+import type { CompleteWeighmentType } from "@/app/weighments/types";
 
-const DIRECTION_CONFIG: Record<CompletedWeighmentType, { label: string; className: string }> = {
+const DIRECTION_CONFIG: Record<CompleteWeighmentType, { label: string; className: string }> = {
   in: { label: "Material In", className: "bg-[#66684f]/15 text-[#66684f]" },
   out: { label: "Material Out", className: "bg-zinc-900 text-white" },
   unassigned: { label: "Unassigned", className: "bg-zinc-100 text-zinc-700" },
 };
 
-export function ReceiptDirectionBadge({ type }: { type: CompletedWeighmentType }) {
+export function ReceiptDirectionBadge({ type }: { type: CompleteWeighmentType }) {
   const config = DIRECTION_CONFIG[type];
   return (
     <span
@@ -89,7 +89,7 @@ export function ReceiptBranding({
 
 interface CommonHeaderProps {
   id: number;
-  type: CompletedWeighmentType;
+  type: CompleteWeighmentType;
   factory: Factory;
 }
 

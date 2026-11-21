@@ -6,7 +6,7 @@ import {
   CircleMinusIcon,
   Clock01Icon,
 } from "@hugeicons/core-free-icons";
-import type { WeighmentType } from "@/app/weighments/types";
+import type { AutomaticWeighmentType } from "@/app/weighments/types";
 
 interface WeighmentTypeConfig {
   label: string;
@@ -14,7 +14,7 @@ interface WeighmentTypeConfig {
   className: string;
 }
 
-const WEIGHMENT_TYPE_CONFIGS: Record<WeighmentType, WeighmentTypeConfig> = {
+const WEIGHMENT_TYPE_CONFIGS: Record<AutomaticWeighmentType, WeighmentTypeConfig> = {
   pending: {
     label: "Pending",
     icon: Clock01Icon,
@@ -42,7 +42,7 @@ const WEIGHMENT_TYPE_CONFIGS: Record<WeighmentType, WeighmentTypeConfig> = {
 };
 
 export interface WeighmentTypeBadgeProps {
-  type: WeighmentType;
+  type: AutomaticWeighmentType;
 }
 
 export function WeighmentTypeBadge({ type }: WeighmentTypeBadgeProps) {

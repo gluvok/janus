@@ -10,8 +10,9 @@ import { supabase } from "@/lib/supabase";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
 import {
   automaticWeighmentTypeSchema,
-  manualWeighmentTypeSchema,
-  type Weighment,
+  completeWeighmentTypeSchema,
+  type AutomaticWeighment,
+  type ManualWeighment,
   type WeighmentMode,
 } from "@/app/weighments/types";
 
@@ -122,7 +123,7 @@ export async function executeWeighmentsGetQuery(
     }
   }
 
-  return executePaginatedEntityQuery<WeighmentSortColumn, Weighment>({
+  return executePaginatedEntityQuery<WeighmentSortColumn, AutomaticWeighment | ManualWeighment>({
     request,
     table,
     select,
@@ -148,7 +149,7 @@ export async function executeWeighmentsGetQuery(
       const typeParam = searchParams.get("type")?.trim();
       if (typeParam && typeParam !== "all") {
         const typeSchema =
-          mode === "manual" ? manualWeighmentTypeSchema : automaticWeighmentTypeSchema;
+          mode === "manual" ? completeWeighmentTypeSchema : automaticWeighmentTypeSchema;
         const parsedType = typeSchema.safeParse(typeParam);
         if (parsedType.success) {
           filteredQuery = filteredQuery.eq("type", parsedType.data);
