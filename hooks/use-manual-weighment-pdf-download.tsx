@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/toast";
 import { getErrorMessage } from "@/lib/utils";
 import { useFactoryStore } from "@/stores/use-factory-store";
 import { generateReceiptPdf } from "@/components/weighment-receipt/pdf/generate-pdf";
-import { ManualWeighmentReceiptView } from "@/components/weighment-receipt/views/manual-receipt-view";
+import { WeighmentReceiptView } from "@/components/weighment-receipt/views/receipt-view";
 import { manualWeighmentSchema, type ManualWeighment } from "@/app/weighments/types";
 
 export function useManualWeighmentPdfDownload() {
@@ -40,7 +40,7 @@ export function useManualWeighmentPdfDownload() {
 
         const fileName = `manual-weighment-${manualWeighment.id}-${manualWeighment.vehicle_number}.pdf`;
         await generateReceiptPdf(
-          <ManualWeighmentReceiptView weighment={manualWeighment} factory={factory} />,
+          <WeighmentReceiptView mode="manual" weighment={manualWeighment} factory={factory} />,
           fileName,
         );
 

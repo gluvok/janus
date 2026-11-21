@@ -1,6 +1,6 @@
 "use client";
 
-import { createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -324,8 +324,10 @@ const actionsColumn = createCopyActionsColumn<AnyWeighment>(columnHelper, ({ row
   };
 });
 
-export function getWeighmentColumns(mode: WeighmentMode) {
-  const base = [
+export function getWeighmentColumns(
+  mode: WeighmentMode,
+): ColumnDef<DataTableFeatures, AnyWeighment, any>[] {
+  return [
     createSelectColumn(columnHelper),
     createIdColumn(columnHelper),
     vehicleNumberColumn,
@@ -337,20 +339,12 @@ export function getWeighmentColumns(mode: WeighmentMode) {
     outWeightColumn,
     inCenterColumn,
     outCenterColumn,
-  ];
-
-  if (mode === "manual") {
-    base.push(operatorColumn);
-  }
-
-  base.push(
+    ...(mode === "manual" ? [operatorColumn] : []),
     inTimeColumn,
     outTimeColumn,
     photosColumn,
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),
     actionsColumn,
-  );
-
-  return columnHelper.columns(base);
+  ];
 }
