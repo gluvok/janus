@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { userRoleEnum } from "@/app/users/types";
 
 export const WEIGHMENT_MODES = ["automatic", "manual"] as const;
 export type WeighmentMode = (typeof WEIGHMENT_MODES)[number];
@@ -12,23 +13,28 @@ export type WeighmentMode = (typeof WEIGHMENT_MODES)[number];
 /* Weighment Types (Separated 1:1 with PostgreSQL ENUMs)                      */
 /* -------------------------------------------------------------------------- */
 
-export const AUTOMATIC_WEIGHMENT_TYPES = ["pending", "in", "out", "unassigned"] as const;
+export const COMPLETE_WEIGHMENT_TYPES = ["in", "out", "unassigned"] as const;
+export type CompleteWeighmentType = (typeof COMPLETE_WEIGHMENT_TYPES)[number];
+export const completeWeighmentTypeSchema = z.enum(COMPLETE_WEIGHMENT_TYPES);
+
+export const AUTOMATIC_WEIGHMENT_TYPES = ["pending", ...COMPLETE_WEIGHMENT_TYPES] as const;
 export type AutomaticWeighmentType = (typeof AUTOMATIC_WEIGHMENT_TYPES)[number];
 export const automaticWeighmentTypeSchema = z.enum(AUTOMATIC_WEIGHMENT_TYPES);
 
-export const MANUAL_WEIGHMENT_TYPES = ["in", "out", "unassigned"] as const;
-export type ManualWeighmentType = (typeof MANUAL_WEIGHMENT_TYPES)[number];
-export const manualWeighmentTypeSchema = z.enum(MANUAL_WEIGHMENT_TYPES);
+// Manual weighments are always complete
+export const MANUAL_WEIGHMENT_TYPES = COMPLETE_WEIGHMENT_TYPES;
+export type ManualWeighmentType = CompleteWeighmentType;
+export const manualWeighmentTypeSchema = completeWeighmentTypeSchema;
 
 // Unified union type for multi-mode table views
 export const WEIGHMENT_TYPES = AUTOMATIC_WEIGHMENT_TYPES;
 export type WeighmentType = AutomaticWeighmentType;
 export const weighmentTypeEnum = automaticWeighmentTypeSchema;
 
-// Completed weighments strictly use manual weighment types ('in', 'out', 'unassigned')
-export const COMPLETED_WEIGHMENT_TYPES = MANUAL_WEIGHMENT_TYPES;
-export type CompletedWeighmentType = ManualWeighmentType;
-export const completedWeighmentTypeEnum = manualWeighmentTypeSchema;
+// Completed weighments strictly use complete weighment types ('in', 'out', 'unassigned')
+export const COMPLETED_WEIGHMENT_TYPES = COMPLETE_WEIGHMENT_TYPES;
+export type CompletedWeighmentType = CompleteWeighmentType;
+export const completedWeighmentTypeEnum = completeWeighmentTypeSchema;
 
 export const weighmentCenterSchema = z
   .object({
@@ -44,6 +50,7 @@ export const weighmentUserSchema = z
     id: z.int().positive(),
     name: z.string().min(1),
     username: z.string().min(1),
+    role: userRoleEnum,
   })
   .strict();
 export type WeighmentUser = z.infer<typeof weighmentUserSchema>;
@@ -145,3 +152,18 @@ export const completedWeighmentSchema = weighmentSchema.extend({
 });
 
 export type CompletedWeighment = z.infer<typeof completedWeighmentSchema>;
+
+/**
+ * CompletedAutomaticWeighment: Strict non-null schema required for completed automatic weighment receipt slips.
+ */
+export const completedAutomaticWeighmentSchema = automaticWeighmentSchema.extend({
+  out_weight: z.number().positive(),
+  out_time: z.string(),
+  out_center_id: z.int().positive(),
+  out_center: weighmentCenterSchema,
+  tare: z.number().positive(),
+  net: z.number().nonnegative(),
+  type: manualWeighmentTypeSchema,
+});
+
+export type CompletedAutomaticWeighment = z.infer<typeof completedAutomaticWeighmentSchema>;

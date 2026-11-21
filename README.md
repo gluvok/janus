@@ -33,12 +33,12 @@ A centralized operational platform and automation management system for weighbri
         ELSE 'unassigned'::automatic_weighment_type
     END
     ```
-  - `manual_weighments.type` (`manual_weighment_type`):
+  - `manual_weighments.type` (`complete_weighment_type`):
     ```sql
     CASE
-        WHEN in_weight > out_weight THEN 'in'::manual_weighment_type
-        WHEN in_weight < out_weight THEN 'out'::manual_weighment_type
-        ELSE 'unassigned'::manual_weighment_type
+        WHEN in_weight > out_weight THEN 'in'::complete_weighment_type
+        WHEN in_weight < out_weight THEN 'out'::complete_weighment_type
+        ELSE 'unassigned'::complete_weighment_type
     END
     ```
 - **Mode-Specific Layout**: Automatic weighments omit the Operator column and show In/Out ANPR camera badges. Manual weighments include the Operator column (`creator`). The table defaults to `updated_at DESC`.

@@ -1,8 +1,15 @@
 import { formatDateTime } from "@/lib/utils";
-import type { CompletedWeighment } from "@/app/weighments/types";
+
+interface TransitDetailsData {
+  vehicle_number: string;
+  in_time: string;
+  out_time: string;
+  in_center: { id: number; name: string };
+  out_center: { id: number; name: string };
+}
 
 interface ReceiptTransitDetailsProps {
-  weighment: CompletedWeighment;
+  weighment: TransitDetailsData;
 }
 
 function ScaleLocationColumn({
@@ -20,9 +27,7 @@ function ScaleLocationColumn({
     <div
       className={`col-span-12 sm:col-span-4 flex flex-col gap-0.5 min-w-0 ${isLast ? "sm:pl-4" : "sm:px-4"}`}
     >
-      <span className="font-heading text-3xs uppercase tracking-widest text-zinc-400 font-bold">
-        {label}
-      </span>
+      <span className="font-heading text-3xs text-zinc-400 font-semibold">{label}</span>
       <div className="flex flex-col min-w-0">
         <span className="font-mono text-xs font-bold text-zinc-900 tabular-nums">
           {formatDateTime(time)}
@@ -41,10 +46,8 @@ export function ReceiptTransitDetails({ weighment }: ReceiptTransitDetailsProps)
       <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-zinc-200/60 items-center">
         {/* Col 1: Vehicle Identifier */}
         <div className="col-span-12 sm:col-span-4 sm:pr-4 flex flex-col gap-0.5 min-w-0">
-          <span className="font-heading text-3xs uppercase tracking-widest text-zinc-400 font-bold">
-            Vehicle No.
-          </span>
-          <span className="font-mono text-sm sm:text-base font-black text-zinc-950 tracking-wider truncate">
+          <span className="font-heading text-3xs text-zinc-400 font-semibold">Vehicle No.</span>
+          <span className="font-mono text-sm sm:text-base font-bold text-zinc-950 tracking-wider truncate">
             {weighment.vehicle_number}
           </span>
         </div>

@@ -26,9 +26,10 @@ import { getErrorMessage } from "@/lib/utils";
 import { useDataTableStore } from "@/stores/use-data-table-store";
 import { type TableItemState, DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-strategy";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
-import { useWeighmentPdfDownload } from "@/components/weighment-receipt/use-weighment-pdf-download";
+import { useAutomaticWeighmentPdfDownload } from "@/components/weighment-receipt/use-automatic-weighment-pdf-download";
+import { useManualWeighmentPdfDownload } from "@/components/weighment-receipt/use-manual-weighment-pdf-download";
 import { WEIGHMENT_COLUMNS, type WeighmentsTableMeta } from "./columns";
-import type { Weighment, WeighmentMode } from "./types";
+import type { Weighment, WeighmentMode, AutomaticWeighment, ManualWeighment } from "./types";
 import type { Center } from "@/app/centers/types";
 
 const AUTOMATIC_TYPE_OPTIONS: FacetedFilterOption[] = [
@@ -173,7 +174,9 @@ export function WeighmentsDataTable() {
     images: [],
   });
 
-  const { downloadPdf, downloadingId } = useWeighmentPdfDownload();
+  const { downloadAutomaticPdf, downloadingId: downloadingAutoId } =
+    useAutomaticWeighmentPdfDownload();
+  const { downloadManualPdf, downloadingId: downloadingManualId } = useManualWeighmentPdfDownload();
 
   const handleViewPhotos = useCallback(
     (payload: {
@@ -271,11 +274,22 @@ export function WeighmentsDataTable() {
     () => ({
       onViewPhotos: handleViewPhotos,
       onDownloadPdf: (weighment: Weighment) => {
-        downloadPdf(weighment, mode);
+        if (mode === "manual") {
+          downloadManualPdf(weighment as ManualWeighment);
+        } else {
+          downloadAutomaticPdf(weighment as AutomaticWeighment);
+        }
       },
-      downloadingId,
+      downloadingId: downloadingManualId ?? downloadingAutoId,
     }),
-    [handleViewPhotos, downloadPdf, mode, downloadingId],
+    [
+      handleViewPhotos,
+      downloadManualPdf,
+      downloadAutomaticPdf,
+      mode,
+      downloadingManualId,
+      downloadingAutoId,
+    ],
   );
 
   const columns = useMemo(() => WEIGHMENT_COLUMNS[mode](), [mode]);

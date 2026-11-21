@@ -23,6 +23,7 @@ DROP TABLE IF EXISTS factories CASCADE;
 
 DROP TYPE IF EXISTS ticket_status CASCADE;
 DROP TYPE IF EXISTS automatic_weighment_type CASCADE;
+DROP TYPE IF EXISTS complete_weighment_type CASCADE;
 DROP TYPE IF EXISTS manual_weighment_type CASCADE;
 DROP TYPE IF EXISTS weighment_type CASCADE;
 DROP TYPE IF EXISTS role_enum CASCADE;
@@ -35,8 +36,8 @@ DROP EXTENSION IF EXISTS pg_trgm CASCADE;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TYPE role_enum AS ENUM ('admin', 'manager', 'operator', 'base');
+CREATE TYPE complete_weighment_type AS ENUM ('in', 'out', 'unassigned');
 CREATE TYPE automatic_weighment_type AS ENUM ('pending', 'in', 'out', 'unassigned');
-CREATE TYPE manual_weighment_type AS ENUM ('in', 'out', 'unassigned');
 CREATE TYPE ticket_status AS ENUM ('pending', 'approved', 'rejected');
 
 -- ==============================================================================
@@ -171,11 +172,11 @@ CREATE TABLE manual_weighments (
     net NUMERIC(10, 2) GENERATED ALWAYS AS (
         ABS(in_weight - out_weight)
     ) STORED,
-    type manual_weighment_type GENERATED ALWAYS AS (
+    type complete_weighment_type GENERATED ALWAYS AS (
         CASE
-            WHEN in_weight > out_weight THEN 'in'::manual_weighment_type
-            WHEN in_weight < out_weight THEN 'out'::manual_weighment_type
-            ELSE 'unassigned'::manual_weighment_type
+            WHEN in_weight > out_weight THEN 'in'::complete_weighment_type
+            WHEN in_weight < out_weight THEN 'out'::complete_weighment_type
+            ELSE 'unassigned'::complete_weighment_type
         END
     ) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

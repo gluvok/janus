@@ -76,7 +76,7 @@ const MANUAL_PROJECTION = `
   updated_at,
   in_center:centers!in_center_id!inner(id, name, factory_id),
   out_center:centers!out_center_id(id, name),
-  creator:users!creator_id(id, name, username)
+  creator:users!creator_id(id, name, username, role)
 ` as const;
 
 const PROJECTIONS: Record<WeighmentMode, string> = {

@@ -30,7 +30,7 @@ export function ReceiptPhotos({
     <div className="flex flex-col gap-1.5 pt-0.5">
       {/* Evidence Section Header */}
       <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1">
-        <span className="font-heading text-3xs font-black uppercase tracking-widest text-zinc-400">
+        <span className="font-heading text-3xs font-semibold text-zinc-400">
           Transit Evidence ({effectiveTotal})
         </span>
       </div>
@@ -56,14 +56,14 @@ export function ReceiptPhotos({
                 className="w-full h-full object-cover rounded-none"
               />
 
-              {/* Minimalist IN / OUT Badge */}
+              {/* Minimalist In / Out Badge */}
               <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
                 <span
-                  className={`font-heading text-3xs font-black px-1.5 py-0.5 rounded-none tracking-widest uppercase ${
+                  className={`font-heading text-3xs font-semibold px-1.5 py-0.5 rounded-none ${
                     isEntry ? "bg-[#66684f] text-white" : "bg-zinc-950 text-white"
                   }`}
                 >
-                  {isEntry ? "IN" : "OUT"}
+                  {isEntry ? "In" : "Out"}
                 </span>
               </div>
             </div>

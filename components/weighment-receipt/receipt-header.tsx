@@ -1,17 +1,7 @@
 import * as React from "react";
 import { formatDateTime, cn } from "@/lib/utils";
 import type { Factory } from "@/app/settings/types";
-import type {
-  CompletedWeighment,
-  CompletedWeighmentType,
-  WeighmentMode,
-} from "@/app/weighments/types";
-
-interface ReceiptHeaderProps {
-  weighment: CompletedWeighment;
-  factory: Factory;
-  mode: WeighmentMode;
-}
+import type { CompletedWeighmentType } from "@/app/weighments/types";
 
 const DIRECTION_CONFIG: Record<CompletedWeighmentType, { label: string; className: string }> = {
   in: { label: "Material In", className: "bg-[#66684f]/15 text-[#66684f]" },
@@ -24,7 +14,7 @@ export function ReceiptDirectionBadge({ type }: { type: CompletedWeighmentType }
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 font-heading text-3xs font-semibold px-2 py-0.5 rounded-none uppercase tracking-wider",
+        "inline-flex items-center gap-1 font-heading text-3xs font-semibold px-2 py-0.5 rounded-none",
         config.className,
       )}
     >
@@ -42,7 +32,7 @@ function BaseModeBadge({ label, className }: BaseModeBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center font-heading text-3xs font-semibold rounded-none uppercase tracking-wider px-2 py-0.5",
+        "inline-flex items-center font-heading text-3xs font-semibold rounded-none px-2 py-0.5",
         className,
       )}
     >
@@ -58,11 +48,6 @@ export function AutoModeBadge() {
 export function ManualModeBadge() {
   return <BaseModeBadge label="Manual" className="bg-amber-50 text-amber-900" />;
 }
-
-const MODE_BADGES: Record<WeighmentMode, React.ComponentType> = {
-  automatic: AutoModeBadge,
-  manual: ManualModeBadge,
-};
 
 export function ReceiptBranding({
   factoryName,
@@ -83,7 +68,7 @@ export function ReceiptBranding({
       <div className={cn("flex min-w-0", compact ? "items-baseline gap-2" : "flex-col")}>
         <span
           className={cn(
-            "font-heading font-semibold tracking-tight text-zinc-950 uppercase whitespace-normal",
+            "font-heading font-semibold tracking-tight text-zinc-950 whitespace-normal",
             compact ? "text-xs" : "text-lg sm:text-xl leading-tight",
           )}
         >
@@ -91,7 +76,7 @@ export function ReceiptBranding({
         </span>
         <span
           className={cn(
-            "font-heading font-semibold uppercase tracking-wider text-zinc-500 whitespace-normal",
+            "font-heading font-semibold text-zinc-500 whitespace-normal",
             compact ? "text-3xs" : "text-xs leading-snug",
           )}
         >
@@ -102,18 +87,21 @@ export function ReceiptBranding({
   );
 }
 
-export function ReceiptHeader({ weighment, factory, mode }: ReceiptHeaderProps) {
-  const ModeBadge = MODE_BADGES[mode];
+interface CommonHeaderProps {
+  id: number;
+  type: CompletedWeighmentType;
+  factory: Factory;
+}
 
+export function AutomaticReceiptHeader({ id, type, factory }: CommonHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-zinc-200/80 pb-1.5">
       <ReceiptBranding factoryName={factory.name} />
 
-      {/* Slip Metadata & Status Badges */}
       <div className="flex flex-col items-end text-right shrink-0 gap-1.5">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-semibold text-zinc-950 tabular-nums">
-            SLIP #{weighment.id}
+            Slip #{id}
           </span>
           <span className="text-zinc-300 font-mono">&bull;</span>
           <span className="text-3xs font-mono text-zinc-500 tabular-nums">
@@ -122,33 +110,93 @@ export function ReceiptHeader({ weighment, factory, mode }: ReceiptHeaderProps) 
         </div>
 
         <div className="flex items-center gap-1.5">
-          <ReceiptDirectionBadge type={weighment.type} />
-          <ModeBadge />
+          <ReceiptDirectionBadge type={type} />
+          <AutoModeBadge />
         </div>
       </div>
     </div>
   );
 }
 
-export function ReceiptContinuationHeader({ weighment, factory, mode }: ReceiptHeaderProps) {
-  const ModeBadge = MODE_BADGES[mode];
+export function ManualReceiptHeader({ id, type, factory }: CommonHeaderProps) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-zinc-200/80 pb-1.5">
+      <ReceiptBranding factoryName={factory.name} />
 
+      <div className="flex flex-col items-end text-right shrink-0 gap-1.5">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs font-semibold text-zinc-950 tabular-nums">
+            Slip #{id}
+          </span>
+          <span className="text-zinc-300 font-mono">&bull;</span>
+          <span className="text-3xs font-mono text-zinc-500 tabular-nums">
+            {formatDateTime(new Date().toISOString())}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <ReceiptDirectionBadge type={type} />
+          <ManualModeBadge />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface CommonContinuationHeaderProps {
+  id: number;
+  vehicleNumber: string;
+  factory: Factory;
+}
+
+export function AutomaticReceiptContinuationHeader({
+  id,
+  vehicleNumber,
+  factory,
+}: CommonContinuationHeaderProps) {
   return (
     <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1.5">
       <div className="flex items-center gap-2 min-w-0">
         <ReceiptBranding factoryName={factory.name} compact />
-        <span className="text-3xs font-heading font-medium text-zinc-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
+        <span className="text-3xs font-heading font-medium text-zinc-400 shrink-0 flex items-center gap-1">
           <span>&bull;</span>
           <span>Transit Photos (Cont.)</span>
         </span>
       </div>
       <div className="flex items-center gap-2 text-right shrink-0">
-        <ModeBadge />
+        <AutoModeBadge />
         <span className="font-mono text-3xs font-semibold text-zinc-900 tabular-nums">
-          SLIP #{weighment.id}
+          Slip #{id}
         </span>
         <span className="font-mono text-3xs font-semibold text-zinc-600 bg-zinc-100 px-1 py-0.5 rounded-none">
-          {weighment.vehicle_number}
+          {vehicleNumber}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function ManualReceiptContinuationHeader({
+  id,
+  vehicleNumber,
+  factory,
+}: CommonContinuationHeaderProps) {
+  return (
+    <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <ReceiptBranding factoryName={factory.name} compact />
+        <span className="text-3xs font-heading font-medium text-zinc-400 shrink-0 flex items-center gap-1">
+          <span>&bull;</span>
+          <span>Transit Photos (Cont.)</span>
+        </span>
+      </div>
+      <div className="flex items-center gap-2 text-right shrink-0">
+        <ManualModeBadge />
+        <span className="font-mono text-3xs font-semibold text-zinc-900 tabular-nums">
+          Slip #{id}
+        </span>
+        <span className="font-mono text-3xs font-semibold text-zinc-600 bg-zinc-100 px-1 py-0.5 rounded-none">
+          {vehicleNumber}
         </span>
       </div>
     </div>
