@@ -148,16 +148,15 @@ function calculateType(inWeight: number, outWeight: number | null): WeighmentTyp
 console.log("\n📐 [3/4] Testing Schema Constraint Invariants...");
 
 function validateReceiptImagesPerRow(val: number): boolean {
-  return Number.isInteger(val) && val >= 1 && val <= 6;
+  return Number.isInteger(val) && val >= 1 && val <= 2;
 }
 
 assert.ok(validateReceiptImagesPerRow(1));
-assert.ok(validateReceiptImagesPerRow(3));
-assert.ok(validateReceiptImagesPerRow(6));
+assert.ok(validateReceiptImagesPerRow(2));
 assert.ok(!validateReceiptImagesPerRow(0));
-assert.ok(!validateReceiptImagesPerRow(7));
+assert.ok(!validateReceiptImagesPerRow(3));
 assert.ok(!validateReceiptImagesPerRow(2.5));
-console.log("  ✓ chk_receipt_images_per_row (1 to 6) invariant verified.");
+console.log("  ✓ chk_receipt_images_per_row (1 to 2) invariant verified.");
 
 function validateWeighmentWeights(inWeight: number, outWeight: number | null): boolean {
   if (inWeight <= 0) return false;
@@ -187,12 +186,19 @@ assert.ok(ROLE_ENUMS.has("operator"));
 assert.ok(ROLE_ENUMS.has("base"));
 assert.ok(!ROLE_ENUMS.has("customer")); // customers was deprecated/removed
 
-const WEIGHMENT_TYPE_ENUMS = new Set(["pending", "in", "out", "unassigned"]);
-assert.equal(WEIGHMENT_TYPE_ENUMS.size, 4);
-assert.ok(WEIGHMENT_TYPE_ENUMS.has("pending"));
-assert.ok(WEIGHMENT_TYPE_ENUMS.has("in"));
-assert.ok(WEIGHMENT_TYPE_ENUMS.has("out"));
-assert.ok(WEIGHMENT_TYPE_ENUMS.has("unassigned"));
+const AUTOMATIC_WEIGHMENT_TYPE_ENUMS = new Set(["pending", "in", "out", "unassigned"]);
+assert.equal(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.size, 4);
+assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("pending"));
+assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("in"));
+assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("out"));
+assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("unassigned"));
+
+const MANUAL_WEIGHMENT_TYPE_ENUMS = new Set(["in", "out", "unassigned"]);
+assert.equal(MANUAL_WEIGHMENT_TYPE_ENUMS.size, 3);
+assert.ok(MANUAL_WEIGHMENT_TYPE_ENUMS.has("in"));
+assert.ok(MANUAL_WEIGHMENT_TYPE_ENUMS.has("out"));
+assert.ok(MANUAL_WEIGHMENT_TYPE_ENUMS.has("unassigned"));
+assert.ok(!MANUAL_WEIGHMENT_TYPE_ENUMS.has("pending")); // manual weighments are never pending
 
 const TICKET_STATUS_ENUMS = new Set(["pending", "approved", "rejected"]);
 assert.equal(TICKET_STATUS_ENUMS.size, 3);

@@ -8,7 +8,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import { executePaginatedEntityQuery } from "@/lib/api-query";
-import type { Weighment, WeighmentMode } from "@/app/weighments/types";
+import {
+  automaticWeighmentTypeSchema,
+  manualWeighmentTypeSchema,
+  type Weighment,
+  type WeighmentMode,
+} from "@/app/weighments/types";
 
 export const ALLOWED_WEIGHMENT_SORT_COLUMNS = [
   "id",
@@ -28,6 +33,7 @@ export type WeighmentSortColumn = (typeof ALLOWED_WEIGHMENT_SORT_COLUMNS)[number
 
 const AUTOMATIC_PROJECTION = `
   id,
+  idempotency_key,
   vehicle_number,
   in_detected_vehicle_number,
   out_detected_vehicle_number,
@@ -70,8 +76,7 @@ const MANUAL_PROJECTION = `
   updated_at,
   in_center:centers!in_center_id!inner(id, name, factory_id),
   out_center:centers!out_center_id(id, name),
-  in_creator:users!in_creator_id(id, name, username),
-  out_creator:users!out_creator_id(id, name, username)
+  creator:users!creator_id(id, name, username)
 ` as const;
 
 const PROJECTIONS: Record<WeighmentMode, string> = {
@@ -83,8 +88,6 @@ const TABLES: Record<WeighmentMode, string> = {
   automatic: "automatic_weighments",
   manual: "manual_weighments",
 };
-
-const weighmentTypeFilterSchema = z.enum(["pending", "in", "out", "unassigned"]);
 
 const commaSeparatedIdsSchema = z
   .string()
@@ -141,10 +144,12 @@ export async function executeWeighmentsGetQuery(
         }
       }
 
-      // Filter by type ('pending' | 'in' | 'out' | 'unassigned')
+      // Filter by mode-specific type
       const typeParam = searchParams.get("type")?.trim();
       if (typeParam && typeParam !== "all") {
-        const parsedType = weighmentTypeFilterSchema.safeParse(typeParam);
+        const typeSchema =
+          mode === "manual" ? manualWeighmentTypeSchema : automaticWeighmentTypeSchema;
+        const parsedType = typeSchema.safeParse(typeParam);
         if (parsedType.success) {
           filteredQuery = filteredQuery.eq("type", parsedType.data);
         }

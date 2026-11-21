@@ -136,22 +136,24 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 pt-1 pb-0">
             <FormRequiredNotice />
 
-            <FactoryForm
-              factory={factory}
-              name={name}
-              onNameChange={(val) =>
-                setValue("name", val, { shouldValidate: true, shouldDirty: true })
-              }
-              nameError={errors.name?.message}
-              receiptImagesPerRow={receiptImagesPerRow}
-              onReceiptImagesPerRowChange={(val) =>
-                setValue("receipt_images_per_row", val, {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
-              receiptImagesError={errors.receipt_images_per_row?.message}
-            />
+            {factory ? (
+              <FactoryForm
+                factory={factory}
+                name={name}
+                onNameChange={(val) =>
+                  setValue("name", val, { shouldValidate: true, shouldDirty: true })
+                }
+                nameError={errors.name?.message}
+                receiptImagesPerRow={receiptImagesPerRow}
+                onReceiptImagesPerRowChange={(val) =>
+                  setValue("receipt_images_per_row", val, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+                receiptImagesError={errors.receipt_images_per_row?.message}
+              />
+            ) : null}
 
             <DialogActionFooter
               isDirty={isDirty}

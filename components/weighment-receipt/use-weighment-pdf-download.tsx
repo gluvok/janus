@@ -9,7 +9,11 @@ import { toast } from "@/components/ui/toast";
 import { getErrorMessage } from "@/lib/utils";
 import { useFactoryStore } from "@/stores/use-factory-store";
 import { WeighmentReceiptView } from "./weighment-receipt-view";
-import type { Weighment, WeighmentMode } from "@/app/weighments/types";
+import {
+  completedWeighmentSchema,
+  type Weighment,
+  type WeighmentMode,
+} from "@/app/weighments/types";
 
 export function useWeighmentPdfDownload() {
   const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
@@ -36,7 +40,12 @@ export function useWeighmentPdfDownload() {
         response.data?.data?.find((w) => w.id === weighment.id) ??
         response.data?.data?.[0] ??
         weighment;
+
+      const completedWeighment = completedWeighmentSchema.parse(verifiedWeighment);
       const factory = useFactoryStore.getState().factory;
+      if (!factory) {
+        throw new Error("Factory configuration not found. Please log in again.");
+      }
 
       // 2. Mount receipt view off-screen
       offscreenContainer = document.createElement("div");
@@ -49,12 +58,7 @@ export function useWeighmentPdfDownload() {
 
       root = createRoot(offscreenContainer);
       root.render(
-        <WeighmentReceiptView
-          weighment={verifiedWeighment}
-          factoryName={factory?.name}
-          imagesPerRow={factory?.receipt_images_per_row ?? 2}
-          mode={mode}
-        />,
+        <WeighmentReceiptView weighment={completedWeighment} factory={factory} mode={mode} />,
       );
 
       // Allow DOM layout and images to settle

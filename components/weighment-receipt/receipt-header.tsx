@@ -1,22 +1,26 @@
 import * as React from "react";
 import { formatDateTime, cn } from "@/lib/utils";
-import type { Weighment, WeighmentMode } from "@/app/weighments/types";
+import type { Factory } from "@/app/settings/types";
+import type {
+  CompletedWeighment,
+  CompletedWeighmentType,
+  WeighmentMode,
+} from "@/app/weighments/types";
 
 interface ReceiptHeaderProps {
-  weighment: Weighment;
-  factoryName?: string;
+  weighment: CompletedWeighment;
+  factory: Factory;
   mode: WeighmentMode;
 }
 
-const DIRECTION_CONFIG: Record<string, { label: string; className: string }> = {
+const DIRECTION_CONFIG: Record<CompletedWeighmentType, { label: string; className: string }> = {
   in: { label: "Material In", className: "bg-[#66684f]/15 text-[#66684f]" },
   out: { label: "Material Out", className: "bg-zinc-900 text-white" },
   unassigned: { label: "Unassigned", className: "bg-zinc-100 text-zinc-700" },
-  default: { label: "Pending", className: "bg-amber-50 text-amber-800" },
 };
 
-export function ReceiptDirectionBadge({ type }: { type: string }) {
-  const config = DIRECTION_CONFIG[type] ?? DIRECTION_CONFIG.default;
+export function ReceiptDirectionBadge({ type }: { type: CompletedWeighmentType }) {
+  const config = DIRECTION_CONFIG[type];
   return (
     <span
       className={cn(
@@ -64,7 +68,7 @@ export function ReceiptBranding({
   factoryName,
   compact = false,
 }: {
-  factoryName?: string;
+  factoryName: string;
   compact?: boolean;
 }) {
   return (
@@ -91,19 +95,19 @@ export function ReceiptBranding({
             compact ? "text-3xs" : "text-xs leading-snug",
           )}
         >
-          {factoryName ?? "Mesto Facility"}
+          {factoryName}
         </span>
       </div>
     </div>
   );
 }
 
-export function ReceiptHeader({ weighment, factoryName, mode }: ReceiptHeaderProps) {
+export function ReceiptHeader({ weighment, factory, mode }: ReceiptHeaderProps) {
   const ModeBadge = MODE_BADGES[mode];
 
   return (
     <div className="flex items-center justify-between gap-4 border-b border-zinc-200/80 pb-1.5">
-      <ReceiptBranding factoryName={factoryName} />
+      <ReceiptBranding factoryName={factory.name} />
 
       {/* Slip Metadata & Status Badges */}
       <div className="flex flex-col items-end text-right shrink-0 gap-1.5">
@@ -126,13 +130,13 @@ export function ReceiptHeader({ weighment, factoryName, mode }: ReceiptHeaderPro
   );
 }
 
-export function ReceiptContinuationHeader({ weighment, factoryName, mode }: ReceiptHeaderProps) {
+export function ReceiptContinuationHeader({ weighment, factory, mode }: ReceiptHeaderProps) {
   const ModeBadge = MODE_BADGES[mode];
 
   return (
     <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1.5">
       <div className="flex items-center gap-2 min-w-0">
-        <ReceiptBranding factoryName={factoryName} compact />
+        <ReceiptBranding factoryName={factory.name} compact />
         <span className="text-3xs font-heading font-medium text-zinc-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
           <span>&bull;</span>
           <span>Transit Photos (Cont.)</span>

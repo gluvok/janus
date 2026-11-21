@@ -31,7 +31,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { PhotoItem } from "@/components/photos-dialog";
-import type { Weighment, WeighmentMode } from "./types";
+import type { ManualWeighment, Weighment, WeighmentMode } from "./types";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Weighment>();
 
@@ -62,79 +62,25 @@ const typeColumn = columnHelper.accessor("type", {
   },
 });
 
-const netColumn = columnHelper.accessor("net", {
-  header: ({ column }) => <DataTableColumnHeader column={column} title="Net" icon={ScaleIcon} />,
-  cell: ({ row }) => {
-    const hasBothWeights = row.original.in_weight !== null && row.original.out_weight !== null;
-    if (!hasBothWeights) {
-      return <span className="text-2xs text-muted-foreground italic">-</span>;
-    }
-
-    const net = row.getValue("net") as number | null;
-    if (net === null) {
-      return <span className="text-2xs text-muted-foreground italic">-</span>;
-    }
-    return (
-      <div className="flex items-baseline gap-1 font-mono text-xs">
-        <span className="font-bold text-foreground">{net.toLocaleString()}</span>
-        <span className="text-2xs text-muted-foreground">kg</span>
-      </div>
-    );
-  },
-  meta: {
-    title: "Net",
-    icon: ScaleIcon,
-  },
-});
-
+/**
+ * Gross is generated in PostgreSQL as GREATEST(in_weight, COALESCE(out_weight, in_weight))
+ * and is NOT NULL for all weighments (both automatic and manual).
+ */
 const grossColumn = columnHelper.accessor("gross", {
   header: ({ column }) => (
     <DataTableColumnHeader column={column} title="Gross" icon={ContainerTruck01Icon} />
   ),
-  cell: ({ row }) => {
-    const hasBothWeights = row.original.in_weight !== null && row.original.out_weight !== null;
-    if (!hasBothWeights) {
-      return <span className="text-2xs text-muted-foreground italic">-</span>;
-    }
-
-    const gross = Number(row.getValue("gross"));
-    return (
-      <div className="flex items-baseline gap-1 font-mono text-xs">
-        <span className="font-medium text-foreground">{gross.toLocaleString()}</span>
-        <span className="text-2xs text-muted-foreground">kg</span>
-      </div>
-    );
-  },
+  cell: ({ row }) => (
+    <div className="flex items-baseline gap-1 font-mono text-xs">
+      <span className="font-medium text-foreground">
+        {Number(row.original.gross).toLocaleString()}
+      </span>
+      <span className="text-2xs text-muted-foreground">kg</span>
+    </div>
+  ),
   meta: {
     title: "Gross",
     icon: ContainerTruck01Icon,
-  },
-});
-
-const tareColumn = columnHelper.accessor("tare", {
-  header: ({ column }) => (
-    <DataTableColumnHeader column={column} title="Tare" icon={PackageOpenIcon} />
-  ),
-  cell: ({ row }) => {
-    const hasBothWeights = row.original.in_weight !== null && row.original.out_weight !== null;
-    if (!hasBothWeights) {
-      return <span className="text-2xs text-muted-foreground italic">-</span>;
-    }
-
-    const tare = row.getValue("tare") as number | null;
-    if (tare === null) {
-      return <span className="text-2xs text-muted-foreground italic">-</span>;
-    }
-    return (
-      <div className="flex items-baseline gap-1 font-mono text-xs">
-        <span className="font-medium text-foreground">{tare.toLocaleString()}</span>
-        <span className="text-2xs text-muted-foreground">kg</span>
-      </div>
-    );
-  },
-  meta: {
-    title: "Tare",
-    icon: PackageOpenIcon,
   },
 });
 
@@ -156,28 +102,6 @@ const inWeightColumn = columnHelper.accessor("in_weight", {
   },
 });
 
-const outWeightColumn = columnHelper.accessor("out_weight", {
-  header: ({ column }) => (
-    <DataTableColumnHeader column={column} title="Out Weight" icon={WeightIcon} />
-  ),
-  cell: ({ row }) => {
-    const outWeight = row.original.out_weight;
-    if (outWeight === null) {
-      return <span className="text-2xs text-muted-foreground italic">-</span>;
-    }
-    return (
-      <div className="flex items-baseline gap-1 font-mono text-xs">
-        <span className="font-medium text-foreground">{Number(outWeight).toLocaleString()}</span>
-        <span className="text-2xs text-muted-foreground">kg</span>
-      </div>
-    );
-  },
-  meta: {
-    title: "Out Weight",
-    icon: WeightIcon,
-  },
-});
-
 const inCenterColumn = columnHelper.accessor((row) => row.in_center.name, {
   id: "in_center",
   header: ({ column }) => (
@@ -191,26 +115,6 @@ const inCenterColumn = columnHelper.accessor((row) => row.in_center.name, {
   meta: {
     title: "In Center",
     icon: Building02Icon,
-  },
-  enableSorting: false,
-});
-
-const outCenterColumn = columnHelper.accessor((row) => row.out_center?.name ?? "-", {
-  id: "out_center",
-  header: ({ column }) => (
-    <DataTableColumnHeader column={column} title="Out Center" icon={Building03Icon} />
-  ),
-  cell: ({ row }) =>
-    row.original.out_center ? (
-      <Badge variant="secondary" className="text-xs font-normal">
-        {row.original.out_center.name}
-      </Badge>
-    ) : (
-      <span className="text-2xs text-muted-foreground italic">-</span>
-    ),
-  meta: {
-    title: "Out Center",
-    icon: Building03Icon,
   },
   enableSorting: false,
 });
@@ -231,30 +135,14 @@ const inTimeColumn = columnHelper.accessor("in_time", {
   },
 });
 
-const outTimeColumn = columnHelper.accessor("out_time", {
-  id: "out_time",
-  header: ({ column }) => (
-    <DataTableColumnHeader column={column} title="Out Time" icon={ClockArrowUpIcon} />
-  ),
-  cell: ({ row }) => (
-    <span className="text-xs text-muted-foreground whitespace-nowrap">
-      {row.original.out_time ? formatDateTime(row.original.out_time) : "-"}
-    </span>
-  ),
-  meta: {
-    title: "Out Time",
-    icon: ClockArrowUpIcon,
-  },
-});
-
 const photosColumn = columnHelper.display({
   id: "photos",
   header: ({ column }) => (
     <DataTableColumnHeader column={column} title="Photos" icon={Image01Icon} />
   ),
   cell: ({ row, table }) => {
-    const inImages = row.original.in_images ?? [];
-    const outImages = row.original.out_images ?? [];
+    const inImages = row.original.in_images;
+    const outImages = row.original.out_images;
     const totalCount = inImages.length + outImages.length;
 
     if (totalCount === 0) {
@@ -308,7 +196,7 @@ const actionsColumn = createCopyActionsColumn<Weighment>(columnHelper, ({ row, t
 });
 
 /* -------------------------------------------------------------------------- */
-/* Specialized Columns (Automatic vs. Manual)                                 */
+/* Automatic Scale Columns (Nullable Out Fields for Pending State)            */
 /* -------------------------------------------------------------------------- */
 
 const automaticVehicleNumberColumn = columnHelper.accessor("vehicle_number", {
@@ -326,6 +214,110 @@ const automaticVehicleNumberColumn = columnHelper.accessor("vehicle_number", {
   },
 });
 
+const automaticNetColumn = columnHelper.accessor("net", {
+  header: ({ column }) => <DataTableColumnHeader column={column} title="Net" icon={ScaleIcon} />,
+  cell: ({ row }) => {
+    const net = row.original.net;
+    if (net === null) {
+      return <span className="text-2xs text-muted-foreground italic">-</span>;
+    }
+    return (
+      <div className="flex items-baseline gap-1 font-mono text-xs">
+        <span className="font-bold text-foreground">{net.toLocaleString()}</span>
+        <span className="text-2xs text-muted-foreground">kg</span>
+      </div>
+    );
+  },
+  meta: {
+    title: "Net",
+    icon: ScaleIcon,
+  },
+});
+
+const automaticTareColumn = columnHelper.accessor("tare", {
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Tare" icon={PackageOpenIcon} />
+  ),
+  cell: ({ row }) => {
+    const tare = row.original.tare;
+    if (tare === null) {
+      return <span className="text-2xs text-muted-foreground italic">-</span>;
+    }
+    return (
+      <div className="flex items-baseline gap-1 font-mono text-xs">
+        <span className="font-medium text-foreground">{tare.toLocaleString()}</span>
+        <span className="text-2xs text-muted-foreground">kg</span>
+      </div>
+    );
+  },
+  meta: {
+    title: "Tare",
+    icon: PackageOpenIcon,
+  },
+});
+
+const automaticOutWeightColumn = columnHelper.accessor("out_weight", {
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Out Weight" icon={WeightIcon} />
+  ),
+  cell: ({ row }) => {
+    const outWeight = row.original.out_weight;
+    if (outWeight === null) {
+      return <span className="text-2xs text-muted-foreground italic">-</span>;
+    }
+    return (
+      <div className="flex items-baseline gap-1 font-mono text-xs">
+        <span className="font-medium text-foreground">{Number(outWeight).toLocaleString()}</span>
+        <span className="text-2xs text-muted-foreground">kg</span>
+      </div>
+    );
+  },
+  meta: {
+    title: "Out Weight",
+    icon: WeightIcon,
+  },
+});
+
+const automaticOutCenterColumn = columnHelper.accessor((row) => row.out_center?.name ?? "-", {
+  id: "out_center",
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Out Center" icon={Building03Icon} />
+  ),
+  cell: ({ row }) =>
+    row.original.out_center ? (
+      <Badge variant="secondary" className="text-xs font-normal">
+        {row.original.out_center.name}
+      </Badge>
+    ) : (
+      <span className="text-2xs text-muted-foreground italic">-</span>
+    ),
+  meta: {
+    title: "Out Center",
+    icon: Building03Icon,
+  },
+  enableSorting: false,
+});
+
+const automaticOutTimeColumn = columnHelper.accessor("out_time", {
+  id: "out_time",
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Out Time" icon={ClockArrowUpIcon} />
+  ),
+  cell: ({ row }) => (
+    <span className="text-xs text-muted-foreground whitespace-nowrap">
+      {row.original.out_time ? formatDateTime(row.original.out_time) : "-"}
+    </span>
+  ),
+  meta: {
+    title: "Out Time",
+    icon: ClockArrowUpIcon,
+  },
+});
+
+/* -------------------------------------------------------------------------- */
+/* Manual Scale Columns (Non-Null Scale & Operator Attributes)               */
+/* -------------------------------------------------------------------------- */
+
 const manualVehicleNumberColumn = columnHelper.accessor("vehicle_number", {
   header: ({ column }) => (
     <DataTableColumnHeader column={column} title="Vehicle No." icon={TruckIcon} />
@@ -341,40 +333,108 @@ const manualVehicleNumberColumn = columnHelper.accessor("vehicle_number", {
   },
 });
 
-const operatorColumn = columnHelper.accessor(
-  (row) => row.in_creator?.name ?? row.out_creator?.name ?? "-",
+const manualNetColumn = columnHelper.accessor("net", {
+  header: ({ column }) => <DataTableColumnHeader column={column} title="Net" icon={ScaleIcon} />,
+  cell: ({ row }) => (
+    <div className="flex items-baseline gap-1 font-mono text-xs">
+      <span className="font-bold text-foreground">{Number(row.original.net).toLocaleString()}</span>
+      <span className="text-2xs text-muted-foreground">kg</span>
+    </div>
+  ),
+  meta: {
+    title: "Net",
+    icon: ScaleIcon,
+  },
+});
+
+const manualTareColumn = columnHelper.accessor("tare", {
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Tare" icon={PackageOpenIcon} />
+  ),
+  cell: ({ row }) => (
+    <div className="flex items-baseline gap-1 font-mono text-xs">
+      <span className="font-medium text-foreground">
+        {Number(row.original.tare).toLocaleString()}
+      </span>
+      <span className="text-2xs text-muted-foreground">kg</span>
+    </div>
+  ),
+  meta: {
+    title: "Tare",
+    icon: PackageOpenIcon,
+  },
+});
+
+const manualOutWeightColumn = columnHelper.accessor("out_weight", {
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Out Weight" icon={WeightIcon} />
+  ),
+  cell: ({ row }) => (
+    <div className="flex items-baseline gap-1 font-mono text-xs">
+      <span className="font-medium text-foreground">
+        {Number((row.original as ManualWeighment).out_weight).toLocaleString()}
+      </span>
+      <span className="text-2xs text-muted-foreground">kg</span>
+    </div>
+  ),
+  meta: {
+    title: "Out Weight",
+    icon: WeightIcon,
+  },
+});
+
+const manualOutCenterColumn = columnHelper.accessor(
+  (row) => (row as ManualWeighment).out_center.name,
   {
-    id: "operator",
+    id: "out_center",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Operator" icon={UserIcon} />
+      <DataTableColumnHeader column={column} title="Out Center" icon={Building03Icon} />
     ),
-    cell: ({ row }) => {
-      const inCreator = row.original.in_creator;
-      const outCreator = row.original.out_creator;
-
-      if (!inCreator && !outCreator) {
-        return <span className="text-2xs text-muted-foreground italic">-</span>;
-      }
-
-      if (inCreator && outCreator && inCreator.id !== outCreator.id) {
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-medium text-foreground">In: {inCreator.name}</span>
-            <span className="text-2xs text-muted-foreground">Out: {outCreator.name}</span>
-          </div>
-        );
-      }
-
-      const creator = inCreator ?? outCreator;
-      return <span className="text-xs font-medium text-foreground">{creator?.name}</span>;
-    },
+    cell: ({ row }) => (
+      <Badge variant="secondary" className="text-xs font-normal">
+        {(row.original as ManualWeighment).out_center.name}
+      </Badge>
+    ),
     meta: {
-      title: "Operator",
-      icon: UserIcon,
+      title: "Out Center",
+      icon: Building03Icon,
     },
     enableSorting: false,
   },
 );
+
+const manualOutTimeColumn = columnHelper.accessor("out_time", {
+  id: "out_time",
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Out Time" icon={ClockArrowUpIcon} />
+  ),
+  cell: ({ row }) => (
+    <span className="text-xs text-muted-foreground whitespace-nowrap">
+      {formatDateTime((row.original as ManualWeighment).out_time)}
+    </span>
+  ),
+  meta: {
+    title: "Out Time",
+    icon: ClockArrowUpIcon,
+  },
+});
+
+const manualOperatorColumn = columnHelper.accessor((row) => (row as ManualWeighment).creator.name, {
+  id: "operator",
+  header: ({ column }) => (
+    <DataTableColumnHeader column={column} title="Operator" icon={UserIcon} />
+  ),
+  cell: ({ row }) => (
+    <span className="text-xs font-medium text-foreground">
+      {(row.original as ManualWeighment).creator.name}
+    </span>
+  ),
+  meta: {
+    title: "Operator",
+    icon: UserIcon,
+  },
+  enableSorting: false,
+});
 
 /* -------------------------------------------------------------------------- */
 /* Column Builders & Declarative Registry                                     */
@@ -386,15 +446,15 @@ export function getAutomaticWeighmentColumns() {
     createIdColumn(columnHelper),
     automaticVehicleNumberColumn,
     typeColumn,
-    netColumn,
+    automaticNetColumn,
     grossColumn,
-    tareColumn,
+    automaticTareColumn,
     inWeightColumn,
-    outWeightColumn,
+    automaticOutWeightColumn,
     inCenterColumn,
-    outCenterColumn,
+    automaticOutCenterColumn,
     inTimeColumn,
-    outTimeColumn,
+    automaticOutTimeColumn,
     photosColumn,
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),
@@ -408,16 +468,16 @@ export function getManualWeighmentColumns() {
     createIdColumn(columnHelper),
     manualVehicleNumberColumn,
     typeColumn,
-    netColumn,
+    manualNetColumn,
     grossColumn,
-    tareColumn,
+    manualTareColumn,
     inWeightColumn,
-    outWeightColumn,
+    manualOutWeightColumn,
     inCenterColumn,
-    outCenterColumn,
-    operatorColumn,
+    manualOutCenterColumn,
+    manualOperatorColumn,
     inTimeColumn,
-    outTimeColumn,
+    manualOutTimeColumn,
     photosColumn,
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),

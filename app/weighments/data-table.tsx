@@ -31,9 +31,16 @@ import { WEIGHMENT_COLUMNS, type WeighmentsTableMeta } from "./columns";
 import type { Weighment, WeighmentMode } from "./types";
 import type { Center } from "@/app/centers/types";
 
-const TYPE_OPTIONS: FacetedFilterOption[] = [
+const AUTOMATIC_TYPE_OPTIONS: FacetedFilterOption[] = [
   { label: "All types", value: "all", icon: Layers01Icon },
   { label: "Pending", value: "pending", icon: Clock01Icon },
+  { label: "In", value: "in", icon: ArrowDownRight01Icon },
+  { label: "Out", value: "out", icon: ArrowUpRight01Icon },
+  { label: "Unassigned", value: "unassigned", icon: CircleMinusIcon },
+];
+
+const MANUAL_TYPE_OPTIONS: FacetedFilterOption[] = [
+  { label: "All types", value: "all", icon: Layers01Icon },
   { label: "In", value: "in", icon: ArrowDownRight01Icon },
   { label: "Out", value: "out", icon: ArrowUpRight01Icon },
   { label: "Unassigned", value: "unassigned", icon: CircleMinusIcon },
@@ -289,7 +296,7 @@ export function WeighmentsDataTable() {
       {
         key: "type",
         title: "Type",
-        options: TYPE_OPTIONS,
+        options: mode === "manual" ? MANUAL_TYPE_OPTIONS : AUTOMATIC_TYPE_OPTIONS,
         variant: "orange",
         categoryIcon: Layers01Icon,
       },
@@ -308,7 +315,7 @@ export function WeighmentsDataTable() {
         categoryIcon: Building03Icon,
       },
     ];
-  }, [inCenterOptions, outCenterOptions]);
+  }, [mode, inCenterOptions, outCenterOptions]);
 
   if (initialError) {
     return (

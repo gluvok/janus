@@ -40,8 +40,7 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
     out_time: string | null;
     in_center_id: number;
     out_center_id: number | null;
-    in_creator_id?: number;
-    out_creator_id?: number | null;
+    creator_id?: number;
     inPhotoPaths: string[];
     outPhotoPaths: string[];
     created_at: string;
@@ -200,21 +199,19 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
   // Factory 1 Manual Weighments (20 records)
   for (let i = 0; i < 20; i++) {
     const plate = SAMPLE_PLATES[(i + 3) % SAMPLE_PLATES.length];
-    const category = i % 4;
+    const category = i % 3; // 0: 'in', 1: 'out', 2: 'unassigned'
     const inCenterId = primaryCenterIds[i % primaryCenterIds.length];
-    const outCenterId = category !== 0 ? primaryCenterIds[(i + 2) % primaryCenterIds.length] : null;
+    const outCenterId = primaryCenterIds[(i + 2) % primaryCenterIds.length];
 
     const inTime = daysAgo(Math.floor(i / 2), (i % 12) * 35);
-    const outTime = category !== 0 ? daysAgo(Math.floor(i / 2), (i % 12) * 35 - 50) : null;
+    const outTime = daysAgo(Math.floor(i / 2), (i % 12) * 35 - 50);
 
-    let inWeight = 18000 + ((i * 450) % 12000);
-    let outWeight: number | null = null;
+    const inWeight = 18000 + ((i * 450) % 12000);
+    let outWeight = inWeight;
 
     if (category === 0) {
-      outWeight = null;
-    } else if (category === 1) {
       outWeight = inWeight - 8000;
-    } else if (category === 2) {
+    } else if (category === 1) {
       outWeight = inWeight + 9500;
     } else {
       outWeight = inWeight;
@@ -232,20 +229,17 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       }),
     );
 
-    const outCount = category !== 0 ? 3 : 0;
-    const outPhotoPaths =
-      category !== 0
-        ? Array.from({ length: outCount }, (_, p) =>
-            registerPhoto({
-              factoryId: primaryFactoryId,
-              mode: "manual",
-              weighmentIndex: i,
-              direction: "out",
-              photoIndex: p,
-              plate,
-            }),
-          )
-        : [];
+    const outCount = 3;
+    const outPhotoPaths = Array.from({ length: outCount }, (_, p) =>
+      registerPhoto({
+        factoryId: primaryFactoryId,
+        mode: "manual",
+        weighmentIndex: i,
+        direction: "out",
+        photoIndex: p,
+        plate,
+      }),
+    );
 
     manualSpecs.push({
       vehicle_number: plate,
@@ -257,34 +251,30 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       out_time: outTime,
       in_center_id: inCenterId,
       out_center_id: outCenterId,
-      in_creator_id: operatorId1,
-      out_creator_id: category !== 0 ? operatorId2 : null,
+      creator_id: i % 2 === 0 ? operatorId1 : operatorId2,
       inPhotoPaths,
       outPhotoPaths,
       created_at: inTime,
-      updated_at: outTime ?? inTime,
+      updated_at: outTime,
     });
   }
 
   // Factory 2 Manual Weighments (10 records)
   for (let i = 0; i < 10; i++) {
     const plate = SAMPLE_PLATES[(i + 5) % SAMPLE_PLATES.length];
-    const category = i % 4;
+    const category = i % 3; // 0: 'in', 1: 'out', 2: 'unassigned'
     const inCenterId = secondaryCenterIds[i % secondaryCenterIds.length];
-    const outCenterId =
-      category !== 0 ? secondaryCenterIds[(i + 1) % secondaryCenterIds.length] : null;
+    const outCenterId = secondaryCenterIds[(i + 1) % secondaryCenterIds.length];
 
     const inTime = daysAgo(Math.floor(i / 2), (i % 14) * 30);
-    const outTime = category !== 0 ? daysAgo(Math.floor(i / 2), (i % 14) * 30 - 45) : null;
+    const outTime = daysAgo(Math.floor(i / 2), (i % 14) * 30 - 45);
 
-    let inWeight = 19000 + ((i * 380) % 11000);
-    let outWeight: number | null = null;
+    const inWeight = 19000 + ((i * 380) % 11000);
+    let outWeight = inWeight;
 
     if (category === 0) {
-      outWeight = null;
-    } else if (category === 1) {
       outWeight = inWeight - 7500;
-    } else if (category === 2) {
+    } else if (category === 1) {
       outWeight = inWeight + 8500;
     } else {
       outWeight = inWeight;
@@ -302,20 +292,17 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       }),
     );
 
-    const outCount = category !== 0 ? 3 : 0;
-    const outPhotoPaths =
-      category !== 0
-        ? Array.from({ length: outCount }, (_, p) =>
-            registerPhoto({
-              factoryId: secondaryFactoryId,
-              mode: "manual",
-              weighmentIndex: i + 20,
-              direction: "out",
-              photoIndex: p,
-              plate,
-            }),
-          )
-        : [];
+    const outCount = 3;
+    const outPhotoPaths = Array.from({ length: outCount }, (_, p) =>
+      registerPhoto({
+        factoryId: secondaryFactoryId,
+        mode: "manual",
+        weighmentIndex: i + 20,
+        direction: "out",
+        photoIndex: p,
+        plate,
+      }),
+    );
 
     manualSpecs.push({
       vehicle_number: plate,
@@ -327,12 +314,11 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
       out_time: outTime,
       in_center_id: inCenterId,
       out_center_id: outCenterId,
-      in_creator_id: operatorApexId,
-      out_creator_id: category !== 0 ? operatorApexId : null,
+      creator_id: operatorApexId,
       inPhotoPaths,
       outPhotoPaths,
       created_at: inTime,
-      updated_at: outTime ?? inTime,
+      updated_at: outTime,
     });
   }
 
@@ -340,7 +326,8 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
   const resolvedPhotoUrls = await uploadAndVerifyPhotos(photoTargets);
 
   // Transform specs into final database insert records
-  const autoWeighments = autoSpecs.map((spec) => ({
+  const autoWeighments = autoSpecs.map((spec, i) => ({
+    idempotency_key: `seed-auto-${spec.vehicle_number}-${i + 1}`,
     vehicle_number: spec.vehicle_number,
     in_detected_vehicle_number: spec.in_detected_vehicle_number,
     out_detected_vehicle_number: spec.out_detected_vehicle_number,
@@ -359,13 +346,12 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
   const manualWeighments = manualSpecs.map((spec) => ({
     vehicle_number: spec.vehicle_number,
     in_weight: spec.in_weight,
-    out_weight: spec.out_weight,
+    out_weight: spec.out_weight!,
     in_time: spec.in_time,
-    out_time: spec.out_time,
+    out_time: spec.out_time!,
     in_center_id: spec.in_center_id,
-    out_center_id: spec.out_center_id,
-    in_creator_id: spec.in_creator_id!,
-    out_creator_id: spec.out_creator_id,
+    out_center_id: spec.out_center_id!,
+    creator_id: spec.creator_id!,
     in_images: spec.inPhotoPaths.map((p) => resolvedPhotoUrls.get(p)!),
     out_images: spec.outPhotoPaths.map((p) => resolvedPhotoUrls.get(p)!),
     created_at: spec.created_at,

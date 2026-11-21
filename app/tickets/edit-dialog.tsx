@@ -105,22 +105,23 @@ export function TicketEditDialog({ open, onOpenChange, ticket, onSuccess }: Tick
 
           {/* Ticket Context Overview Strip */}
           <div className="rounded-lg border bg-muted/20 p-3 space-y-2 text-xs">
-            <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-              <div>
-                <span className="font-medium text-foreground">Weighment:</span> #
-                {ticket.automatic_weighment_id}
-                <span className="ml-1.5 font-mono font-semibold text-foreground">
-                  ({ticket.weighment.vehicle_number})
-                </span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-foreground">Weighment:</span>
+                  <span className="font-semibold text-foreground">
+                    #{ticket.automatic_weighment_id}
+                  </span>
+                  <span className="font-mono font-semibold text-foreground bg-muted px-1.5 py-0.5 rounded text-2xs">
+                    {ticket.weighment.vehicle_number}
+                  </span>
+                </div>
+                <div className="text-muted-foreground text-2xs">
+                  <span className="font-medium text-foreground">Created:</span>{" "}
+                  {formatDateTime(ticket.created_at)}
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-medium text-foreground">Status:</span>
-                <TicketStatusBadge status={ticket.status} />
-              </div>
-              <div className="col-span-2">
-                <span className="font-medium text-foreground">Created:</span>{" "}
-                {formatDateTime(ticket.created_at)}
-              </div>
+              <TicketStatusBadge status={ticket.status} />
             </div>
 
             {ticket.reply && (

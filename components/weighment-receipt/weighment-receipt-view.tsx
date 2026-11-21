@@ -3,12 +3,12 @@ import { ReceiptHeader, ReceiptContinuationHeader } from "./receipt-header";
 import { ReceiptTransitDetails } from "./receipt-transit-details";
 import { ReceiptWeights } from "./receipt-weights";
 import { ReceiptPhotos, type ReceiptPhotoItem } from "./receipt-photos";
-import type { Weighment, WeighmentMode } from "@/app/weighments/types";
+import type { Factory } from "@/app/settings/types";
+import type { CompletedWeighment, WeighmentMode } from "@/app/weighments/types";
 
 interface WeighmentReceiptViewProps {
-  weighment: Weighment;
-  factoryName?: string;
-  imagesPerRow?: number;
+  weighment: CompletedWeighment;
+  factory: Factory;
   mode: WeighmentMode;
 }
 
@@ -30,28 +30,18 @@ function partitionPhotos(photos: ReceiptPhotoItem[], imagesPerRow: number): Rece
 }
 
 export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentReceiptViewProps>(
-  function WeighmentReceiptView({ weighment, factoryName, imagesPerRow = 2, mode }, ref) {
-    // Specifically extract in_images and out_images to ensure accurate weighment attribution
-    const inPhotos: ReceiptPhotoItem[] = (weighment.in_images ?? []).map((url) => ({
+  function WeighmentReceiptView({ weighment, factory, mode }, ref) {
+    const inPhotos: ReceiptPhotoItem[] = weighment.in_images.map((url) => ({
       url,
       direction: "in" as const,
     }));
-    const outPhotos: ReceiptPhotoItem[] = (weighment.out_images ?? []).map((url) => ({
+    const outPhotos: ReceiptPhotoItem[] = weighment.out_images.map((url) => ({
       url,
       direction: "out" as const,
     }));
     const allPhotos: ReceiptPhotoItem[] = [...inPhotos, ...outPhotos].filter((p) => Boolean(p.url));
 
-    // Fallback if in_images/out_images arrays are empty but weighment.images has URLs
-    if (allPhotos.length === 0 && Array.isArray(weighment.images)) {
-      for (const url of weighment.images) {
-        if (url) {
-          allPhotos.push({ url, direction: "in" });
-        }
-      }
-    }
-
-    const photoPages = partitionPhotos(allPhotos, imagesPerRow);
+    const photoPages = partitionPhotos(allPhotos, factory.receipt_images_per_row);
     const totalPages = photoPages.length;
 
     let cumulativePhotoIndex = 0;
@@ -66,18 +56,12 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
           return (
             <div
               key={`receipt-page-${pageIdx + 1}`}
-              className="receipt-page bg-white text-zinc-950 rounded-none border border-zinc-200/80 p-5 flex flex-col gap-2 font-sans text-xs relative box-border"
-              style={{
-                width: "794px",
-                height: "1123px",
-                minHeight: "1123px",
-                maxHeight: "1123px",
-              }}
+              className="receipt-page bg-white text-zinc-950 rounded-none border border-zinc-200/80 p-5 flex flex-col gap-2 font-sans text-xs relative box-border w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px]"
             >
               {isFirstPage ? (
                 <>
                   {/* Primary Header with High-Impact Branding, Material In/Out & Auto/Manual */}
-                  <ReceiptHeader weighment={weighment} factoryName={factoryName} mode={mode} />
+                  <ReceiptHeader weighment={weighment} factory={factory} mode={mode} />
 
                   {/* Clean 3-Column Structured Transit Details */}
                   <ReceiptTransitDetails weighment={weighment} />
@@ -88,7 +72,7 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
                   {/* Page 1 Transit Photos with Minimalist IN / OUT Badges */}
                   <ReceiptPhotos
                     photos={pagePhotos}
-                    imagesPerRow={imagesPerRow}
+                    imagesPerRow={factory.receipt_images_per_row}
                     totalPhotosCount={allPhotos.length}
                     startIndex={currentStartIndex}
                   />
@@ -96,16 +80,12 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
               ) : (
                 <>
                   {/* Clean Continuation Header */}
-                  <ReceiptContinuationHeader
-                    weighment={weighment}
-                    factoryName={factoryName}
-                    mode={mode}
-                  />
+                  <ReceiptContinuationHeader weighment={weighment} factory={factory} mode={mode} />
 
                   {/* Page N Transit Photos with Minimalist IN / OUT Badges */}
                   <ReceiptPhotos
                     photos={pagePhotos}
-                    imagesPerRow={imagesPerRow}
+                    imagesPerRow={factory.receipt_images_per_row}
                     totalPhotosCount={allPhotos.length}
                     startIndex={currentStartIndex}
                   />

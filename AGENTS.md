@@ -74,10 +74,11 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 6. Consult Local Documentation First
 
-**Always check `docs/shadcn` and `docs/zustand` before implementing any component or state management.**
+**Always check `docs/shadcn`, `docs/zustand`, and `docs/zod` before implementing any component, state management, or schema validation.**
 
 - Review component anatomy, prop specifications, and usage patterns in `docs/shadcn` before editing UI components.
 - Review state persistence and management patterns in `docs/zustand` before authoring client stores.
+- Review schema patterns in `docs/zod` before authoring schemas.
 
 ---
 

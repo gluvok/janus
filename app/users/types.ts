@@ -10,28 +10,29 @@ export const usernameSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(3, "Username must be at least 3 characters")
-  .max(50, "Username must not exceed 50 characters")
-  .regex(
-    /^[a-z0-9_.-]+$/,
-    "Username must contain only lowercase letters, numbers, hyphens, or underscores",
-  );
+  .min(3, { error: "Username must be at least 3 characters" })
+  .max(50, { error: "Username must not exceed 50 characters" })
+  .regex(/^[a-z0-9_.-]+$/, {
+    error: "Username must contain only lowercase letters, numbers, hyphens, or underscores",
+  });
 
 export const nameSchema = z
   .string()
   .trim()
-  .min(1, "Name is required")
-  .max(100, "Name must not exceed 100 characters");
+  .min(1, { error: "Name is required" })
+  .max(100, { error: "Name must not exceed 100 characters" });
 
-export const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+export const passwordSchema = z
+  .string()
+  .min(6, { error: "Password must be at least 6 characters" });
 
 export const userSchema = z
   .object({
-    id: z.number().int().positive(),
+    id: z.int().positive({ error: "User ID must be a positive integer" }),
     username: usernameSchema,
     name: nameSchema,
     role: userRoleEnum,
-    factory_id: z.number().int().positive(),
+    factory_id: z.int().positive({ error: "Factory ID must be a positive integer" }),
     created_at: z.string(),
     updated_at: z.string(),
   })
@@ -59,7 +60,7 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 export const updateUserSchema = z
   .object({
-    id: z.number().int().positive("Invalid user ID"),
+    id: z.int().positive({ error: "Invalid user ID" }),
     name: nameSchema,
     role: userRoleEnum,
     username: usernameSchema,
@@ -73,7 +74,7 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 /* -------------------------------------------------------------------------- */
 
 const baseUserFormFields = {
-  id: z.number().int().positive().optional(),
+  id: z.int().positive().optional(),
   name: nameSchema,
   role: userRoleEnum,
   username: usernameSchema,
@@ -106,7 +107,7 @@ export type UserFormInput = z.infer<typeof editUserFormSchema>;
 
 export const deleteUserSchema = z
   .object({
-    ids: z.array(z.number().int().positive()).min(1, "At least one user ID is required"),
+    ids: z.array(z.int().positive()).min(1, { error: "At least one user ID is required" }),
   })
   .strict();
 export type DeleteUserInput = z.infer<typeof deleteUserSchema>;

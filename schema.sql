@@ -22,6 +22,8 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS factories CASCADE;
 
 DROP TYPE IF EXISTS ticket_status CASCADE;
+DROP TYPE IF EXISTS automatic_weighment_type CASCADE;
+DROP TYPE IF EXISTS manual_weighment_type CASCADE;
 DROP TYPE IF EXISTS weighment_type CASCADE;
 DROP TYPE IF EXISTS role_enum CASCADE;
 
@@ -33,7 +35,8 @@ DROP EXTENSION IF EXISTS pg_trgm CASCADE;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TYPE role_enum AS ENUM ('admin', 'manager', 'operator', 'base');
-CREATE TYPE weighment_type AS ENUM ('pending', 'in', 'out', 'unassigned');
+CREATE TYPE automatic_weighment_type AS ENUM ('pending', 'in', 'out', 'unassigned');
+CREATE TYPE manual_weighment_type AS ENUM ('in', 'out', 'unassigned');
 CREATE TYPE ticket_status AS ENUM ('pending', 'approved', 'rejected');
 
 -- ==============================================================================
@@ -90,6 +93,7 @@ CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 -- ------------------------------------------------------------------------------
 CREATE TABLE automatic_weighments (
     id SERIAL PRIMARY KEY,
+    idempotency_key TEXT UNIQUE NOT NULL,
     vehicle_number TEXT NOT NULL,
     in_detected_vehicle_number TEXT,
     out_detected_vehicle_number TEXT,
@@ -120,12 +124,12 @@ CREATE TABLE automatic_weighments (
             ELSE ABS(in_weight - out_weight)
         END
     ) STORED,
-    type weighment_type GENERATED ALWAYS AS (
+    type automatic_weighment_type GENERATED ALWAYS AS (
         CASE
-            WHEN out_weight IS NULL THEN 'pending'::weighment_type
-            WHEN in_weight > out_weight THEN 'in'::weighment_type
-            WHEN in_weight < out_weight THEN 'out'::weighment_type
-            ELSE 'unassigned'::weighment_type
+            WHEN out_weight IS NULL THEN 'pending'::automatic_weighment_type
+            WHEN in_weight > out_weight THEN 'in'::automatic_weighment_type
+            WHEN in_weight < out_weight THEN 'out'::automatic_weighment_type
+            ELSE 'unassigned'::automatic_weighment_type
         END
     ) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -135,6 +139,7 @@ CREATE TABLE automatic_weighments (
 );
 
 CREATE INDEX idx_automatic_weighments_vehicle ON automatic_weighments (vehicle_number, created_at DESC);
+CREATE UNIQUE INDEX idx_automatic_weighments_idempotency_key ON automatic_weighments (idempotency_key) WHERE idempotency_key IS NOT NULL;
 CREATE INDEX idx_automatic_weighments_created ON automatic_weighments (created_at DESC);
 CREATE INDEX idx_automatic_weighments_in_center ON automatic_weighments (in_center_id);
 CREATE INDEX idx_automatic_weighments_out_center ON automatic_weighments (out_center_id);
@@ -148,54 +153,42 @@ CREATE TABLE manual_weighments (
     id SERIAL PRIMARY KEY,
     vehicle_number TEXT NOT NULL,
     in_weight NUMERIC(10, 2) NOT NULL,
-    out_weight NUMERIC(10, 2),
+    out_weight NUMERIC(10, 2) NOT NULL,
     in_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    out_time TIMESTAMPTZ,
+    out_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     in_center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
-    out_center_id INT REFERENCES centers(id) ON DELETE RESTRICT,
-    in_creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    out_creator_id INT REFERENCES users(id) ON DELETE RESTRICT,
+    out_center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
+    creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     in_images TEXT[] NOT NULL DEFAULT '{}',
     out_images TEXT[] NOT NULL DEFAULT '{}',
     images TEXT[] GENERATED ALWAYS AS (in_images || out_images) STORED,
     gross NUMERIC(10, 2) GENERATED ALWAYS AS (
-        CASE
-            WHEN out_weight IS NULL THEN in_weight
-            ELSE GREATEST(in_weight, out_weight)
-        END
+        GREATEST(in_weight, out_weight)
     ) STORED,
     tare NUMERIC(10, 2) GENERATED ALWAYS AS (
-        CASE
-            WHEN out_weight IS NULL THEN NULL
-            ELSE LEAST(in_weight, out_weight)
-        END
+        LEAST(in_weight, out_weight)
     ) STORED,
     net NUMERIC(10, 2) GENERATED ALWAYS AS (
-        CASE
-            WHEN out_weight IS NULL THEN NULL
-            ELSE ABS(in_weight - out_weight)
-        END
+        ABS(in_weight - out_weight)
     ) STORED,
-    type weighment_type GENERATED ALWAYS AS (
+    type manual_weighment_type GENERATED ALWAYS AS (
         CASE
-            WHEN out_weight IS NULL THEN 'pending'::weighment_type
-            WHEN in_weight > out_weight THEN 'in'::weighment_type
-            WHEN in_weight < out_weight THEN 'out'::weighment_type
-            ELSE 'unassigned'::weighment_type
+            WHEN in_weight > out_weight THEN 'in'::manual_weighment_type
+            WHEN in_weight < out_weight THEN 'out'::manual_weighment_type
+            ELSE 'unassigned'::manual_weighment_type
         END
     ) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_manual_weighments_in_weight_positive CHECK (in_weight > 0),
-    CONSTRAINT chk_manual_weighments_out_weight_positive CHECK (out_weight IS NULL OR out_weight > 0)
+    CONSTRAINT chk_manual_weighments_out_weight_positive CHECK (out_weight > 0)
 );
 
 CREATE INDEX idx_manual_weighments_vehicle ON manual_weighments (vehicle_number, created_at DESC);
 CREATE INDEX idx_manual_weighments_created ON manual_weighments (created_at DESC);
 CREATE INDEX idx_manual_weighments_in_center ON manual_weighments (in_center_id);
 CREATE INDEX idx_manual_weighments_out_center ON manual_weighments (out_center_id);
-CREATE INDEX idx_manual_weighments_in_creator ON manual_weighments (in_creator_id);
-CREATE INDEX idx_manual_weighments_out_creator ON manual_weighments (out_creator_id);
+CREATE INDEX idx_manual_weighments_creator ON manual_weighments (creator_id);
 CREATE INDEX idx_manual_weighments_type ON manual_weighments (type);
 CREATE INDEX idx_manual_weighments_vehicle_trgm ON manual_weighments USING gin (vehicle_number gin_trgm_ops);
 

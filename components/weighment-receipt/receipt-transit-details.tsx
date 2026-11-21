@@ -1,8 +1,8 @@
 import { formatDateTime } from "@/lib/utils";
-import type { Weighment } from "@/app/weighments/types";
+import type { CompletedWeighment } from "@/app/weighments/types";
 
 interface ReceiptTransitDetailsProps {
-  weighment: Weighment;
+  weighment: CompletedWeighment;
 }
 
 function ScaleLocationColumn({
@@ -12,8 +12,8 @@ function ScaleLocationColumn({
   isLast = false,
 }: {
   label: string;
-  time: string | null;
-  center: { id: number; name: string } | null;
+  time: string;
+  center: { id: number; name: string };
   isLast?: boolean;
 }) {
   return (
@@ -28,7 +28,7 @@ function ScaleLocationColumn({
           {formatDateTime(time)}
         </span>
         <span className="text-3xs text-zinc-500 truncate">
-          {center ? `[#${center.id}] ${center.name}` : "—"}
+          [#{center.id}] {center.name}
         </span>
       </div>
     </div>

@@ -13,27 +13,35 @@ A centralized operational platform and automation management system for weighbri
 - **Users**: System operators, managers, and administrators with argon2 password hashing.
 - **Sessions**: Database-backed user authentication sessions with 400-day persistent rolling HTTP-only cookies (`mesto_session`).
 - **Automatic Weighments**: Hardware/ANPR camera-captured vehicle weighments. Features PostgreSQL stored generated columns (`gross`, `tare`, `net`, `type`), inbound/outbound weights, timestamps, and separate inbound/outbound photo arrays (`in_images`, `out_images`) unified via stored generated column `images = in_images || out_images`.
-- **Manual Weighments**: Operator-recorded weighments with full creator accountability (`in_creator_id`, `out_creator_id`), inbound/outbound weights, and photo arrays (`in_images`, `out_images`).
+- **Manual Weighments**: Operator-recorded weighments with full creator accountability (`creator_id`), inbound/outbound weights, and photo arrays (`in_images`, `out_images`).
 - **Tickets**: Support and discrepancy tickets linked directly to `automatic_weighments` via `automatic_weighment_id`.
 - **Support & Services**: Common reusable `UnderConstruction` placeholder pages at `/support` and `/services`.
 
 ### Stored Generated Columns (`automatic_weighments` & `manual_weighments`)
 
 - `images`: `in_images || out_images` (PostgreSQL stored concatenation of inbound and outbound camera photos)
-- `gross`: `CASE WHEN out_weight IS NULL THEN in_weight ELSE GREATEST(in_weight, out_weight) END`
-- `tare`: `CASE WHEN out_weight IS NULL THEN NULL ELSE LEAST(in_weight, out_weight) END`
-- `net`: `CASE WHEN out_weight IS NULL THEN NULL ELSE ABS(in_weight - out_weight) END`
+- `gross`: `CASE WHEN out_weight IS NULL THEN in_weight ELSE GREATEST(in_weight, out_weight) END` (always valid and non-null)
+- `tare`: `CASE WHEN out_weight IS NULL THEN NULL ELSE LEAST(in_weight, out_weight) END` (null only in pending automatic weighments; always non-null in manual weighments)
+- `net`: `CASE WHEN out_weight IS NULL THEN NULL ELSE ABS(in_weight - out_weight) END` (null only in pending automatic weighments; always non-null in manual weighments)
 - `type`:
-  ```sql
-  CASE
-      WHEN out_weight IS NULL THEN 'pending'::weighment_type
-      WHEN in_weight > out_weight THEN 'in'::weighment_type
-      WHEN in_weight < out_weight THEN 'out'::weighment_type
-      ELSE 'unassigned'::weighment_type
-  END
-  ```
-- **UI Invariant**: In the UI data table, `gross`, `net`, and `tare` display dashes (`-`) whenever either `in_weight` or `out_weight` is null; formatted kg values render only when both scale weights are present.
-- **Mode-Specific Layout**: Automatic weighments omit the Operator column and show In/Out ANPR camera badges. Manual weighments include the Operator column (`in_creator` / `out_creator`). The table defaults to `updated_at DESC`.
+  - `automatic_weighments.type` (`automatic_weighment_type`):
+    ```sql
+    CASE
+        WHEN out_weight IS NULL THEN 'pending'::automatic_weighment_type
+        WHEN in_weight > out_weight THEN 'in'::automatic_weighment_type
+        WHEN in_weight < out_weight THEN 'out'::automatic_weighment_type
+        ELSE 'unassigned'::automatic_weighment_type
+    END
+    ```
+  - `manual_weighments.type` (`manual_weighment_type`):
+    ```sql
+    CASE
+        WHEN in_weight > out_weight THEN 'in'::manual_weighment_type
+        WHEN in_weight < out_weight THEN 'out'::manual_weighment_type
+        ELSE 'unassigned'::manual_weighment_type
+    END
+    ```
+- **Mode-Specific Layout**: Automatic weighments omit the Operator column and show In/Out ANPR camera badges. Manual weighments include the Operator column (`creator`). The table defaults to `updated_at DESC`.
 
 ### Advanced Multi-Column Search
 

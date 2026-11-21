@@ -1,8 +1,8 @@
 import * as React from "react";
-import type { Weighment, WeighmentMode } from "@/app/weighments/types";
+import type { CompletedWeighment, WeighmentMode } from "@/app/weighments/types";
 
 interface ReceiptWeightsProps {
-  weighment: Weighment;
+  weighment: CompletedWeighment;
   mode: WeighmentMode;
 }
 
@@ -13,7 +13,7 @@ function WeightMetricCard({
   isFirst = false,
 }: {
   label: string;
-  value: number | null;
+  value: number;
   subtitle: string;
   isFirst?: boolean;
 }) {
@@ -28,7 +28,7 @@ function WeightMetricCard({
       </span>
       <div className="flex items-baseline gap-1">
         <span className="font-mono text-base sm:text-lg font-bold text-zinc-950 tabular-nums">
-          {value !== null ? value.toLocaleString() : "—"}
+          {value.toLocaleString()}
         </span>
         <span className="text-3xs font-semibold text-zinc-400">kg</span>
       </div>
@@ -39,10 +39,9 @@ function WeightMetricCard({
 
 export function ReceiptWeights({ weighment, mode }: ReceiptWeightsProps) {
   const isManual = mode === "manual";
-  const hasOperators = isManual && Boolean(weighment.in_creator || weighment.out_creator);
 
   // Gross is max(in_weight, out_weight), Tare is min(in_weight, out_weight)
-  const isGrossIn = weighment.out_weight === null || weighment.in_weight >= weighment.out_weight;
+  const isGrossIn = weighment.in_weight >= weighment.out_weight;
 
   const grossSourceLabel = isGrossIn ? "In Weight" : "Out Weight";
   const tareSourceLabel = isGrossIn ? "Out Weight" : "In Weight";
@@ -60,11 +59,7 @@ export function ReceiptWeights({ weighment, mode }: ReceiptWeightsProps) {
         />
 
         {/* Tare Weight */}
-        <WeightMetricCard
-          label="Tare Weight"
-          value={weighment.tare}
-          subtitle={weighment.tare !== null ? tareSourceLabel : "Pending Scale"}
-        />
+        <WeightMetricCard label="Tare Weight" value={weighment.tare} subtitle={tareSourceLabel} />
 
         {/* Net Weight (Hero Value in Matcha) */}
         <div className="col-span-12 sm:col-span-4 sm:pl-4 flex flex-col gap-1 min-w-0">
@@ -73,7 +68,7 @@ export function ReceiptWeights({ weighment, mode }: ReceiptWeightsProps) {
           </span>
           <div className="flex items-baseline gap-1">
             <span className="font-mono text-xl sm:text-2xl font-black text-[#66684f] tabular-nums tracking-tight">
-              {weighment.net !== null ? weighment.net.toLocaleString() : "—"}
+              {weighment.net.toLocaleString()}
             </span>
             <span className="text-xs font-bold text-[#66684f]/80">kg</span>
           </div>
@@ -82,25 +77,12 @@ export function ReceiptWeights({ weighment, mode }: ReceiptWeightsProps) {
       </div>
 
       {/* Discrete Operator Audit Line (Manual Scale) */}
-      {hasOperators && (
+      {isManual && weighment.creator && (
         <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-3xs text-zinc-500">
           <span className="font-heading font-semibold uppercase tracking-wider text-zinc-400">
-            Scale Operators:
+            Scale Operator:
           </span>
-          <div className="flex items-center gap-3">
-            {weighment.in_creator && (
-              <span>
-                Scale In:{" "}
-                <strong className="font-bold text-zinc-900">{weighment.in_creator.name}</strong>
-              </span>
-            )}
-            {weighment.out_creator && (
-              <span>
-                Scale Out:{" "}
-                <strong className="font-bold text-zinc-900">{weighment.out_creator.name}</strong>
-              </span>
-            )}
-          </div>
+          <span className="font-medium text-zinc-900">{weighment.creator.name}</span>
         </div>
       )}
     </div>

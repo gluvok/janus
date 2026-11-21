@@ -1,4 +1,5 @@
 import * as React from "react";
+import { cn } from "@/lib/utils";
 
 export interface ReceiptPhotoItem {
   url: string;
@@ -7,14 +8,14 @@ export interface ReceiptPhotoItem {
 
 interface ReceiptPhotosProps {
   photos: ReceiptPhotoItem[];
-  imagesPerRow?: number;
+  imagesPerRow: number;
   totalPhotosCount?: number;
   startIndex?: number;
 }
 
 export function ReceiptPhotos({
   photos,
-  imagesPerRow = 2,
+  imagesPerRow,
   totalPhotosCount,
   startIndex = 0,
 }: ReceiptPhotosProps) {
@@ -35,12 +36,7 @@ export function ReceiptPhotos({
       </div>
 
       {/* Responsive Grid */}
-      <div
-        className="grid gap-2"
-        style={{
-          gridTemplateColumns: `repeat(${imagesPerRow}, minmax(0, 1fr))`,
-        }}
-      >
+      <div className={cn("grid gap-2", imagesPerRow === 1 ? "grid-cols-1" : "grid-cols-2")}>
         {photos.map((photo, idx) => {
           const photoNumber = startIndex + idx + 1;
           const isEntry = photo.direction === "in";

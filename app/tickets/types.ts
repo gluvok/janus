@@ -6,17 +6,17 @@ export const ticketStatusEnum = z.enum(TICKET_STATUSES);
 
 export const ticketUserSchema = z
   .object({
-    id: z.number().int().positive(),
+    id: z.int().positive(),
     name: z.string().min(1),
     username: z.string().min(1),
-    factory_id: z.number().int().positive(),
+    factory_id: z.int().positive(),
   })
   .strict();
 export type TicketUser = z.infer<typeof ticketUserSchema>;
 
 export const ticketWeighmentSchema = z
   .object({
-    id: z.number().int().positive(),
+    id: z.int().positive(),
     vehicle_number: z.string().min(1),
   })
   .strict();
@@ -24,12 +24,12 @@ export type TicketWeighment = z.infer<typeof ticketWeighmentSchema>;
 
 export const ticketSchema = z
   .object({
-    id: z.number().int().positive(),
+    id: z.int().positive(),
     concern: z.string().min(1),
     reply: z.string().nullable(),
     status: ticketStatusEnum,
-    automatic_weighment_id: z.number().int().positive(),
-    user_id: z.number().int().positive(),
+    automatic_weighment_id: z.int().positive(),
+    user_id: z.int().positive(),
     created_at: z.string(),
     updated_at: z.string(),
     user: ticketUserSchema,
@@ -41,12 +41,12 @@ export type Ticket = z.infer<typeof ticketSchema>;
 
 export const updateTicketSchema = z
   .object({
-    id: z.number().int().positive(),
+    id: z.int().positive(),
     concern: z
       .string()
       .trim()
-      .min(1, "Concern is required")
-      .max(1000, "Concern must not exceed 1000 characters"),
+      .min(1, { error: "Concern is required" })
+      .max(1000, { error: "Concern must not exceed 1000 characters" }),
   })
   .strict();
 
@@ -54,7 +54,7 @@ export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
 export const deleteTicketSchema = z
   .object({
-    id: z.number().int().positive(),
+    id: z.int().positive(),
   })
   .strict();
 
@@ -65,8 +65,8 @@ export const ticketFormSchema = z
     concern: z
       .string()
       .trim()
-      .min(1, "Concern is required")
-      .max(1000, "Concern must not exceed 1000 characters"),
+      .min(1, { error: "Concern is required" })
+      .max(1000, { error: "Concern must not exceed 1000 characters" }),
   })
   .strict();
 
