@@ -22,12 +22,12 @@ import {
   ContainerTruck01Icon,
   Image01Icon,
   Layers01Icon,
+  Login01Icon,
+  Logout01Icon,
   PackageOpenIcon,
   ScaleIcon,
   TruckIcon,
   UserIcon,
-  WeightIcon,
-  WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { PhotoItem } from "@/components/photos-dialog";
@@ -140,7 +140,7 @@ const tareColumn = columnHelper.accessor("tare", {
 
 const inWeightColumn = columnHelper.accessor("in_weight", {
   header: ({ column }) => (
-    <DataTableColumnHeader column={column} title="In Weight" icon={WeightScale01Icon} />
+    <DataTableColumnHeader column={column} title="In Weight" icon={Login01Icon} />
   ),
   cell: ({ row }) => (
     <div className="flex items-baseline gap-1 font-mono text-xs">
@@ -152,13 +152,13 @@ const inWeightColumn = columnHelper.accessor("in_weight", {
   ),
   meta: {
     title: "In Weight",
-    icon: WeightScale01Icon,
+    icon: Login01Icon,
   },
 });
 
 const outWeightColumn = columnHelper.accessor("out_weight", {
   header: ({ column }) => (
-    <DataTableColumnHeader column={column} title="Out Weight" icon={WeightIcon} />
+    <DataTableColumnHeader column={column} title="Out Weight" icon={Logout01Icon} />
   ),
   cell: ({ row }) => {
     const outWeight = row.original.out_weight;
@@ -174,7 +174,7 @@ const outWeightColumn = columnHelper.accessor("out_weight", {
   },
   meta: {
     title: "Out Weight",
-    icon: WeightIcon,
+    icon: Logout01Icon,
   },
 });
 
