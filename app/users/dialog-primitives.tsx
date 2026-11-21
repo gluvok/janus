@@ -160,6 +160,103 @@ export function FullNameField({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Standalone Username and Password Fields                                    */
+/* -------------------------------------------------------------------------- */
+
+export interface UsernameFieldProps {
+  value: string;
+  onChange: (val: string) => void;
+  error?: string;
+  placeholder?: string;
+  description?: string;
+  isRequired?: boolean;
+}
+
+export function UsernameField({
+  value,
+  onChange,
+  error,
+  placeholder = "e.g. jdoe",
+  description = "Unique user identifier.",
+  isRequired = true,
+}: UsernameFieldProps) {
+  return (
+    <Field data-invalid={Boolean(error)}>
+      <FieldLabel htmlFor="user-username">
+        <HugeiconsIcon icon={TextFontIcon} className="size-3.5 text-muted-foreground" />
+        <span>Username</span>
+        {isRequired && (
+          <span className="text-destructive font-semibold" aria-hidden="true">
+            *
+          </span>
+        )}
+      </FieldLabel>
+      <Input
+        id="user-username"
+        value={value}
+        onChange={(e) => onChange(e.target.value.toLowerCase())}
+        placeholder={placeholder}
+        aria-invalid={Boolean(error)}
+        className="h-8 text-xs font-mono"
+        autoComplete="off"
+      />
+      {error && <FieldError errors={[{ message: error }]} />}
+      <FieldDescription>{description}</FieldDescription>
+    </Field>
+  );
+}
+
+export interface PasswordFieldProps {
+  value: string;
+  onChange: (val: string) => void;
+  error?: string;
+  isRequired?: boolean;
+  placeholder?: string;
+  description?: string;
+}
+
+export function PasswordField({
+  value,
+  onChange,
+  error,
+  isRequired = true,
+  placeholder,
+  description,
+}: PasswordFieldProps) {
+  const defaultPlaceholder = isRequired ? "At least 6 characters" : "Leave blank to keep current";
+  const defaultDescription = isRequired ? "Minimum 6 characters." : "Account password.";
+
+  return (
+    <Field data-invalid={Boolean(error)}>
+      <FieldLabel htmlFor="user-password">
+        <HugeiconsIcon icon={Key01Icon} className="size-3.5 text-muted-foreground" />
+        {isRequired ? (
+          <>
+            <span>Password</span>
+            <span className="text-destructive font-semibold" aria-hidden="true">
+              *
+            </span>
+          </>
+        ) : (
+          <span>New Password (Optional)</span>
+        )}
+      </FieldLabel>
+      <PasswordInput
+        id="user-password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? defaultPlaceholder}
+        aria-invalid={Boolean(error)}
+        className="h-8 text-xs"
+        autoComplete="new-password"
+      />
+      {error && <FieldError errors={[{ message: error }]} />}
+      <FieldDescription>{description ?? defaultDescription}</FieldDescription>
+    </Field>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Credentials 2-Column Grid (Username & Password)                            */
 /* -------------------------------------------------------------------------- */
 
@@ -188,55 +285,20 @@ export function CredentialsFields({
 }: CredentialsFieldsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <Field data-invalid={Boolean(usernameError)}>
-        <FieldLabel htmlFor="user-username">
-          <HugeiconsIcon icon={TextFontIcon} className="size-3.5 text-muted-foreground" />
-          <span>Username</span>
-          <span className="text-destructive font-semibold" aria-hidden="true">
-            *
-          </span>
-        </FieldLabel>
-        <Input
-          id="user-username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value.toLowerCase())}
-          placeholder={usernamePlaceholder}
-          aria-invalid={Boolean(usernameError)}
-          className="h-8 text-xs font-mono"
-          autoComplete="off"
-        />
-        {usernameError && <FieldError errors={[{ message: usernameError }]} />}
-        <FieldDescription>{usernameDescription}</FieldDescription>
-      </Field>
-
-      <Field data-invalid={Boolean(passwordError)}>
-        <FieldLabel htmlFor="user-password">
-          <HugeiconsIcon icon={Key01Icon} className="size-3.5 text-muted-foreground" />
-          {isPasswordRequired ? (
-            <>
-              <span>Password</span>
-              <span className="text-destructive font-semibold" aria-hidden="true">
-                *
-              </span>
-            </>
-          ) : (
-            <span>New Password (Optional)</span>
-          )}
-        </FieldLabel>
-        <PasswordInput
-          id="user-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={isPasswordRequired ? "At least 6 characters" : "Leave blank to keep current"}
-          aria-invalid={Boolean(passwordError)}
-          className="h-8 text-xs"
-          autoComplete="new-password"
-        />
-        {passwordError && <FieldError errors={[{ message: passwordError }]} />}
-        <FieldDescription>
-          {isPasswordRequired ? "Minimum 6 characters." : "Account password."}
-        </FieldDescription>
-      </Field>
+      <UsernameField
+        value={username}
+        onChange={setUsername}
+        error={usernameError}
+        placeholder={usernamePlaceholder}
+        description={usernameDescription}
+        isRequired={true}
+      />
+      <PasswordField
+        value={password}
+        onChange={setPassword}
+        error={passwordError}
+        isRequired={isPasswordRequired}
+      />
     </div>
   );
 }

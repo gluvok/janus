@@ -3,12 +3,13 @@ import { ReceiptHeader, ReceiptContinuationHeader } from "./receipt-header";
 import { ReceiptTransitDetails } from "./receipt-transit-details";
 import { ReceiptWeights } from "./receipt-weights";
 import { ReceiptPhotos, type ReceiptPhotoItem } from "./receipt-photos";
-import type { Weighment } from "@/app/weighments/types";
+import type { Weighment, WeighmentMode } from "@/app/weighments/types";
 
 interface WeighmentReceiptViewProps {
   weighment: Weighment;
   factoryName?: string;
   imagesPerRow?: number;
+  mode: WeighmentMode;
 }
 
 function partitionPhotos(photos: ReceiptPhotoItem[], imagesPerRow: number): ReceiptPhotoItem[][] {
@@ -29,7 +30,7 @@ function partitionPhotos(photos: ReceiptPhotoItem[], imagesPerRow: number): Rece
 }
 
 export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentReceiptViewProps>(
-  function WeighmentReceiptView({ weighment, factoryName, imagesPerRow = 2 }, ref) {
+  function WeighmentReceiptView({ weighment, factoryName, imagesPerRow = 2, mode }, ref) {
     // Specifically extract in_images and out_images to ensure accurate weighment attribution
     const inPhotos: ReceiptPhotoItem[] = (weighment.in_images ?? []).map((url) => ({
       url,
@@ -71,19 +72,18 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
                 height: "1123px",
                 minHeight: "1123px",
                 maxHeight: "1123px",
-                fontFamily: "var(--font-sans), system-ui, sans-serif",
               }}
             >
               {isFirstPage ? (
                 <>
                   {/* Primary Header with High-Impact Branding, Material In/Out & Auto/Manual */}
-                  <ReceiptHeader weighment={weighment} factoryName={factoryName} />
+                  <ReceiptHeader weighment={weighment} factoryName={factoryName} mode={mode} />
 
                   {/* Clean 3-Column Structured Transit Details */}
                   <ReceiptTransitDetails weighment={weighment} />
 
                   {/* Open 3-Column Balance Bar (Hero Matcha Net Weight) */}
-                  <ReceiptWeights weighment={weighment} />
+                  <ReceiptWeights weighment={weighment} mode={mode} />
 
                   {/* Page 1 Transit Photos with Minimalist IN / OUT Badges */}
                   <ReceiptPhotos
@@ -96,7 +96,11 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
               ) : (
                 <>
                   {/* Clean Continuation Header */}
-                  <ReceiptContinuationHeader weighment={weighment} factoryName={factoryName} />
+                  <ReceiptContinuationHeader
+                    weighment={weighment}
+                    factoryName={factoryName}
+                    mode={mode}
+                  />
 
                   {/* Page N Transit Photos with Minimalist IN / OUT Badges */}
                   <ReceiptPhotos
@@ -110,7 +114,7 @@ export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentRe
 
               {/* Minimalist Scale Slip Footer & Tabular Page Number */}
               <div className="mt-auto pt-2 border-t border-zinc-200/80 flex items-center justify-between gap-3 text-3xs text-zinc-400">
-                <span className="font-semibold uppercase tracking-wider text-zinc-500">
+                <span className="font-heading font-semibold uppercase tracking-wider text-zinc-500">
                   Official Scale Slip &bull; Mesto Industrial Automations
                 </span>
                 <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-600">

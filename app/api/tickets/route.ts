@@ -14,7 +14,6 @@ import {
   deleteTicketSchema,
   TICKET_SELECT_PROJECTION,
   type Ticket,
-  type TicketStatus,
 } from "@/app/tickets/types";
 
 const ALLOWED_SORT_COLUMNS = [
@@ -94,20 +93,16 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     return validationErrorResponse(validation.error);
   }
 
-  const { id, reply, status } = validation.data;
-  await findTicketForFactory(id, context.factory.id);
+  const { id, concern } = validation.data;
+  const ticket = await findTicketForFactory(id, context.factory.id);
 
-  const updates: { reply?: string | null; status?: TicketStatus } = {};
-  if (reply !== undefined) {
-    updates.reply = reply;
-  }
-  if (status !== undefined) {
-    updates.status = status;
+  if (ticket.status !== "pending") {
+    throw new ServiceError("Only pending tickets can be updated.", StatusCodes.BAD_REQUEST);
   }
 
   const { data: updated, error: updateError } = await supabase
     .from("tickets")
-    .update(updates)
+    .update({ concern })
     .eq("id", id)
     .select(TICKET_SELECT_PROJECTION)
     .single();

@@ -1,14 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -19,7 +12,7 @@ import {
   Layout2ColumnIcon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { type Factory } from "./types";
 
 const RECEIPT_IMAGE_OPTIONS = [
@@ -73,7 +66,7 @@ export function FactoryForm({
           <FieldDescription>Primary processing facility title.</FieldDescription>
         </Field>
 
-        {/* Column 2: Receipt Images Per Row */}
+        {/* Column 2: Receipt Images Per Row (Radio Group) */}
         <Field data-invalid={Boolean(receiptImagesError)}>
           <FieldLabel htmlFor="receipt-images">
             <HugeiconsIcon icon={ImagesIcon} className="size-3.5 text-muted-foreground" />
@@ -84,33 +77,33 @@ export function FactoryForm({
               </span>
             </span>
           </FieldLabel>
-          <Select
-            items={RECEIPT_IMAGE_OPTIONS}
+          <RadioGroup
             value={String(receiptImagesPerRow)}
             onValueChange={(val) => {
               if (val) onReceiptImagesPerRowChange(Number(val));
             }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2"
           >
-            <SelectTrigger
-              id="receipt-images"
-              className="h-8 w-full text-xs font-normal cursor-pointer"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="start" className="min-w-44">
-              <SelectGroup>
-                {RECEIPT_IMAGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-xs cursor-pointer">
-                    <HugeiconsIcon
-                      icon={opt.icon}
-                      className="mr-1.5 size-3.5 shrink-0 text-muted-foreground"
-                    />
-                    <span>{opt.label}</span>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            {RECEIPT_IMAGE_OPTIONS.map((opt) => {
+              const isSelected = receiptImagesPerRow === Number(opt.value);
+              return (
+                <label
+                  key={opt.value}
+                  htmlFor={`receipt-img-${opt.value}`}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border p-2 text-xs cursor-pointer transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary/5 text-foreground font-medium"
+                      : "border-border bg-background hover:bg-accent/40 text-muted-foreground",
+                  )}
+                >
+                  <RadioGroupItem id={`receipt-img-${opt.value}`} value={opt.value} />
+                  <HugeiconsIcon icon={opt.icon} className="size-3.5 shrink-0" />
+                  <span>{opt.label}</span>
+                </label>
+              );
+            })}
+          </RadioGroup>
           {receiptImagesError && <FieldError errors={[{ message: receiptImagesError }]} />}
           <FieldDescription>Photos per ticket row.</FieldDescription>
         </Field>

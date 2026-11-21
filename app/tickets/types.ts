@@ -42,8 +42,11 @@ export type Ticket = z.infer<typeof ticketSchema>;
 export const updateTicketSchema = z
   .object({
     id: z.number().int().positive(),
-    reply: z.string().trim().max(1000).nullable().optional(),
-    status: ticketStatusEnum.optional(),
+    concern: z
+      .string()
+      .trim()
+      .min(1, "Concern is required")
+      .max(1000, "Concern must not exceed 1000 characters"),
   })
   .strict();
 
@@ -59,8 +62,11 @@ export type DeleteTicketInput = z.infer<typeof deleteTicketSchema>;
 
 export const ticketFormSchema = z
   .object({
-    status: ticketStatusEnum,
-    reply: z.string().trim().max(1000),
+    concern: z
+      .string()
+      .trim()
+      .min(1, "Concern is required")
+      .max(1000, "Concern must not exceed 1000 characters"),
   })
   .strict();
 

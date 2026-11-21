@@ -43,10 +43,10 @@ CREATE TYPE ticket_status AS ENUM ('pending', 'approved', 'rejected');
 CREATE TABLE factories (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    receipt_images_per_row INT NOT NULL DEFAULT 3,
+    receipt_images_per_row INT NOT NULL DEFAULT 2,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_receipt_images_per_row CHECK (receipt_images_per_row BETWEEN 1 AND 6)
+    CONSTRAINT chk_receipt_images_per_row CHECK (receipt_images_per_row BETWEEN 1 AND 2)
 );
 
 CREATE TABLE centers (

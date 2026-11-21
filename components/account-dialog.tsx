@@ -19,7 +19,7 @@ import {
   FormErrorBanner,
   FormRequiredNotice,
 } from "@/components/form-primitives";
-import { FullNameField, CredentialsFields } from "@/app/users/dialog-primitives";
+import { FullNameField, UsernameField, PasswordField } from "@/app/users/dialog-primitives";
 import { RoleBadge } from "@/components/role-badge";
 import { toast } from "@/components/ui/toast";
 import { cn, formatDateTime, getErrorMessage } from "@/lib/utils";
@@ -186,30 +186,38 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
               <FormRequiredNotice />
               <FormErrorBanner error={formError} />
 
-              <FullNameField
-                value={name}
-                onChange={(val) =>
-                  setValue("name", val, { shouldValidate: true, shouldDirty: true })
-                }
-                placeholder="e.g. Alex Morgan"
-                description="Your display name."
-                error={errors.name?.message}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FullNameField
+                  value={name}
+                  onChange={(val) =>
+                    setValue("name", val, { shouldValidate: true, shouldDirty: true })
+                  }
+                  placeholder="e.g. Alex Morgan"
+                  description="Your display name."
+                  error={errors.name?.message}
+                />
 
-              <CredentialsFields
-                username={username}
-                setUsername={(val) =>
-                  setValue("username", val, { shouldValidate: true, shouldDirty: true })
-                }
-                usernameError={errors.username?.message}
-                password={password || ""}
-                setPassword={(val) =>
+                <UsernameField
+                  value={username}
+                  onChange={(val) =>
+                    setValue("username", val, { shouldValidate: true, shouldDirty: true })
+                  }
+                  placeholder="e.g. admin1"
+                  description="Lowercase handle."
+                  error={errors.username?.message}
+                  isRequired={true}
+                />
+              </div>
+
+              <PasswordField
+                value={password || ""}
+                onChange={(val) =>
                   setValue("password", val, { shouldValidate: true, shouldDirty: true })
                 }
-                passwordError={errors.password?.message}
-                isPasswordRequired={false}
-                usernamePlaceholder="e.g. admin1"
-                usernameDescription="Lowercase handle."
+                error={errors.password?.message}
+                isRequired={false}
+                placeholder="Leave blank to keep current"
+                description="Account password."
               />
 
               <DialogActionFooter

@@ -26,6 +26,7 @@ import {
   ScaleIcon,
   TruckIcon,
   UserIcon,
+  WeightIcon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
@@ -157,7 +158,7 @@ const inWeightColumn = columnHelper.accessor("in_weight", {
 
 const outWeightColumn = columnHelper.accessor("out_weight", {
   header: ({ column }) => (
-    <DataTableColumnHeader column={column} title="Out Weight" icon={WeightScale01Icon} />
+    <DataTableColumnHeader column={column} title="Out Weight" icon={WeightIcon} />
   ),
   cell: ({ row }) => {
     const outWeight = row.original.out_weight;
@@ -173,7 +174,7 @@ const outWeightColumn = columnHelper.accessor("out_weight", {
   },
   meta: {
     title: "Out Weight",
-    icon: WeightScale01Icon,
+    icon: WeightIcon,
   },
 });
 

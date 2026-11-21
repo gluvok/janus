@@ -53,6 +53,7 @@ export function useWeighmentPdfDownload() {
           weighment={verifiedWeighment}
           factoryName={factory?.name}
           imagesPerRow={factory?.receipt_images_per_row ?? 2}
+          mode={mode}
         />,
       );
 

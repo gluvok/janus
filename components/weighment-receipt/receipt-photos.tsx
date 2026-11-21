@@ -23,12 +23,13 @@ export function ReceiptPhotos({
   }
 
   const effectiveTotal = totalPhotosCount ?? photos.length;
+  const isSingleColumn = imagesPerRow === 1;
 
   return (
     <div className="flex flex-col gap-1.5 pt-0.5">
       {/* Evidence Section Header */}
       <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1">
-        <span className="text-3xs font-black uppercase tracking-widest text-zinc-400">
+        <span className="font-heading text-3xs font-black uppercase tracking-widest text-zinc-400">
           Transit Evidence ({effectiveTotal})
         </span>
       </div>
@@ -47,7 +48,9 @@ export function ReceiptPhotos({
           return (
             <div
               key={`${photo.url}-${idx}`}
-              className="group relative aspect-video rounded-none overflow-hidden bg-zinc-100 flex flex-col border-0"
+              className={`group relative rounded-none overflow-hidden bg-zinc-100 flex flex-col border-0 ${
+                isSingleColumn ? "h-92" : "aspect-video"
+              }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -60,7 +63,7 @@ export function ReceiptPhotos({
               {/* Minimalist IN / OUT Badge */}
               <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
                 <span
-                  className={`font-mono text-3xs font-black px-1.5 py-0.5 rounded-none tracking-widest uppercase ${
+                  className={`font-heading text-3xs font-black px-1.5 py-0.5 rounded-none tracking-widest uppercase ${
                     isEntry ? "bg-[#66684f] text-white" : "bg-zinc-950 text-white"
                   }`}
                 >

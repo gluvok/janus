@@ -9,7 +9,7 @@ import {
   createUpdatedAtColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
-import { EditableRowActions, FullRowActions } from "@/components/data-table/data-table-row-actions";
+import { CopyRowAction, FullRowActions } from "@/components/data-table/data-table-row-actions";
 import {
   HelpCircleIcon,
   Message01Icon,
@@ -124,14 +124,7 @@ export const columns = columnHelper.columns([
         );
       }
 
-      return (
-        <EditableRowActions
-          copyText={String(ticket.id)}
-          copyLabel="Copy Ticket ID"
-          onEdit={() => meta?.onEditTicket(ticket)}
-          editLabel="Update Ticket"
-        />
-      );
+      return <CopyRowAction copyText={String(ticket.id)} copyLabel="Copy Ticket ID" />;
     },
     enableSorting: false,
     enableHiding: false,
