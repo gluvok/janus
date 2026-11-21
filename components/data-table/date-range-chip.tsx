@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Calendar01Icon } from "@hugeicons/core-free-icons";
-import { DataTableFilterChip } from "./data-table-filter-chip";
+import { DataTableFilterChip } from "./filter-chip";
 
 interface DataTableDateRangeChipProps {
   dateRange?: DateRange;

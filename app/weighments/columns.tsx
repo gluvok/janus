@@ -25,16 +25,19 @@ import {
   PackageOpenIcon,
   ScaleIcon,
   TruckIcon,
+  UserIcon,
   WeightIcon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { PhotoItem } from "@/components/photos-dialog";
-import type { AutomaticWeighment } from "./types";
+import type { AutomaticWeighment, ManualWeighment, WeighmentMode } from "./types";
 
-const columnHelper = createColumnHelper<DataTableFeatures, AutomaticWeighment>();
+export type AnyWeighment = AutomaticWeighment | ManualWeighment;
 
-export interface AutomaticWeighmentsTableMeta {
+const columnHelper = createColumnHelper<DataTableFeatures, AnyWeighment>();
+
+export interface WeighmentsTableMeta {
   onViewPhotos: (payload: {
     weighmentId: number;
     vehicleNumber: string;
@@ -42,7 +45,7 @@ export interface AutomaticWeighmentsTableMeta {
     outCenter: { id: number; name: string } | null;
     images: PhotoItem[];
   }) => void;
-  onDownloadPdf?: (weighment: AutomaticWeighment) => void;
+  onDownloadPdf?: (weighment: AnyWeighment) => void;
   downloadingId?: number | null;
 }
 
@@ -145,12 +148,12 @@ const netColumn = columnHelper.accessor("net", {
   header: ({ column }) => <DataTableColumnHeader column={column} title="Net" icon={ScaleIcon} />,
   cell: ({ row }) => {
     const net = row.original.net;
-    if (net === null) {
+    if (net === null || net === undefined) {
       return <span className="text-2xs text-muted-foreground italic">-</span>;
     }
     return (
       <div className="flex items-baseline gap-1 font-mono text-xs">
-        <span className="font-bold text-foreground">{net.toLocaleString()}</span>
+        <span className="font-bold text-foreground">{Number(net).toLocaleString()}</span>
         <span className="text-2xs text-muted-foreground">kg</span>
       </div>
     );
@@ -167,12 +170,12 @@ const tareColumn = columnHelper.accessor("tare", {
   ),
   cell: ({ row }) => {
     const tare = row.original.tare;
-    if (tare === null) {
+    if (tare === null || tare === undefined) {
       return <span className="text-2xs text-muted-foreground italic">-</span>;
     }
     return (
       <div className="flex items-baseline gap-1 font-mono text-xs">
-        <span className="font-medium text-foreground">{tare.toLocaleString()}</span>
+        <span className="font-medium text-foreground">{Number(tare).toLocaleString()}</span>
         <span className="text-2xs text-muted-foreground">kg</span>
       </div>
     );
@@ -189,7 +192,7 @@ const outWeightColumn = columnHelper.accessor("out_weight", {
   ),
   cell: ({ row }) => {
     const outWeight = row.original.out_weight;
-    if (outWeight === null) {
+    if (outWeight === null || outWeight === undefined) {
       return <span className="text-2xs text-muted-foreground italic">-</span>;
     }
     return (
@@ -241,6 +244,26 @@ const outTimeColumn = columnHelper.accessor("out_time", {
   },
 });
 
+const operatorColumn = columnHelper.accessor(
+  (row) => ("creator" in row && row.creator ? row.creator.name : "-"),
+  {
+    id: "operator",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Operator" icon={UserIcon} />
+    ),
+    cell: ({ row }) => (
+      <span className="text-xs font-medium text-foreground">
+        {"creator" in row.original && row.original.creator ? row.original.creator.name : "-"}
+      </span>
+    ),
+    meta: {
+      title: "Operator",
+      icon: UserIcon,
+    },
+    enableSorting: false,
+  },
+);
+
 const photosColumn = columnHelper.display({
   id: "photos",
   header: ({ column }) => (
@@ -259,7 +282,7 @@ const photosColumn = columnHelper.display({
     const outPhotos: PhotoItem[] = outImages.map((url) => ({ url, direction: "out" }));
     const photos: PhotoItem[] = [...inPhotos, ...outPhotos];
 
-    const meta = table.options.meta as AutomaticWeighmentsTableMeta | undefined;
+    const meta = table.options.meta as WeighmentsTableMeta | undefined;
     return (
       <Button
         type="button"
@@ -289,23 +312,20 @@ const photosColumn = columnHelper.display({
   enableSorting: false,
 });
 
-const actionsColumn = createCopyActionsColumn<AutomaticWeighment>(
-  columnHelper,
-  ({ row, table }) => {
-    const meta = table.options.meta as AutomaticWeighmentsTableMeta | undefined;
-    const isCompleted = row.original.type !== "pending";
+const actionsColumn = createCopyActionsColumn<AnyWeighment>(columnHelper, ({ row, table }) => {
+  const meta = table.options.meta as WeighmentsTableMeta | undefined;
+  const isCompleted = row.original.type !== "pending";
 
-    return {
-      copyText: row.original.vehicle_number,
-      copyLabel: "Copy Vehicle No.",
-      onDownloadPdf: isCompleted ? () => meta?.onDownloadPdf?.(row.original) : undefined,
-      isDownloadingPdf: meta?.downloadingId === row.original.id,
-    };
-  },
-);
+  return {
+    copyText: row.original.vehicle_number,
+    copyLabel: "Copy Vehicle No.",
+    onDownloadPdf: isCompleted ? () => meta?.onDownloadPdf?.(row.original) : undefined,
+    isDownloadingPdf: meta?.downloadingId === row.original.id,
+  };
+});
 
-export function getAutomaticWeighmentColumns() {
-  return columnHelper.columns([
+export function getWeighmentColumns(mode: WeighmentMode) {
+  const base = [
     createSelectColumn(columnHelper),
     createIdColumn(columnHelper),
     vehicleNumberColumn,
@@ -317,11 +337,20 @@ export function getAutomaticWeighmentColumns() {
     outWeightColumn,
     inCenterColumn,
     outCenterColumn,
+  ];
+
+  if (mode === "manual") {
+    base.push(operatorColumn);
+  }
+
+  base.push(
     inTimeColumn,
     outTimeColumn,
     photosColumn,
     createCreatedAtColumn(columnHelper),
     createUpdatedAtColumn(columnHelper),
     actionsColumn,
-  ]);
+  );
+
+  return columnHelper.columns(base);
 }

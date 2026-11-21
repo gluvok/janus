@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SlidersHorizontalIcon } from "@hugeicons/core-free-icons";
-import { type DataTableFeatures } from "./data-table-features";
+import { type DataTableFeatures } from "./features";
 
 interface DataTableViewOptionsProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;

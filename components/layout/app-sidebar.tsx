@@ -14,8 +14,8 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { NavGroup } from "@/components/nav-group";
-import { NavUser, type UserProps } from "@/components/nav-user";
+import { NavGroup } from "./nav-group";
+import { NavUser, type UserProps } from "./nav-user";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { mainNavItems, secondaryNavItems } from "@/lib/navigation";
 import { useUserStore } from "@/stores/use-user-store";

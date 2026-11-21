@@ -13,7 +13,7 @@ import { LoadingState } from "@/components/loading-state";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, SearchVisualIcon } from "@hugeicons/core-free-icons";
-import { type DataTableFeatures } from "./data-table-features";
+import { type DataTableFeatures } from "./features";
 
 export interface DataTableContentProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>;

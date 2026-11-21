@@ -2,7 +2,7 @@
 
 import type { ColumnDef, ColumnHelper, Row, RowData, Table } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DataTableColumnHeader } from "./data-table-column-header";
+import { DataTableColumnHeader } from "./column-header";
 import {
   CopyRowAction,
   EditableRowActions,
@@ -10,7 +10,7 @@ import {
   type CopyRowActionProps,
   type EditableRowActionsProps,
   type FullRowActionsProps,
-} from "./data-table-row-actions";
+} from "./row-actions";
 import { formatDateTime } from "@/lib/utils";
 import {
   AtIcon,
@@ -39,7 +39,7 @@ import {
   UserGroupIcon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
-import type { DataTableFeatures } from "./data-table-features";
+import type { DataTableFeatures } from "./features";
 
 export interface ColumnMetaConfig {
   label: string;

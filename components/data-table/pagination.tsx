@@ -13,7 +13,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
-import { type DataTableFeatures } from "./data-table-features";
+import { type DataTableFeatures } from "./features";
 
 const PAGE_SIZE_OPTIONS = [
   { label: "15", value: 15 },

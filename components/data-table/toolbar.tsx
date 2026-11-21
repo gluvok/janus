@@ -3,14 +3,14 @@
 import * as React from "react";
 import type { RowData } from "@tanstack/react-table";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { DataTableSearchInput } from "./data-table-search-input";
-import { DataTableRefreshButton } from "./data-table-refresh-button";
-import { DataTableViewOptions } from "./data-table-view-options";
-import { DataTableFacetedFilter, type FacetedFilterOption } from "./data-table-faceted-filter";
-import { DataTableClearButton } from "./data-table-clear-button";
-import { DataTableCriteriaBar } from "./data-table-criteria-bar";
+import { DataTableSearchInput } from "./search-input";
+import { DataTableRefreshButton } from "./refresh-button";
+import { DataTableViewOptions } from "./view-options";
+import { DataTableFacetedFilter, type FacetedFilterOption } from "./faceted-filter";
+import { DataTableClearButton } from "./clear-button";
+import { DataTableCriteriaBar } from "./criteria-bar";
 import { DatePickerWithRange } from "./date-range-picker";
-import type { UseDataTableReturn } from "./use-data-table";
+import type { UseDataTableReturn } from "@/hooks/use-data-table";
 
 export interface DataTableFilterConfig {
   key: string;

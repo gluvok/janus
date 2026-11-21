@@ -1,8 +1,8 @@
 "use client";
 
-export { DataTableClearButton, type DataTableClearButtonProps } from "./data-table-clear-button";
+export { DataTableClearButton, type DataTableClearButtonProps } from "./clear-button";
 
-export { DataTableColumnHeader } from "./data-table-column-header";
+export { DataTableColumnHeader } from "./column-header";
 
 export {
   createSelectColumn,
@@ -15,34 +15,31 @@ export {
   createFullActionsColumn,
   DEFAULT_COLUMN_METADATA,
   type ColumnMetaConfig,
-} from "./data-table-columns";
+} from "./columns";
 
-export { DataTableContent, type DataTableContentProps } from "./data-table-content";
+export { DataTableContent, type DataTableContentProps } from "./content";
 
-export { DataTableCriteriaBar, type DataTableCriteriaBarProps } from "./data-table-criteria-bar";
+export { DataTableCriteriaBar, type DataTableCriteriaBarProps } from "./criteria-bar";
 
-export { DataTableDateRangeChip } from "./data-table-date-range-chip";
+export { DataTableDateRangeChip } from "./date-range-chip";
 
 export {
   DataTableFacetedFilter,
   type DataTableFacetedFilterProps,
   type FacetedFilterOption,
-} from "./data-table-faceted-filter";
+} from "./faceted-filter";
 
-export { features, type DataTableFeatures } from "./data-table-features";
+export { features, type DataTableFeatures } from "./features";
 
-export { DataTableFilterChip, type FilterChipVariant } from "./data-table-filter-chip";
+export { DataTableFilterChip, type FilterChipVariant } from "./filter-chip";
 
-export { DataTablePagination } from "./data-table-pagination";
+export { DataTablePagination } from "./pagination";
 
-export {
-  DataTableRefreshButton,
-  type DataTableRefreshButtonProps,
-} from "./data-table-refresh-button";
+export { DataTableRefreshButton, type DataTableRefreshButtonProps } from "./refresh-button";
 
-export { DataTableSearchInput, type DataTableSearchInputProps } from "./data-table-search-input";
+export { DataTableSearchInput, type DataTableSearchInputProps } from "./search-input";
 
-export { DataTableViewOptions } from "./data-table-view-options";
+export { DataTableViewOptions } from "./view-options";
 
 export { DatePickerWithRange, type DatePickerWithRangeProps } from "./date-range-picker";
 
@@ -52,8 +49,8 @@ export {
   DataTableToolbar,
   type DataTableToolbarProps,
   type DataTableFilterConfig,
-} from "./data-table-toolbar";
+} from "./toolbar";
 
-export { DataTableErrorState, type DataTableErrorStateProps } from "./data-table-error-state";
+export { DataTableErrorState, type DataTableErrorStateProps } from "./error-state";
 
-export { useDataTable, endpointFetcher, type UseDataTableReturn } from "./use-data-table";
+export { useDataTable, endpointFetcher, type UseDataTableReturn } from "@/hooks/use-data-table";

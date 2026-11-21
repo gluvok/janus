@@ -23,8 +23,8 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Sorting05Icon } from "@hugeicons/core-free-icons";
 import { SortableSortChip, SortChipOverlay } from "./sortable-sort-chip";
-import { DEFAULT_COLUMN_METADATA } from "./data-table-columns";
-import { DataTableClearButton } from "./data-table-clear-button";
+import { DEFAULT_COLUMN_METADATA } from "./columns";
+import { DataTableClearButton } from "./clear-button";
 
 export interface DataTableCriteriaBarProps {
   hasActiveSorts: boolean;

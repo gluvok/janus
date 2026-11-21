@@ -14,7 +14,7 @@ import {
   type Updater,
 } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
-import { features, type DataTableFeatures } from "./data-table-features";
+import { features, type DataTableFeatures } from "@/components/data-table/features";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getErrorMessage } from "@/lib/utils";
 import {

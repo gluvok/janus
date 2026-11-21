@@ -11,9 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { AppSidebar } from "@/components/app-sidebar";
-import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { AppHeaderControls } from "@/components/app-header-controls";
+import { AppSidebar, AppBreadcrumb, AppHeaderControls } from "@/components/layout";
 import type { User } from "@/app/users/types";
 import type { Factory } from "@/app/settings/types";
 

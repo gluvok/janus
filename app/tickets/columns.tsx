@@ -9,7 +9,7 @@ import {
   createUpdatedAtColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
-import { CopyRowAction, FullRowActions } from "@/components/data-table/data-table-row-actions";
+import { CopyRowAction, FullRowActions } from "@/components/data-table/row-actions";
 import {
   HelpCircleIcon,
   Message01Icon,

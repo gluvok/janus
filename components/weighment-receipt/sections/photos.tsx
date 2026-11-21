@@ -9,8 +9,8 @@ export interface ReceiptPhotoItem {
 interface ReceiptPhotosProps {
   photos: ReceiptPhotoItem[];
   imagesPerRow: number;
-  totalPhotosCount?: number;
-  startIndex?: number;
+  totalPhotosCount: number;
+  startIndex: number;
 }
 
 export function ReceiptPhotos({
@@ -19,10 +19,6 @@ export function ReceiptPhotos({
   totalPhotosCount,
   startIndex = 0,
 }: ReceiptPhotosProps) {
-  if (photos.length === 0) {
-    return null;
-  }
-
   const effectiveTotal = totalPhotosCount ?? photos.length;
   const isSingleColumn = imagesPerRow === 1;
 

@@ -1,13 +1,13 @@
 import * as React from "react";
-import { AutomaticReceiptHeader, AutomaticReceiptContinuationHeader } from "./receipt-header";
-import { ReceiptTransitDetails } from "./receipt-transit-details";
-import { AutomaticReceiptWeights } from "./receipt-weights";
-import { ReceiptPhotos, type ReceiptPhotoItem } from "./receipt-photos";
+import { ManualReceiptHeader, ManualReceiptContinuationHeader } from "../sections/header";
+import { ReceiptTransitDetails } from "../sections/transit-details";
+import { ManualReceiptWeights } from "../sections/weights";
+import { ReceiptPhotos, type ReceiptPhotoItem } from "../sections/photos";
 import type { Factory } from "@/app/settings/types";
-import type { CompletedAutomaticWeighment } from "@/app/weighments/types";
+import type { ManualWeighment } from "@/app/weighments/types";
 
-export interface AutomaticWeighmentReceiptViewProps {
-  weighment: CompletedAutomaticWeighment;
+export interface ManualWeighmentReceiptViewProps {
+  weighment: ManualWeighment;
   factory: Factory;
 }
 
@@ -25,10 +25,10 @@ function partitionPhotos(photos: ReceiptPhotoItem[], imagesPerRow: number): Rece
   return pages;
 }
 
-export const AutomaticWeighmentReceiptView = React.forwardRef<
+export const ManualWeighmentReceiptView = React.forwardRef<
   HTMLDivElement,
-  AutomaticWeighmentReceiptViewProps
->(function AutomaticWeighmentReceiptView({ weighment, factory }, ref) {
+  ManualWeighmentReceiptViewProps
+>(function ManualWeighmentReceiptView({ weighment, factory }, ref) {
   const inPhotos: ReceiptPhotoItem[] = weighment.in_images.map((url) => ({
     url,
     direction: "in" as const,
@@ -58,9 +58,9 @@ export const AutomaticWeighmentReceiptView = React.forwardRef<
           >
             {isFirstPage ? (
               <>
-                <AutomaticReceiptHeader id={weighment.id} type={weighment.type} factory={factory} />
+                <ManualReceiptHeader id={weighment.id} type={weighment.type} factory={factory} />
                 <ReceiptTransitDetails weighment={weighment} />
-                <AutomaticReceiptWeights weighment={weighment} />
+                <ManualReceiptWeights weighment={weighment} />
                 <ReceiptPhotos
                   photos={pagePhotos}
                   imagesPerRow={factory.receipt_images_per_row}
@@ -70,7 +70,7 @@ export const AutomaticWeighmentReceiptView = React.forwardRef<
               </>
             ) : (
               <>
-                <AutomaticReceiptContinuationHeader
+                <ManualReceiptContinuationHeader
                   id={weighment.id}
                   vehicleNumber={weighment.vehicle_number}
                   factory={factory}
