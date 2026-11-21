@@ -173,22 +173,18 @@ export function createUpdatedAtColumn<TData extends { updated_at: string }>(
 
 export function createNameColumn<TData extends { name: string }>(
   columnHelper: ColumnHelper<DataTableFeatures, TData>,
-  options?: {
-    title?: string;
-    icon?: unknown;
-  },
 ) {
-  const defaultMeta = DEFAULT_COLUMN_METADATA.name;
-  const title = options?.title ?? defaultMeta.label;
-  const icon = options?.icon ?? defaultMeta.icon;
+  const meta = DEFAULT_COLUMN_METADATA.name;
 
   return columnHelper.accessor((row) => row.name, {
     id: "name",
-    header: ({ column }) => <DataTableColumnHeader column={column} title={title} icon={icon} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={meta.label} icon={meta.icon} />
+    ),
     cell: ({ row }) => <span className="font-medium text-xs">{row.original.name}</span>,
     meta: {
-      title,
-      icon,
+      title: meta.label,
+      icon: meta.icon,
     },
   });
 }

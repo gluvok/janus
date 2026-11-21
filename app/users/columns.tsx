@@ -42,7 +42,7 @@ export function getColumns(options: { showRole: boolean; entityLabel: string }) 
         icon: AtIcon,
       },
     }),
-    createNameColumn(columnHelper, { title: "Full Name" }),
+    createNameColumn(columnHelper),
     ...(showRole
       ? [
           columnHelper.accessor("role", {
@@ -61,14 +61,14 @@ export function getColumns(options: { showRole: boolean; entityLabel: string }) 
     createUpdatedAtColumn(columnHelper),
     createFullActionsColumn(columnHelper, ({ row, table }) => {
       const user = row.original;
-      const meta = table.options.meta as UsersTableMeta | undefined;
+      const meta = table.options.meta as UsersTableMeta;
 
       return {
         copyText: user.username,
         copyLabel: "Copy Username",
-        onEdit: () => meta?.onEditUser(user),
+        onEdit: () => meta.onEditUser(user),
         editLabel: `Edit ${entityLabel}`,
-        onDelete: () => meta?.onDeleteUser(user),
+        onDelete: () => meta.onDeleteUser(user),
         deleteLabel: `Delete ${entityLabel}`,
       };
     }),
