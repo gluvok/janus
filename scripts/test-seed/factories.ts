@@ -13,8 +13,8 @@ export async function seedFactories(): Promise<{
   console.log("\n🏭 [1/5] Ensuring Core Factories...");
 
   const factoryConfigs: FactoryConfig[] = [
-    { name: "Mesto Industrial Alpha", receipt_images_per_row: 3 },
-    { name: "Apex Agro Logistics", receipt_images_per_row: 4 },
+    { name: "Mesto Industrial Alpha", receipt_images_per_row: 2 },
+    { name: "Apex Agro Logistics", receipt_images_per_row: 2 },
   ];
 
   const targetFactoryNames = factoryConfigs.map((f) => f.name);
