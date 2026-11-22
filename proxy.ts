@@ -13,8 +13,10 @@ export async function proxy(request: NextRequest) {
     pathname === "/icon.png";
 
   const isPublicAuthApi = pathname === "/api/auth/login";
+  const isPublicAutomaticIngest =
+    pathname === "/api/weighments/automatic" && request.method === "POST";
 
-  if (isPublicAsset || isPublicAuthApi) {
+  if (isPublicAsset || isPublicAuthApi || isPublicAutomaticIngest) {
     return NextResponse.next();
   }
 
