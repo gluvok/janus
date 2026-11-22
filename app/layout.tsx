@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Geist, Geist_Mono, Manrope } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -7,22 +7,19 @@ import { Toaster } from "@/components/ui/toast";
 import { BootingScreen } from "@/components/booting-screen";
 import { getServerSession } from "@/lib/auth";
 
-const manrope = localFont({
-  src: "./fonts/Manrope-Variable.woff2",
+const manrope = Manrope({
+  subsets: ["latin"],
   variable: "--font-heading",
-  display: "swap",
 });
 
-const geistSans = localFont({
-  src: "./fonts/Geist-Variable.woff2",
+const geistSans = Geist({
+  subsets: ["latin"],
   variable: "--font-sans",
-  display: "swap",
 });
 
-const geistMono = localFont({
-  src: "./fonts/GeistMono-Variable.woff2",
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
   variable: "--font-mono",
-  display: "swap",
 });
 
 export const metadata: Metadata = {

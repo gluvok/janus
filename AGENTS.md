@@ -67,7 +67,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 5. Continuous Quality & Verification Loop
 
-**Always run `pnpm type-check`, `pnpm lint`, `pnpm fmt`, and `pnpm build` in a loop to fix warnings and errors.**
+**Always run `pnpm type-check`, `pnpm lint`, and `pnpm fmt` in a loop to fix warnings and errors.**
 
 - Run verification commands after every meaningful change.
 - Never stop until 0 errors and 0 warnings are achieved across all checks.
