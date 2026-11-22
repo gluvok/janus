@@ -33,7 +33,8 @@ export type WeighmentSortColumn = (typeof ALLOWED_WEIGHMENT_SORT_COLUMNS)[number
 
 export const AUTOMATIC_PROJECTION = `
   id,
-  idempotency_key,
+  in_idempotency_key,
+  out_idempotency_key,
   vehicle_number,
   in_detected_vehicle_number,
   out_detected_vehicle_number,

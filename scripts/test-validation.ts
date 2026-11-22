@@ -6,7 +6,7 @@
  * 2. Generated column calculations (gross, tare, net, type) matching schema.sql
  * 3. Schema check constraints (positive weights, receipt images per row)
  * 4. Database enum definitions (role_enum, weighment_type, ticket_status)
- * 5. Idempotency key UUIDv7 format validation for automatic weighments
+ * 5. Dual idempotency keys (in/out) UUIDv7 format validation for automatic weighments
  */
 
 import assert from "node:assert/strict";
@@ -212,12 +212,13 @@ assert.ok(TICKET_STATUS_ENUMS.has("rejected"));
 console.log("  ✓ All database enum sets match schema.sql exactly.");
 
 // ------------------------------------------------------------------------------
-// 5. IDEMPOTENCY KEY UUIDV7 INVARIANTS
-// Reference: schema.sql line 97 & app/weighments/types.ts
+// 5. DUAL IDEMPOTENCY KEY UUIDV7 INVARIANTS (IN & OUT)
+// Reference: schema.sql lines 97-98 & app/weighments/types.ts
 // ------------------------------------------------------------------------------
-console.log("\n🔑 [5/5] Testing Idempotency Key UUIDv7 Validation...");
+console.log("\n🔑 [5/5] Testing Dual Idempotency Keys UUIDv7 Validation...");
 
 const idempotencySchema = z.uuidv7();
+const optionalIdempotencySchema = z.uuidv7().nullable();
 
 // Valid UUIDv7 generated via Node 24 native crypto
 const validUuidV7 = crypto.randomUUIDv7();
@@ -250,7 +251,23 @@ for (const key of invalidKeys) {
     `Expected invalid key '${key}' to be rejected`,
   );
 }
-console.log("  ✓ UUIDv7 validation verified (valid UUIDv7 accepted, UUIDv4 & non-UUID rejected).");
+
+// Inbound requires non-null UUIDv7; outbound can be null for pending weighments
+assert.ok(
+  optionalIdempotencySchema.safeParse(null).success,
+  "Expected null out_idempotency_key to be valid for pending",
+);
+assert.ok(
+  optionalIdempotencySchema.safeParse(validUuidV7).success,
+  "Expected UUIDv7 out_idempotency_key to be valid for completed",
+);
+assert.ok(
+  !optionalIdempotencySchema.safeParse(uuidV4).success,
+  "Expected UUIDv4 to be rejected for out_idempotency_key",
+);
+console.log(
+  "  ✓ Dual UUIDv7 validation verified (in_idempotency_key requires UUIDv7; out_idempotency_key supports nullable/UUIDv7).",
+);
 
 console.log("\n=================================================");
 console.log("🎉 All validation and schema invariant tests passed!");

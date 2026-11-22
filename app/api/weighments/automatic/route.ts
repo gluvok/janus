@@ -32,10 +32,7 @@ export async function POST(request: Request) {
     });
 
     if (!validation.success) {
-      return NextResponse.json(
-        { error: validation.error.issues[0].message },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });
     }
 
     const {
@@ -46,15 +43,17 @@ export async function POST(request: Request) {
       "idempotency-key": validatedIdempotencyKey,
     } = validation.data;
 
-    // Check if any weighment exists with the same idempotency key
+    // Check if any weighment exists with either in_idempotency_key or out_idempotency_key
     const { data: existing } = await supabase
       .from("automatic_weighments")
-      .select("id")
-      .eq("idempotency_key", validatedIdempotencyKey)
+      .select("*")
+      .or(
+        `in_idempotency_key.eq.${validatedIdempotencyKey},out_idempotency_key.eq.${validatedIdempotencyKey}`,
+      )
       .maybeSingle();
 
     if (existing) {
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, data: existing });
     }
 
     // Authenticate center via x-api-key in centers table
@@ -98,6 +97,7 @@ export async function POST(request: Request) {
       const { data, error } = await supabase
         .from("automatic_weighments")
         .update({
+          out_idempotency_key: validatedIdempotencyKey,
           out_weight: weight,
           out_time: new Date().toISOString(),
           out_detected_vehicle_number: vehicle_number,
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("automatic_weighments")
       .insert({
-        idempotency_key: validatedIdempotencyKey,
+        in_idempotency_key: validatedIdempotencyKey,
         vehicle_number,
         in_detected_vehicle_number: vehicle_number,
         in_weight: weight,

@@ -66,7 +66,8 @@ const baseWeighmentFields = {
 export const automaticWeighmentSchema = z
   .object({
     ...baseWeighmentFields,
-    idempotency_key: z.uuidv7(),
+    in_idempotency_key: z.uuidv7(),
+    out_idempotency_key: z.uuidv7().nullable().optional(),
     in_detected_vehicle_number: z.string().nullable().optional(),
     out_detected_vehicle_number: z.string().nullable().optional(),
     out_weight: z.number().positive().nullable(),
@@ -104,6 +105,7 @@ export type ManualWeighment = z.infer<typeof manualWeighmentSchema>;
  * CompletedAutomaticWeighment: Strict non-null schema required for completed automatic weighment receipt slips.
  */
 export const completedAutomaticWeighmentSchema = automaticWeighmentSchema.extend({
+  out_idempotency_key: z.uuidv7(),
   out_weight: z.number().positive(),
   out_time: z.string(),
   out_center_id: z.int().positive(),

@@ -328,7 +328,8 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
 
   // Transform specs into final database insert records
   const autoWeighments = autoSpecs.map((spec) => ({
-    idempotency_key: crypto.randomUUIDv7(),
+    in_idempotency_key: crypto.randomUUIDv7(),
+    out_idempotency_key: spec.out_weight !== null ? crypto.randomUUIDv7() : null,
     vehicle_number: spec.vehicle_number,
     in_detected_vehicle_number: spec.in_detected_vehicle_number,
     out_detected_vehicle_number: spec.out_detected_vehicle_number,

@@ -94,7 +94,8 @@ CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 -- ------------------------------------------------------------------------------
 CREATE TABLE automatic_weighments (
     id SERIAL PRIMARY KEY,
-    idempotency_key UUID UNIQUE NOT NULL,
+    in_idempotency_key UUID UNIQUE NOT NULL,
+    out_idempotency_key UUID UNIQUE,
     vehicle_number TEXT NOT NULL,
     in_detected_vehicle_number TEXT,
     out_detected_vehicle_number TEXT,
@@ -140,7 +141,8 @@ CREATE TABLE automatic_weighments (
 );
 
 CREATE INDEX idx_automatic_weighments_vehicle ON automatic_weighments (vehicle_number, created_at DESC);
-CREATE UNIQUE INDEX idx_automatic_weighments_idempotency_key ON automatic_weighments (idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE UNIQUE INDEX idx_automatic_weighments_in_idempotency_key ON automatic_weighments (in_idempotency_key);
+CREATE UNIQUE INDEX idx_automatic_weighments_out_idempotency_key ON automatic_weighments (out_idempotency_key) WHERE out_idempotency_key IS NOT NULL;
 CREATE INDEX idx_automatic_weighments_created ON automatic_weighments (created_at DESC);
 CREATE INDEX idx_automatic_weighments_in_center ON automatic_weighments (in_center_id);
 CREATE INDEX idx_automatic_weighments_out_center ON automatic_weighments (out_center_id);
