@@ -8,7 +8,7 @@ const ingestSchema = z.object({
   vehicle_number: z.string().trim().min(1, "vehicle_number is required"),
   "x-api-key": z.string().trim().min(1, "x-api-key is required"),
   weight: z.coerce.number().positive("weight must be a positive number"),
-  images: z.array(z.file().min(2)).min(2, "at least two images are required"),
+  images: z.array(z.file().min(1)).min(1, "at least two images are required"),
   "idempotency-key": z.uuid("idempotency-key must be a valid UUID"),
 });
 
