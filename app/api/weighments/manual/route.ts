@@ -1,5 +1,5 @@
-import { executeWeighmentsGetQuery } from "@/lib/weighments-query";
+import { executeManualWeighmentsQuery } from "@/lib/weighments-query";
 
 export async function GET(request: Request) {
-  return executeWeighmentsGetQuery(request, "manual");
+  return executeManualWeighmentsQuery(request);
 }

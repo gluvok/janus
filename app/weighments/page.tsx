@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { WeighmentsDataTable } from "./data-table";
+import { WeighmentsTableContainer } from "./data-table";
 
 export const metadata: Metadata = {
   title: "Weighments | Mesto",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function WeighmentsPage() {
-  return <WeighmentsDataTable />;
+  return <WeighmentsTableContainer />;
 }

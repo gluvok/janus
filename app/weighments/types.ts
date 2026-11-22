@@ -66,7 +66,7 @@ const baseWeighmentFields = {
 export const automaticWeighmentSchema = z
   .object({
     ...baseWeighmentFields,
-    idempotency_key: z.string().min(1),
+    idempotency_key: z.uuidv7(),
     in_detected_vehicle_number: z.string().nullable().optional(),
     out_detected_vehicle_number: z.string().nullable().optional(),
     out_weight: z.number().positive().nullable(),

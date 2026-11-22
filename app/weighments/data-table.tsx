@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RowData } from "@tanstack/react-table";
 import axios from "axios";
 import {
   DataTableContent,
@@ -8,6 +9,7 @@ import {
   DataTableToolbar,
   DataTableErrorState,
   useDataTable,
+  type UseDataTableReturn,
   type FacetedFilterOption,
   type DataTableFilterConfig,
 } from "@/components/data-table";
@@ -26,7 +28,12 @@ import { DEFAULT_TABLE_ITEM_STATE } from "@/lib/table-strategy";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
 import { useAutomaticWeighmentPdfDownload } from "@/hooks/use-automatic-weighment-pdf-download";
 import { useManualWeighmentPdfDownload } from "@/hooks/use-manual-weighment-pdf-download";
-import { getWeighmentColumns, type WeighmentsTableMeta, type AnyWeighment } from "./columns";
+import {
+  getAutomaticWeighmentColumns,
+  getManualWeighmentColumns,
+  type AutomaticWeighmentsTableMeta,
+  type ManualWeighmentsTableMeta,
+} from "./columns";
 import type { AutomaticWeighment, ManualWeighment, WeighmentMode } from "./types";
 import {
   fetchFilterOptions,
@@ -50,200 +57,30 @@ const MANUAL_TYPE_OPTIONS: FacetedFilterOption[] = [
   { label: "Unassigned", value: "unassigned", icon: CircleMinusIcon },
 ];
 
-const WEIGHMENT_CONFIG = {
-  automatic: {
-    endpoint: "/api/weighments/automatic",
-    typeOptions: AUTOMATIC_TYPE_OPTIONS,
-  },
-  manual: {
-    endpoint: "/api/weighments/manual",
-    typeOptions: MANUAL_TYPE_OPTIONS,
-  },
-} as const;
+interface PhotosDialogState {
+  open: boolean;
+  weighmentId: number;
+  vehicleNumber: string;
+  inCenter: { id: number; name: string };
+  outCenter: { id: number; name: string } | null;
+  images: PhotoItem[];
+}
 
-export function WeighmentsDataTable() {
-  const currentTableState =
-    useDataTableStore((state) => state.tables["weighments"]) ?? DEFAULT_TABLE_ITEM_STATE;
-  const mode = (currentTableState.mode ?? "automatic") as WeighmentMode;
-  const config = WEIGHMENT_CONFIG[mode];
+interface WeighmentsTableShellProps<TData extends RowData> {
+  dataTable: UseDataTableReturn<TData>;
+  filterConfigs: DataTableFilterConfig[];
+  effectiveLoading: boolean;
+  photosDialogState: PhotosDialogState;
+  onPhotosDialogChange: (open: boolean) => void;
+}
 
-  const [inCenterOptions, setInCenterOptions] = useState<FacetedFilterOption[]>([
-    { label: "All In Centers", value: "all", icon: Building02Icon },
-  ]);
-  const [outCenterOptions, setOutCenterOptions] = useState<FacetedFilterOption[]>([
-    { label: "All Out Centers", value: "all", icon: Building03Icon },
-  ]);
-  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
-  const [initialError, setInitialError] = useState<string | null>(null);
-  const [initialData, setInitialData] = useState<
-    { data: AnyWeighment[]; totalCount: number } | undefined
-  >();
-
-  const activeLoadIdRef = useRef<number>(0);
-  const [photosDialogState, setPhotosDialogState] = useState<{
-    open: boolean;
-    weighmentId: number;
-    vehicleNumber: string;
-    inCenter: { id: number; name: string };
-    outCenter: { id: number; name: string } | null;
-    images: PhotoItem[];
-  }>({
-    open: false,
-    weighmentId: 0,
-    vehicleNumber: "",
-    inCenter: { id: 0, name: "" },
-    outCenter: null,
-    images: [],
-  });
-
-  const { downloadAutomaticPdf, downloadingId: autoDownloadingId } =
-    useAutomaticWeighmentPdfDownload();
-  const { downloadManualPdf, downloadingId: manualDownloadingId } = useManualWeighmentPdfDownload();
-
-  const handleDownloadPdf = useCallback(
-    (weighment: AnyWeighment) => {
-      if (mode === "manual") {
-        downloadManualPdf(weighment as ManualWeighment);
-      } else {
-        downloadAutomaticPdf(weighment as AutomaticWeighment);
-      }
-    },
-    [mode, downloadManualPdf, downloadAutomaticPdf],
-  );
-
-  const fetchWeighments = useCallback(
-    async (queryParams: Record<string, unknown>) => {
-      const res = await axios.get<{ data: AnyWeighment[]; totalCount: number }>(config.endpoint, {
-        params: queryParams,
-      });
-      return res.data;
-    },
-    [config.endpoint],
-  );
-
-  const loadInitialData = useCallback(async () => {
-    const currentLoadId = ++activeLoadIdRef.current;
-    setIsInitialLoading(true);
-    setInitialError(null);
-    try {
-      const tableState = useDataTableStore.getState().getTableState("weighments");
-      const currentMode = (tableState.mode ?? "automatic") as WeighmentMode;
-      const endpoint = WEIGHMENT_CONFIG[currentMode].endpoint;
-
-      const initialQueryParams = buildWeighmentsQueryParams(
-        tableState,
-        currentMode,
-        tableState.pagination.pageIndex + 1,
-        tableState.filters,
-      );
-
-      const [optionsResult, weighmentsResult] = await Promise.all([
-        fetchFilterOptions(),
-        axios.get<{ data: AnyWeighment[]; totalCount: number }>(endpoint, {
-          params: initialQueryParams,
-        }),
-      ]);
-
-      if (currentLoadId !== activeLoadIdRef.current) return;
-
-      const { centers } = optionsResult;
-      const { sanitizedFilters, needsFallback } = validateAndSanitizeFilters(
-        tableState.filters,
-        centers,
-        (key) => useDataTableStore.getState().setTableFilter("weighments", key, "all"),
-      );
-
-      let finalWeighments = weighmentsResult.data;
-      if (needsFallback) {
-        const sanitizedQueryParams = buildWeighmentsQueryParams(
-          tableState,
-          currentMode,
-          1,
-          sanitizedFilters,
-        );
-        const refetchRes = await axios.get<{ data: AnyWeighment[]; totalCount: number }>(endpoint, {
-          params: sanitizedQueryParams,
-        });
-        if (currentLoadId !== activeLoadIdRef.current) return;
-        finalWeighments = refetchRes.data;
-      }
-
-      setInCenterOptions(formatCenterOptions(centers, "In Centers"));
-      setOutCenterOptions(formatCenterOptions(centers, "Out Centers"));
-      setInitialData(finalWeighments);
-      setIsInitialLoading(false);
-    } catch (err) {
-      if (currentLoadId === activeLoadIdRef.current) {
-        setInitialError(getErrorMessage(err, "Failed to load weighments."));
-        setIsInitialLoading(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
-
-  const tableMeta: WeighmentsTableMeta = useMemo(
-    () => ({
-      onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
-      onDownloadPdf: handleDownloadPdf,
-      downloadingId: autoDownloadingId ?? manualDownloadingId,
-    }),
-    [handleDownloadPdf, autoDownloadingId, manualDownloadingId],
-  );
-
-  const columns = useMemo(() => getWeighmentColumns(mode), [mode]);
-  const extraParams = useMemo(() => ({ mode }), [mode]);
-
-  const dataTable = useDataTable<AnyWeighment>({
-    tableId: "weighments",
-    columns,
-    extraParams,
-    fetchData: fetchWeighments,
-    meta: tableMeta,
-    enabled: !isInitialLoading && !!initialData,
-    initialData,
-  });
-
-  const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
-    return [
-      {
-        key: "type",
-        title: "Type",
-        options: config.typeOptions,
-        variant: "orange",
-        categoryIcon: Layers01Icon,
-      },
-      {
-        key: "in_center_id",
-        title: "In Center",
-        options: inCenterOptions,
-        variant: "stone",
-        categoryIcon: Building02Icon,
-      },
-      {
-        key: "out_center_id",
-        title: "Out Center",
-        options: outCenterOptions,
-        variant: "stone",
-        categoryIcon: Building03Icon,
-      },
-    ];
-  }, [config.typeOptions, inCenterOptions, outCenterOptions]);
-
-  if (initialError) {
-    return (
-      <DataTableErrorState
-        title="Failed to load weighments"
-        error={initialError}
-        onRetry={loadInitialData}
-      />
-    );
-  }
-
-  const effectiveLoading = dataTable.loading || isInitialLoading;
-
+export function WeighmentsTableShell<TData extends RowData>({
+  dataTable,
+  filterConfigs,
+  effectiveLoading,
+  photosDialogState,
+  onPhotosDialogChange,
+}: WeighmentsTableShellProps<TData>) {
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       <DataTableToolbar
@@ -264,7 +101,7 @@ export function WeighmentsDataTable() {
 
       <PhotosDialog
         open={photosDialogState.open}
-        onOpenChange={(open) => setPhotosDialogState((prev) => ({ ...prev, open }))}
+        onOpenChange={onPhotosDialogChange}
         weighmentId={photosDialogState.weighmentId}
         vehicleNumber={photosDialogState.vehicleNumber}
         inCenter={photosDialogState.inCenter}
@@ -273,4 +110,349 @@ export function WeighmentsDataTable() {
       />
     </div>
   );
+}
+
+export function AutomaticWeighmentsDataTable() {
+  const [inCenterOptions, setInCenterOptions] = useState<FacetedFilterOption[]>([
+    { label: "All In Centers", value: "all", icon: Building02Icon },
+  ]);
+  const [outCenterOptions, setOutCenterOptions] = useState<FacetedFilterOption[]>([
+    { label: "All Out Centers", value: "all", icon: Building03Icon },
+  ]);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [initialError, setInitialError] = useState<string | null>(null);
+  const [initialData, setInitialData] = useState<
+    { data: AutomaticWeighment[]; totalCount: number } | undefined
+  >();
+
+  const activeLoadIdRef = useRef<number>(0);
+  const [photosDialogState, setPhotosDialogState] = useState<PhotosDialogState>({
+    open: false,
+    weighmentId: 0,
+    vehicleNumber: "",
+    inCenter: { id: 0, name: "" },
+    outCenter: null,
+    images: [],
+  });
+
+  const { downloadAutomaticPdf, downloadingId: autoDownloadingId } =
+    useAutomaticWeighmentPdfDownload();
+
+  const fetchWeighments = useCallback(async (queryParams: Record<string, unknown>) => {
+    const res = await axios.get<{ data: AutomaticWeighment[]; totalCount: number }>(
+      "/api/weighments/automatic",
+      { params: queryParams },
+    );
+    return res.data;
+  }, []);
+
+  const loadInitialData = useCallback(async () => {
+    const currentLoadId = ++activeLoadIdRef.current;
+    setIsInitialLoading(true);
+    setInitialError(null);
+    try {
+      const tableState = useDataTableStore.getState().getTableState("weighments");
+      const initialQueryParams = buildWeighmentsQueryParams(
+        tableState,
+        "automatic",
+        tableState.pagination.pageIndex + 1,
+        tableState.filters,
+      );
+
+      const [optionsResult, weighmentsResult] = await Promise.all([
+        fetchFilterOptions(),
+        axios.get<{ data: AutomaticWeighment[]; totalCount: number }>("/api/weighments/automatic", {
+          params: initialQueryParams,
+        }),
+      ]);
+
+      if (currentLoadId !== activeLoadIdRef.current) return;
+
+      const { centers } = optionsResult;
+      const { sanitizedFilters, needsFallback } = validateAndSanitizeFilters(
+        tableState.filters,
+        centers,
+        (key) => useDataTableStore.getState().setTableFilter("weighments", key, "all"),
+      );
+
+      let finalWeighments = weighmentsResult.data;
+      if (needsFallback) {
+        const sanitizedQueryParams = buildWeighmentsQueryParams(
+          tableState,
+          "automatic",
+          1,
+          sanitizedFilters,
+        );
+        const refetchRes = await axios.get<{ data: AutomaticWeighment[]; totalCount: number }>(
+          "/api/weighments/automatic",
+          { params: sanitizedQueryParams },
+        );
+        if (currentLoadId !== activeLoadIdRef.current) return;
+        finalWeighments = refetchRes.data;
+      }
+
+      setInCenterOptions(formatCenterOptions(centers, "In Centers"));
+      setOutCenterOptions(formatCenterOptions(centers, "Out Centers"));
+      setInitialData(finalWeighments);
+      setIsInitialLoading(false);
+    } catch (err) {
+      if (currentLoadId === activeLoadIdRef.current) {
+        setInitialError(getErrorMessage(err, "Failed to load automatic weighments."));
+        setIsInitialLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  const tableMeta: AutomaticWeighmentsTableMeta = useMemo(
+    () => ({
+      onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
+      onDownloadPdf: (w) => downloadAutomaticPdf(w),
+      downloadingId: autoDownloadingId,
+    }),
+    [downloadAutomaticPdf, autoDownloadingId],
+  );
+
+  const columns = useMemo(() => getAutomaticWeighmentColumns(), []);
+
+  const dataTable = useDataTable<AutomaticWeighment>({
+    tableId: "weighments",
+    columns,
+    fetchData: fetchWeighments,
+    meta: tableMeta,
+    enabled: !isInitialLoading && !!initialData,
+    initialData,
+  });
+
+  const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
+    return [
+      {
+        key: "type",
+        title: "Type",
+        options: AUTOMATIC_TYPE_OPTIONS,
+        variant: "orange",
+        categoryIcon: Layers01Icon,
+      },
+      {
+        key: "in_center_id",
+        title: "In Center",
+        options: inCenterOptions,
+        variant: "stone",
+        categoryIcon: Building02Icon,
+      },
+      {
+        key: "out_center_id",
+        title: "Out Center",
+        options: outCenterOptions,
+        variant: "stone",
+        categoryIcon: Building03Icon,
+      },
+    ];
+  }, [inCenterOptions, outCenterOptions]);
+
+  if (initialError) {
+    return (
+      <DataTableErrorState
+        title="Failed to load weighments"
+        error={initialError}
+        onRetry={loadInitialData}
+      />
+    );
+  }
+
+  const effectiveLoading = dataTable.loading || isInitialLoading;
+
+  return (
+    <WeighmentsTableShell
+      dataTable={dataTable}
+      filterConfigs={filterConfigs}
+      effectiveLoading={effectiveLoading}
+      photosDialogState={photosDialogState}
+      onPhotosDialogChange={(open) => setPhotosDialogState((prev) => ({ ...prev, open }))}
+    />
+  );
+}
+
+export function ManualWeighmentsDataTable() {
+  const [inCenterOptions, setInCenterOptions] = useState<FacetedFilterOption[]>([
+    { label: "All In Centers", value: "all", icon: Building02Icon },
+  ]);
+  const [outCenterOptions, setOutCenterOptions] = useState<FacetedFilterOption[]>([
+    { label: "All Out Centers", value: "all", icon: Building03Icon },
+  ]);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [initialError, setInitialError] = useState<string | null>(null);
+  const [initialData, setInitialData] = useState<
+    { data: ManualWeighment[]; totalCount: number } | undefined
+  >();
+
+  const activeLoadIdRef = useRef<number>(0);
+  const [photosDialogState, setPhotosDialogState] = useState<PhotosDialogState>({
+    open: false,
+    weighmentId: 0,
+    vehicleNumber: "",
+    inCenter: { id: 0, name: "" },
+    outCenter: null,
+    images: [],
+  });
+
+  const { downloadManualPdf, downloadingId: manualDownloadingId } = useManualWeighmentPdfDownload();
+
+  const fetchWeighments = useCallback(async (queryParams: Record<string, unknown>) => {
+    const res = await axios.get<{ data: ManualWeighment[]; totalCount: number }>(
+      "/api/weighments/manual",
+      { params: queryParams },
+    );
+    return res.data;
+  }, []);
+
+  const loadInitialData = useCallback(async () => {
+    const currentLoadId = ++activeLoadIdRef.current;
+    setIsInitialLoading(true);
+    setInitialError(null);
+    try {
+      const tableState = useDataTableStore.getState().getTableState("weighments");
+      const initialQueryParams = buildWeighmentsQueryParams(
+        tableState,
+        "manual",
+        tableState.pagination.pageIndex + 1,
+        tableState.filters,
+      );
+
+      const [optionsResult, weighmentsResult] = await Promise.all([
+        fetchFilterOptions(),
+        axios.get<{ data: ManualWeighment[]; totalCount: number }>("/api/weighments/manual", {
+          params: initialQueryParams,
+        }),
+      ]);
+
+      if (currentLoadId !== activeLoadIdRef.current) return;
+
+      const { centers } = optionsResult;
+      const { sanitizedFilters, needsFallback } = validateAndSanitizeFilters(
+        tableState.filters,
+        centers,
+        (key) => useDataTableStore.getState().setTableFilter("weighments", key, "all"),
+      );
+
+      // Check if 'pending' type filter exists and sanitize it for manual mode
+      if (sanitizedFilters.type === "pending") {
+        useDataTableStore.getState().setTableFilter("weighments", "type", "all");
+        delete sanitizedFilters.type;
+      }
+
+      let finalWeighments = weighmentsResult.data;
+      if (needsFallback) {
+        const sanitizedQueryParams = buildWeighmentsQueryParams(
+          tableState,
+          "manual",
+          1,
+          sanitizedFilters,
+        );
+        const refetchRes = await axios.get<{ data: ManualWeighment[]; totalCount: number }>(
+          "/api/weighments/manual",
+          { params: sanitizedQueryParams },
+        );
+        if (currentLoadId !== activeLoadIdRef.current) return;
+        finalWeighments = refetchRes.data;
+      }
+
+      setInCenterOptions(formatCenterOptions(centers, "In Centers"));
+      setOutCenterOptions(formatCenterOptions(centers, "Out Centers"));
+      setInitialData(finalWeighments);
+      setIsInitialLoading(false);
+    } catch (err) {
+      if (currentLoadId === activeLoadIdRef.current) {
+        setInitialError(getErrorMessage(err, "Failed to load manual weighments."));
+        setIsInitialLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  const tableMeta: ManualWeighmentsTableMeta = useMemo(
+    () => ({
+      onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
+      onDownloadPdf: (w) => downloadManualPdf(w),
+      downloadingId: manualDownloadingId,
+    }),
+    [downloadManualPdf, manualDownloadingId],
+  );
+
+  const columns = useMemo(() => getManualWeighmentColumns(), []);
+
+  const dataTable = useDataTable<ManualWeighment>({
+    tableId: "weighments",
+    columns,
+    fetchData: fetchWeighments,
+    meta: tableMeta,
+    enabled: !isInitialLoading && !!initialData,
+    initialData,
+  });
+
+  const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
+    return [
+      {
+        key: "type",
+        title: "Type",
+        options: MANUAL_TYPE_OPTIONS,
+        variant: "orange",
+        categoryIcon: Layers01Icon,
+      },
+      {
+        key: "in_center_id",
+        title: "In Center",
+        options: inCenterOptions,
+        variant: "stone",
+        categoryIcon: Building02Icon,
+      },
+      {
+        key: "out_center_id",
+        title: "Out Center",
+        options: outCenterOptions,
+        variant: "stone",
+        categoryIcon: Building03Icon,
+      },
+    ];
+  }, [inCenterOptions, outCenterOptions]);
+
+  if (initialError) {
+    return (
+      <DataTableErrorState
+        title="Failed to load weighments"
+        error={initialError}
+        onRetry={loadInitialData}
+      />
+    );
+  }
+
+  const effectiveLoading = dataTable.loading || isInitialLoading;
+
+  return (
+    <WeighmentsTableShell
+      dataTable={dataTable}
+      filterConfigs={filterConfigs}
+      effectiveLoading={effectiveLoading}
+      photosDialogState={photosDialogState}
+      onPhotosDialogChange={(open) => setPhotosDialogState((prev) => ({ ...prev, open }))}
+    />
+  );
+}
+
+export function WeighmentsTableContainer() {
+  const currentTableState =
+    useDataTableStore((state) => state.tables["weighments"]) ?? DEFAULT_TABLE_ITEM_STATE;
+  const mode = (currentTableState.mode ?? "automatic") as WeighmentMode;
+
+  if (mode === "manual") {
+    return <ManualWeighmentsDataTable />;
+  }
+
+  return <AutomaticWeighmentsDataTable />;
 }

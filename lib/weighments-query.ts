@@ -1,6 +1,6 @@
 /**
  * @file lib/weighments-query.ts
- * @description Shared backend query utilities for weighments endpoints (/api/weighments/automatic and /api/weighments/manual).
+ * @description Dedicated backend query utilities for automatic and manual weighments.
  * Executes paginated queries directly against automatic_weighments and manual_weighments with PostgreSQL stored generated columns.
  */
 
@@ -13,7 +13,6 @@ import {
   completeWeighmentTypeSchema,
   type AutomaticWeighment,
   type ManualWeighment,
-  type WeighmentMode,
 } from "@/app/weighments/types";
 
 export const ALLOWED_WEIGHMENT_SORT_COLUMNS = [
@@ -32,7 +31,7 @@ export const ALLOWED_WEIGHMENT_SORT_COLUMNS = [
 
 export type WeighmentSortColumn = (typeof ALLOWED_WEIGHMENT_SORT_COLUMNS)[number];
 
-const AUTOMATIC_PROJECTION = `
+export const AUTOMATIC_PROJECTION = `
   id,
   idempotency_key,
   vehicle_number,
@@ -57,7 +56,7 @@ const AUTOMATIC_PROJECTION = `
   out_center:centers!out_center_id(id, name)
 ` as const;
 
-const MANUAL_PROJECTION = `
+export const MANUAL_PROJECTION = `
   id,
   vehicle_number,
   in_weight,
@@ -80,16 +79,6 @@ const MANUAL_PROJECTION = `
   creator:users!creator_id(id, name, username, role)
 ` as const;
 
-const PROJECTIONS: Record<WeighmentMode, string> = {
-  automatic: AUTOMATIC_PROJECTION,
-  manual: MANUAL_PROJECTION,
-};
-
-const TABLES: Record<WeighmentMode, string> = {
-  automatic: "automatic_weighments",
-  manual: "manual_weighments",
-};
-
 const commaSeparatedIdsSchema = z
   .string()
   .transform((val) =>
@@ -100,30 +89,87 @@ const commaSeparatedIdsSchema = z
   )
   .pipe(z.array(z.number().int().positive()));
 
-export async function executeWeighmentsGetQuery(
-  request: Request,
-  mode: WeighmentMode,
-): Promise<NextResponse> {
-  const table = TABLES[mode];
-  const select = PROJECTIONS[mode];
-  const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search")?.trim();
-  const extraOrConditions: string[] = [];
+export async function fetchCenterSearchExtraOrConditions(
+  search: string | null | undefined,
+): Promise<string[]> {
+  if (!search) return [];
 
-  if (search) {
-    const { data: matchedCenters } = await supabase
-      .from("centers")
-      .select("id")
-      .ilike("name", `%${search}%`)
-      .limit(100);
+  const { data: matchedCenters } = await supabase
+    .from("centers")
+    .select("id")
+    .ilike("name", `%${search}%`)
+    .limit(100);
 
-    if (matchedCenters && matchedCenters.length > 0) {
-      const ids = matchedCenters.map((c) => c.id).join(",");
-      extraOrConditions.push(`in_center_id.in.(${ids})`, `out_center_id.in.(${ids})`);
+  if (!matchedCenters || matchedCenters.length === 0) return [];
+
+  const ids = matchedCenters.map((c) => c.id).join(",");
+  return [`in_center_id.in.(${ids})`, `out_center_id.in.(${ids})`];
+}
+
+export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchParams): any {
+  let filteredQuery = query;
+
+  // Filter by single weighment id if explicitly provided
+  const idParam = searchParams.get("id")?.trim();
+  if (idParam) {
+    const parsedId = Number(idParam);
+    if (!Number.isNaN(parsedId) && parsedId > 0) {
+      filteredQuery = filteredQuery.eq("id", parsedId);
     }
   }
 
-  return executePaginatedEntityQuery<WeighmentSortColumn, AutomaticWeighment | ManualWeighment>({
+  // Filter by in_center_id and out_center_id
+  const centerFilters: readonly { param: string; column: string }[] = [
+    { param: "in_center_id", column: "in_center_id" },
+    { param: "out_center_id", column: "out_center_id" },
+  ];
+
+  for (const { param, column } of centerFilters) {
+    const paramVal = searchParams.get(param)?.trim();
+    if (paramVal && paramVal !== "all") {
+      const parsed = commaSeparatedIdsSchema.safeParse(paramVal);
+      if (parsed.success && parsed.data.length > 0) {
+        filteredQuery = filteredQuery.in(column, parsed.data);
+      }
+    }
+  }
+
+  // Filter by combined centers (in_center or out_center)
+  const centerParam = searchParams.get("center_ids") || searchParams.get("center_id");
+  if (centerParam && centerParam !== "all") {
+    const parsedIds = commaSeparatedIdsSchema.safeParse(centerParam);
+    if (parsedIds.success && parsedIds.data.length > 0) {
+      if (parsedIds.data.length === 1) {
+        const id = parsedIds.data[0];
+        filteredQuery = filteredQuery.or(`in_center_id.eq.${id},out_center_id.eq.${id}`);
+      } else {
+        const idList = `(${parsedIds.data.join(",")})`;
+        filteredQuery = filteredQuery.or(`in_center_id.in.${idList},out_center_id.in.${idList}`);
+      }
+    }
+  }
+
+  return filteredQuery;
+}
+
+interface WeighmentsQueryConfig {
+  request: Request;
+  table: string;
+  select: string;
+  typeSchema: z.ZodType<string>;
+}
+
+async function executeWeighmentsQuery<TRecord extends Record<string, unknown>>({
+  request,
+  table,
+  select,
+  typeSchema,
+}: WeighmentsQueryConfig): Promise<NextResponse> {
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get("search")?.trim();
+  const extraOrConditions = await fetchCenterSearchExtraOrConditions(search);
+
+  return executePaginatedEntityQuery<WeighmentSortColumn, TRecord>({
     request,
     table,
     select,
@@ -133,63 +179,36 @@ export async function executeWeighmentsGetQuery(
     integerColumns: ["id"],
     numericColumns: ["net", "gross", "tare", "in_weight", "out_weight"],
     extraOrConditions,
-    applyCustomFilters: (query, searchParams) => {
-      let filteredQuery = query;
+    applyCustomFilters: (query, params) => {
+      let filtered = applyCommonWeighmentFilters(query, params);
 
-      // Filter by single weighment id if explicitly provided
-      const idParam = searchParams.get("id")?.trim();
-      if (idParam) {
-        const parsedId = Number(idParam);
-        if (!Number.isNaN(parsedId) && parsedId > 0) {
-          filteredQuery = filteredQuery.eq("id", parsedId);
-        }
-      }
-
-      // Filter by mode-specific type
-      const typeParam = searchParams.get("type")?.trim();
+      const typeParam = params.get("type")?.trim();
       if (typeParam && typeParam !== "all") {
-        const typeSchema =
-          mode === "manual" ? completeWeighmentTypeSchema : automaticWeighmentTypeSchema;
         const parsedType = typeSchema.safeParse(typeParam);
         if (parsedType.success) {
-          filteredQuery = filteredQuery.eq("type", parsedType.data);
+          filtered = filtered.eq("type", parsedType.data);
         }
       }
 
-      // Filter by in_center_id and out_center_id
-      const centerFilters: readonly { param: string; column: string }[] = [
-        { param: "in_center_id", column: "in_center_id" },
-        { param: "out_center_id", column: "out_center_id" },
-      ];
-
-      for (const { param, column } of centerFilters) {
-        const idParam = searchParams.get(param)?.trim();
-        if (idParam && idParam !== "all") {
-          const parsed = commaSeparatedIdsSchema.safeParse(idParam);
-          if (parsed.success && parsed.data.length > 0) {
-            filteredQuery = filteredQuery.in(column, parsed.data);
-          }
-        }
-      }
-
-      // Filter by combined centers (in_center or out_center)
-      const centerParam = searchParams.get("center_ids") || searchParams.get("center_id");
-      if (centerParam && centerParam !== "all") {
-        const parsedIds = commaSeparatedIdsSchema.safeParse(centerParam);
-        if (parsedIds.success && parsedIds.data.length > 0) {
-          if (parsedIds.data.length === 1) {
-            const id = parsedIds.data[0];
-            filteredQuery = filteredQuery.or(`in_center_id.eq.${id},out_center_id.eq.${id}`);
-          } else {
-            const idList = `(${parsedIds.data.join(",")})`;
-            filteredQuery = filteredQuery.or(
-              `in_center_id.in.${idList},out_center_id.in.${idList}`,
-            );
-          }
-        }
-      }
-
-      return filteredQuery;
+      return filtered;
     },
+  });
+}
+
+export async function executeAutomaticWeighmentsQuery(request: Request): Promise<NextResponse> {
+  return executeWeighmentsQuery<AutomaticWeighment>({
+    request,
+    table: "automatic_weighments",
+    select: AUTOMATIC_PROJECTION,
+    typeSchema: automaticWeighmentTypeSchema,
+  });
+}
+
+export async function executeManualWeighmentsQuery(request: Request): Promise<NextResponse> {
+  return executeWeighmentsQuery<ManualWeighment>({
+    request,
+    table: "manual_weighments",
+    select: MANUAL_PROJECTION,
+    typeSchema: completeWeighmentTypeSchema,
   });
 }

@@ -94,7 +94,7 @@ CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 -- ------------------------------------------------------------------------------
 CREATE TABLE automatic_weighments (
     id SERIAL PRIMARY KEY,
-    idempotency_key TEXT UNIQUE NOT NULL,
+    idempotency_key UUID UNIQUE NOT NULL,
     vehicle_number TEXT NOT NULL,
     in_detected_vehicle_number TEXT,
     out_detected_vehicle_number TEXT,

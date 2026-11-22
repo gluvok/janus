@@ -3,6 +3,7 @@
  * @description Generates automatic and manual weighments with verified open-license photos in Supabase Storage.
  */
 
+import crypto from "node:crypto";
 import { supabase } from "../supabase.ts";
 import { SAMPLE_PLATES, daysAgo } from "./constants.ts";
 import { buildStoragePath, uploadAndVerifyPhotos, type PhotoTarget } from "./photos.ts";
@@ -326,8 +327,8 @@ export async function seedWeighments(ctx: SeedContext): Promise<{
   const resolvedPhotoUrls = await uploadAndVerifyPhotos(photoTargets);
 
   // Transform specs into final database insert records
-  const autoWeighments = autoSpecs.map((spec, i) => ({
-    idempotency_key: `seed-auto-${spec.vehicle_number}-${i + 1}`,
+  const autoWeighments = autoSpecs.map((spec) => ({
+    idempotency_key: crypto.randomUUIDv7(),
     vehicle_number: spec.vehicle_number,
     in_detected_vehicle_number: spec.in_detected_vehicle_number,
     out_detected_vehicle_number: spec.out_detected_vehicle_number,

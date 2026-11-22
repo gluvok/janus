@@ -1,5 +1,5 @@
-import { executeWeighmentsGetQuery } from "@/lib/weighments-query";
+import { executeAutomaticWeighmentsQuery } from "@/lib/weighments-query";
 
 export async function GET(request: Request) {
-  return executeWeighmentsGetQuery(request, "automatic");
+  return executeAutomaticWeighmentsQuery(request);
 }
