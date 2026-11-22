@@ -296,18 +296,18 @@ export function createTrailingWeighmentColumns<TData extends BaseWeighmentRow>(
   ];
 }
 
-export function createManualOperatorColumn(
+export function createManualCreatorColumn(
   helper: ColumnHelper<DataTableFeatures, ManualWeighment>,
 ): ColumnDef<DataTableFeatures, ManualWeighment, any> {
   return helper.accessor((row) => row.creator.name, {
-    id: "operator",
+    id: "creator",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Operator" icon={UserIcon} />
+      <DataTableColumnHeader column={column} title="Creator" icon={UserIcon} />
     ),
     cell: ({ row }) => (
       <span className="text-xs font-medium text-foreground">{row.original.creator.name}</span>
     ),
-    meta: { title: "Operator", icon: UserIcon },
+    meta: { title: "Creator", icon: UserIcon },
     enableSorting: false,
   });
 }
@@ -360,7 +360,7 @@ export function getManualWeighmentColumns(): ColumnDef<DataTableFeatures, Manual
   const helper = createColumnHelper<DataTableFeatures, ManualWeighment>();
   return [
     ...createLeadingWeighmentColumns(helper),
-    createManualOperatorColumn(helper),
+    createManualCreatorColumn(helper),
     ...createTrailingWeighmentColumns(helper),
     createManualActionsColumn(helper),
   ];

@@ -65,6 +65,7 @@ export const MANUAL_PROJECTION = `
   out_time,
   in_center_id,
   out_center_id,
+  creator_id,
   in_images,
   out_images,
   images,

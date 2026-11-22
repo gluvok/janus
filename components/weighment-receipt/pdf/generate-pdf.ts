@@ -19,11 +19,34 @@ export async function generateReceiptPdf(
   try {
     root.render(receiptElement);
 
-    // Allow DOM layout and images to settle
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    // Synchronize font loading and settle DOM layout
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
+    // Wait for all img elements in container to finish loading
+    const images = Array.from(offscreenContainer.querySelectorAll("img"));
+    if (images.length > 0) {
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) {
+                resolve(true);
+              } else {
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(false);
+              }
+            }),
+        ),
+      );
+    }
+
+    // Allow DOM layout to settle
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     const pageElements = offscreenContainer.querySelectorAll<HTMLElement>(".receipt-page");
-    if (!pageElements || pageElements.length === 0) {
+    if (pageElements.length === 0) {
       throw new Error("Unable to locate receipt template pages for rendering.");
     }
 
