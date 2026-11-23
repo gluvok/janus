@@ -152,3 +152,32 @@
     @apply font-sans;
   }
 }
+
+/* Neumorphism: soft dual shadows on the page background as the shared surface. */
+:root {
+  --neu-shade: oklch(0.55 0.02 135 / 0.22);
+  --neu-light: oklch(1 0 0 / 0.95);
+}
+
+.dark {
+  --neu-shade: oklch(0 0 0 / 0.55);
+  --neu-light: oklch(1 0 0 / 0.05);
+}
+
+@utility neu {
+  box-shadow:
+    5px 5px 12px var(--neu-shade),
+    -5px -5px 12px var(--neu-light);
+}
+
+@utility neu-sm {
+  box-shadow:
+    3px 3px 6px var(--neu-shade),
+    -3px -3px 6px var(--neu-light);
+}
+
+@utility neu-inset {
+  box-shadow:
+    inset 2px 2px 5px var(--neu-shade),
+    inset -2px -2px 5px var(--neu-light);
+}

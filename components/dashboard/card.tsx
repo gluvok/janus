@@ -40,7 +40,7 @@ export function DashboardCard({ name, href, desc, icon: Icon, color, theme }: Da
     >
       <Card
         className={cn(
-          "h-full border bg-card transition-colors duration-200 cursor-pointer py-1",
+          "h-full border-0 bg-background transition-shadow duration-200 cursor-pointer py-1 group-active:neu-inset",
           cardHoverBorder,
           cardHoverBg,
         )}

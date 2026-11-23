@@ -36,7 +36,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           {children}
           {/* Sits in the h-16 header band every page renders; no page header uses its right side. */}
-          <div className="fixed top-3 right-4 z-40">
+          <div className="fixed top-5 right-6 z-40">
             <NotificationBell />
           </div>
         </SidebarInset>

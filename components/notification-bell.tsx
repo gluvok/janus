@@ -105,12 +105,8 @@ function BellPopover({ username }: { username: string }) {
       <PopoverTrigger
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
         className={cn(
-          "relative grid size-10 place-items-center rounded-full bg-background text-muted-foreground transition-all duration-200",
-          "shadow-[4px_4px_10px_rgba(0,0,0,0.08),-4px_-4px_10px_rgba(255,255,255,0.9)]",
-          "dark:shadow-[4px_4px_10px_rgba(0,0,0,0.5),-4px_-4px_10px_rgba(255,255,255,0.04)]",
-          "hover:text-foreground active:scale-95",
-          "data-[state=open]:text-foreground data-[state=open]:shadow-[inset_3px_3px_7px_rgba(0,0,0,0.1),inset_-3px_-3px_7px_rgba(255,255,255,0.9)]",
-          "dark:data-[state=open]:shadow-[inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-3px_-3px_7px_rgba(255,255,255,0.04)]",
+          "relative grid size-10 place-items-center rounded-full bg-background text-muted-foreground neu transition-all duration-200",
+          "hover:text-foreground active:scale-95 data-[state=open]:text-foreground data-[state=open]:neu-inset",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         )}
       >
