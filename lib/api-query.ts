@@ -54,9 +54,11 @@ const TABLE_FACTORY_COLUMNS: Record<string, string> = {
   centers: "factory_id",
   users: "factory_id",
   factories: "id",
-  automatic_weighments: "in_center.factory_id",
-  manual_weighments: "in_center.factory_id",
-  tickets: "user.factory_id",
+  entries: "center.factory_id",
+  entries_view: "factory_id",
+  weighments: "in_center.factory_id",
+  weighments_view: "factory_id",
+  tickets: "entry.center.factory_id",
 };
 
 export interface PaginatedEntityQueryOptions<TCol extends string> {

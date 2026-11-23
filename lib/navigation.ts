@@ -17,6 +17,12 @@ export const mainNavItems: NavItem[] = [
     description: "Track weighbridge measurements, gross, tare, and net weights.",
   },
   {
+    title: "Entries",
+    url: "/entries",
+    icon: appIcons.entries,
+    description: "Raw scale readings, vehicle plates, and transit camera captures.",
+  },
+  {
     title: "Centers",
     url: "/centers",
     icon: appIcons.centers,

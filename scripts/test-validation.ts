@@ -3,10 +3,10 @@
  * @description Invariant and validation test suite strictly enforcing schema.sql rules.
  * Runs under 'pnpm test' to verify:
  * 1. Indian vehicle registration plate normalization and regex validation
- * 2. Generated column calculations (gross, tare, net, type) matching schema.sql
+ * 2. Generated column calculations and trigger derivations (gross, tare, net, type)
  * 3. Schema check constraints (positive weights, receipt images per row)
  * 4. Database enum definitions (role_enum, weighment_type, ticket_status)
- * 5. Dual idempotency keys (in/out) UUIDv7 format validation for automatic weighments
+ * 5. Entry idempotency key UUIDv7 format validation
  */
 
 import assert from "node:assert/strict";
@@ -71,82 +71,62 @@ for (const plate of invalidPlates) {
 console.log(`  ✓ ${invalidPlates.length} invalid plate formats rejected correctly.`);
 
 // ------------------------------------------------------------------------------
-// 2. SCHEMA GENERATED COLUMN CALCULATIONS (gross, tare, net, type)
-// Reference: schema.sql lines 103-128 & 157-182
+// 2. SCHEMA TRIGGER & GENERATED COLUMN CALCULATIONS (gross, tare, net, type)
+// Reference: schema.sql lines 136-147 & 282-321
 // ------------------------------------------------------------------------------
-console.log("\n⚖️ [2/5] Testing PostgreSQL Generated Column Calculations...");
+console.log("\n⚖️ [2/5] Testing PostgreSQL Trigger Derivations & Generated Columns...");
 
-type WeighmentType = "pending" | "in" | "out" | "unassigned";
+type WeighmentType = "in" | "out" | "void";
 
-function calculateGross(inWeight: number, outWeight: number | null): number {
-  if (outWeight === null) return inWeight;
-  return Math.max(inWeight, outWeight);
+function deriveWeighment(
+  inWeight: number,
+  outWeight: number,
+): {
+  gross: number;
+  tare: number;
+  net: number;
+  type: WeighmentType;
+} {
+  const gross = Math.max(inWeight, outWeight);
+  const tare = Math.min(inWeight, outWeight);
+  const net = gross - tare;
+  const type: WeighmentType = inWeight > outWeight ? "in" : inWeight < outWeight ? "out" : "void";
+  return { gross, tare, net, type };
 }
 
-function calculateTare(inWeight: number, outWeight: number | null): number | null {
-  if (outWeight === null) return null;
-  return Math.min(inWeight, outWeight);
-}
-
-function calculateNet(inWeight: number, outWeight: number | null): number | null {
-  if (outWeight === null) return null;
-  return Math.abs(inWeight - outWeight);
-}
-
-function calculateType(inWeight: number, outWeight: number | null): WeighmentType {
-  if (outWeight === null) return "pending";
-  if (inWeight > outWeight) return "in";
-  if (inWeight < outWeight) return "out";
-  return "unassigned";
-}
-
-// Case 1: Inbound Pending Weighment (only in_weight recorded)
+// Case 1: Inbound Unloading Delivery (in_weight > out_weight -> type: 'in')
 {
-  const inWeight = 32500;
-  const outWeight = null;
-  assert.equal(calculateGross(inWeight, outWeight), 32500);
-  assert.equal(calculateTare(inWeight, outWeight), null);
-  assert.equal(calculateNet(inWeight, outWeight), null);
-  assert.equal(calculateType(inWeight, outWeight), "pending");
-  console.log("  ✓ Pending weighment calculations verified.");
+  const result = deriveWeighment(38000, 14000);
+  assert.equal(result.gross, 38000);
+  assert.equal(result.tare, 14000);
+  assert.equal(result.net, 24000);
+  assert.equal(result.type, "in");
+  console.log("  ✓ Inbound delivery (type: 'in') derivations verified.");
 }
 
-// Case 2: Inbound Unloading Delivery (in_weight > out_weight -> type: 'in')
+// Case 2: Outbound Loading Dispatch (in_weight < out_weight -> type: 'out')
 {
-  const inWeight = 38000;
-  const outWeight = 14000;
-  assert.equal(calculateGross(inWeight, outWeight), 38000);
-  assert.equal(calculateTare(inWeight, outWeight), 14000);
-  assert.equal(calculateNet(inWeight, outWeight), 24000);
-  assert.equal(calculateType(inWeight, outWeight), "in");
-  console.log("  ✓ Inbound delivery (type: 'in') calculations verified.");
+  const result = deriveWeighment(12500, 36500);
+  assert.equal(result.gross, 36500);
+  assert.equal(result.tare, 12500);
+  assert.equal(result.net, 24000);
+  assert.equal(result.type, "out");
+  console.log("  ✓ Outbound dispatch (type: 'out') derivations verified.");
 }
 
-// Case 3: Outbound Loading Dispatch (in_weight < out_weight -> type: 'out')
+// Case 3: Equal Weight Pass-Through (in_weight == out_weight -> type: 'void')
 {
-  const inWeight = 12500;
-  const outWeight = 36500;
-  assert.equal(calculateGross(inWeight, outWeight), 36500);
-  assert.equal(calculateTare(inWeight, outWeight), 12500);
-  assert.equal(calculateNet(inWeight, outWeight), 24000);
-  assert.equal(calculateType(inWeight, outWeight), "out");
-  console.log("  ✓ Outbound dispatch (type: 'out') calculations verified.");
-}
-
-// Case 4: Equal Weight Pass-Through (in_weight == out_weight -> type: 'unassigned')
-{
-  const inWeight = 15000;
-  const outWeight = 15000;
-  assert.equal(calculateGross(inWeight, outWeight), 15000);
-  assert.equal(calculateTare(inWeight, outWeight), 15000);
-  assert.equal(calculateNet(inWeight, outWeight), 0);
-  assert.equal(calculateType(inWeight, outWeight), "unassigned");
-  console.log("  ✓ Empty pass-through (type: 'unassigned') calculations verified.");
+  const result = deriveWeighment(15000, 15000);
+  assert.equal(result.gross, 15000);
+  assert.equal(result.tare, 15000);
+  assert.equal(result.net, 0);
+  assert.equal(result.type, "void");
+  console.log("  ✓ Empty pass-through (type: 'void') derivations verified.");
 }
 
 // ------------------------------------------------------------------------------
 // 3. SCHEMA CONSTRAINT INVARIANTS
-// Reference: schema.sql lines 49, 131-132, 185-186
+// Reference: schema.sql lines 50, 54-55, 70-71, 89-90, 117, 123, 145-146
 // ------------------------------------------------------------------------------
 console.log("\n📐 [3/5] Testing Schema Constraint Invariants...");
 
@@ -159,25 +139,73 @@ assert.ok(validateReceiptImagesPerRow(2));
 assert.ok(!validateReceiptImagesPerRow(0));
 assert.ok(!validateReceiptImagesPerRow(3));
 assert.ok(!validateReceiptImagesPerRow(2.5));
-console.log("  ✓ chk_receipt_images_per_row (1 to 2) invariant verified.");
+console.log("  ✓ chk_factories_receipt_images_per_row (1 to 2) invariant verified.");
 
-function validateWeighmentWeights(inWeight: number, outWeight: number | null): boolean {
-  if (inWeight <= 0) return false;
-  if (outWeight !== null && outWeight <= 0) return false;
-  return true;
+function validateApiKey(key: string): boolean {
+  return typeof key === "string" && key.trim().length >= 16;
 }
 
-assert.ok(validateWeighmentWeights(25000, null));
-assert.ok(validateWeighmentWeights(25000, 12000));
-assert.ok(!validateWeighmentWeights(0, null));
-assert.ok(!validateWeighmentWeights(-500, null));
-assert.ok(!validateWeighmentWeights(25000, 0));
-assert.ok(!validateWeighmentWeights(25000, -100));
-console.log("  ✓ chk_weighments_weight_positive invariants verified.");
+assert.ok(validateApiKey("a".repeat(16)));
+assert.ok(validateApiKey("0123456789abcdef0123456789abcdef")); // 32 hex chars
+assert.ok(!validateApiKey("short_key"));
+assert.ok(!validateApiKey("   " + "a".repeat(10) + "   "));
+console.log("  ✓ chk_factories_api_key & chk_centers_api_key (>= 16 chars) verified.");
+
+function validateName(name: string): boolean {
+  return typeof name === "string" && name.trim().length >= 3 && name.trim().length <= 50;
+}
+
+assert.ok(validateName("Mesto Alpha"));
+assert.ok(validateName("abc")); // min 3
+assert.ok(validateName("a".repeat(50))); // max 50
+assert.ok(!validateName("ab")); // < 3
+assert.ok(!validateName("a".repeat(51))); // > 50
+assert.ok(!validateName("   ab   ")); // trimmed < 3
+console.log(
+  "  ✓ chk_factories_name, chk_centers_name, chk_users_username, chk_users_name verified.",
+);
+
+function validateEntryVehicle(plate: string): boolean {
+  return typeof plate === "string" && plate.trim().length >= 8 && plate.trim().length <= 11;
+}
+
+assert.ok(validateEntryVehicle("MH12AB1234")); // 10
+assert.ok(validateEntryVehicle("DL1A1234")); // 8
+assert.ok(validateEntryVehicle("HR26DQ5551A")); // 11
+assert.ok(!validateEntryVehicle("MH123")); // 5 < 8
+assert.ok(!validateEntryVehicle("MH12AB123456")); // 12 > 11
+console.log("  ✓ chk_entries_vehicle (8 to 11 chars) verified.");
+
+function validateEntryWeight(weight: number): boolean {
+  return typeof weight === "number" && weight > 0;
+}
+
+assert.ok(validateEntryWeight(25000));
+assert.ok(!validateEntryWeight(0));
+assert.ok(!validateEntryWeight(-500));
+console.log("  ✓ chk_entries_weight_positive verified.");
+
+function validateWeighmentDistinctEntries(inId: number, outId: number): boolean {
+  return inId !== outId;
+}
+
+assert.ok(validateWeighmentDistinctEntries(1, 2));
+assert.ok(!validateWeighmentDistinctEntries(5, 5));
+console.log("  ✓ chk_weighments_distinct_entries verified.");
+
+function validateWeighmentWeights(gross: number, tare: number): boolean {
+  return gross > 0 && tare >= 0 && gross >= tare;
+}
+
+assert.ok(validateWeighmentWeights(38000, 14000));
+assert.ok(validateWeighmentWeights(15000, 15000));
+assert.ok(!validateWeighmentWeights(14000, 38000)); // gross must be >= tare
+assert.ok(!validateWeighmentWeights(0, 0)); // gross must be > 0
+console.log("  ✓ chk_weighments_gross_tare invariants verified.");
 
 // ------------------------------------------------------------------------------
 // 4. DATABASE ENUM SET INVARIANTS
-// Reference: schema.sql lines 35-37
+// Reference: schema.sql lines 38-40
 // ------------------------------------------------------------------------------
 console.log("\n🏷️ [4/5] Testing Database Enum Definitions...");
 
@@ -187,21 +215,14 @@ assert.ok(ROLE_ENUMS.has("admin"));
 assert.ok(ROLE_ENUMS.has("manager"));
 assert.ok(ROLE_ENUMS.has("operator"));
 assert.ok(ROLE_ENUMS.has("base"));
-assert.ok(!ROLE_ENUMS.has("customer")); // customers was deprecated/removed
+assert.ok(!ROLE_ENUMS.has("customer"));
 
-const AUTOMATIC_WEIGHMENT_TYPE_ENUMS = new Set(["pending", "in", "out", "unassigned"]);
-assert.equal(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.size, 4);
-assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("pending"));
-assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("in"));
-assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("out"));
-assert.ok(AUTOMATIC_WEIGHMENT_TYPE_ENUMS.has("unassigned"));
-
-const MANUAL_WEIGHMENT_TYPE_ENUMS = new Set(["in", "out", "unassigned"]);
-assert.equal(MANUAL_WEIGHMENT_TYPE_ENUMS.size, 3);
-assert.ok(MANUAL_WEIGHMENT_TYPE_ENUMS.has("in"));
-assert.ok(MANUAL_WEIGHMENT_TYPE_ENUMS.has("out"));
-assert.ok(MANUAL_WEIGHMENT_TYPE_ENUMS.has("unassigned"));
-assert.ok(!MANUAL_WEIGHMENT_TYPE_ENUMS.has("pending")); // manual weighments are never pending
+const WEIGHMENT_TYPE_ENUMS = new Set(["in", "out", "void"]);
+assert.equal(WEIGHMENT_TYPE_ENUMS.size, 3);
+assert.ok(WEIGHMENT_TYPE_ENUMS.has("in"));
+assert.ok(WEIGHMENT_TYPE_ENUMS.has("out"));
+assert.ok(WEIGHMENT_TYPE_ENUMS.has("void"));
+assert.ok(!WEIGHMENT_TYPE_ENUMS.has("pending")); // entries are paired; individual entries hold pending states
 
 const TICKET_STATUS_ENUMS = new Set(["pending", "approved", "rejected"]);
 assert.equal(TICKET_STATUS_ENUMS.size, 3);
@@ -212,15 +233,14 @@ assert.ok(TICKET_STATUS_ENUMS.has("rejected"));
 console.log("  ✓ All database enum sets match schema.sql exactly.");
 
 // ------------------------------------------------------------------------------
-// 5. DUAL IDEMPOTENCY KEY UUIDV7 INVARIANTS (IN & OUT)
-// Reference: schema.sql lines 97-98 & app/weighments/types.ts
+// 5. ENTRY IDEMPOTENCY KEY UUIDV7 INVARIANTS
+// Reference: schema.sql line 119
 // ------------------------------------------------------------------------------
-console.log("\n🔑 [5/5] Testing Dual Idempotency Keys UUIDv7 Validation...");
+console.log("\n🔑 [5/5] Testing Entry Idempotency Key UUIDv7 Validation...");
 
 const idempotencySchema = z.uuidv7();
-const optionalIdempotencySchema = z.uuidv7().nullable();
 
-// Valid UUIDv7 generated via Node 24 native crypto
+// Valid UUIDv7 generated via Node native crypto
 const validUuidV7 = crypto.randomUUIDv7();
 assert.ok(
   idempotencySchema.safeParse(validUuidV7).success,
@@ -252,22 +272,7 @@ for (const key of invalidKeys) {
   );
 }
 
-// Inbound requires non-null UUIDv7; outbound can be null for pending weighments
-assert.ok(
-  optionalIdempotencySchema.safeParse(null).success,
-  "Expected null out_idempotency_key to be valid for pending",
-);
-assert.ok(
-  optionalIdempotencySchema.safeParse(validUuidV7).success,
-  "Expected UUIDv7 out_idempotency_key to be valid for completed",
-);
-assert.ok(
-  !optionalIdempotencySchema.safeParse(uuidV4).success,
-  "Expected UUIDv4 to be rejected for out_idempotency_key",
-);
-console.log(
-  "  ✓ Dual UUIDv7 validation verified (in_idempotency_key requires UUIDv7; out_idempotency_key supports nullable/UUIDv7).",
-);
+console.log("  ✓ Entry UUIDv7 idempotency key validation verified.");
 
 console.log("\n=================================================");
 console.log("🎉 All validation and schema invariant tests passed!");

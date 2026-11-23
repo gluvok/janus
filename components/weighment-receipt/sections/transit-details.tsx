@@ -4,8 +4,10 @@ interface TransitDetailsData {
   vehicle_number: string;
   in_time: string;
   out_time: string;
-  in_center: { id: number; name: string };
-  out_center: { id: number; name: string };
+  in_center_id: number;
+  in_center_name: string;
+  out_center_id: number;
+  out_center_name: string;
 }
 
 interface ReceiptTransitDetailsProps {
@@ -15,12 +17,14 @@ interface ReceiptTransitDetailsProps {
 function ScaleLocationColumn({
   label,
   time,
-  center,
+  centerId,
+  centerName,
   isLast = false,
 }: {
   label: string;
   time: string;
-  center: { id: number; name: string };
+  centerId: number;
+  centerName: string;
   isLast?: boolean;
 }) {
   return (
@@ -33,7 +37,7 @@ function ScaleLocationColumn({
           {formatDateTime(time)}
         </span>
         <span className="text-3xs text-zinc-500 truncate">
-          [#{center.id}] {center.name}
+          [#{centerId}] {centerName}
         </span>
       </div>
     </div>
@@ -56,14 +60,16 @@ export function ReceiptTransitDetails({ weighment }: ReceiptTransitDetailsProps)
         <ScaleLocationColumn
           label="Scale In"
           time={weighment.in_time}
-          center={weighment.in_center}
+          centerId={weighment.in_center_id}
+          centerName={weighment.in_center_name}
         />
 
         {/* Col 3: Scale Out Timestamp & Location */}
         <ScaleLocationColumn
           label="Scale Out"
           time={weighment.out_time}
-          center={weighment.out_center}
+          centerId={weighment.out_center_id}
+          centerName={weighment.out_center_name}
           isLast
         />
       </div>

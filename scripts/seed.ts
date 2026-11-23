@@ -2,7 +2,7 @@
  * @file scripts/seed.ts
  * @description Client onboarding seed script for GluVok strictly adhering to schema.sql.
  * Provisions core infrastructure required to onboard a new client:
- * 1. A new Factory (with receipt_images_per_row constraint validation: 1-6)
+ * 1. A new Factory (with receipt_images_per_row constraint validation: 1-2, auto-generated api_key)
  * 2. A new Admin user (dynamically numbered based on existing admins)
  * 3. Centers for the new factory with dedicated API keys
  */
@@ -18,8 +18,8 @@ const cliOptionsSchema = z.object({
     .number()
     .int("Images per row must be an integer")
     .min(1, "Images per row must be at least 1")
-    .max(6, "Images per row must be at most 6")
-    .default(3),
+    .max(2, "Images per row must be at most 2")
+    .default(2),
   centers: z.coerce
     .number()
     .int("Centers count must be an integer")
@@ -79,7 +79,7 @@ function printHelp() {
 Client Onboarding Seeder (scripts/seed.ts)
 
 Provisions the minimal required entities to onboard a new client strictly adhering to schema.sql:
-  • 1 New Factory (receipt_images_per_row: 1 to 6)
+  • 1 New Factory (receipt_images_per_row: 1 to 2, auto-generated 32-char hex api_key)
   • 1 New Admin user (username auto-indexed from current admin count)
   • N New Centers with dedicated API keys and unique factory constraints
 
@@ -88,7 +88,7 @@ Usage:
 
 Options:
   --factory <name>                 Custom name for the factory (default: 'Factory <N>')
-  --receipt-images-per-row <1-6>   Images per row on receipts between 1 and 6 (default: 3)
+  --receipt-images-per-row <1-2>   Images per row on receipts between 1 and 2 (default: 2)
   --centers <count>                Number of centers to create (default: 1)
   --center-names <names>           Comma-separated center names (e.g. 'Terminal A,Terminal B')
   --admin-password <pass>          Admin password (default: 'admin123')
@@ -97,7 +97,7 @@ Options:
 Examples:
   pnpm run seed
   pnpm run seed --factory "Apex Agro" --centers 2
-  pnpm run seed --factory "Delta Grain" --center-names "Main Weighbridge,North Scale" --receipt-images-per-row 4
+  pnpm run seed --factory "Delta Grain" --center-names "Main Weighbridge,North Scale" --receipt-images-per-row 2
 `);
 }
 
@@ -167,19 +167,23 @@ async function main() {
   console.log(
     `\n🏭 Creating factory '${factoryName}' (receipt images per row: ${args.receipt_images_per_row})...`,
   );
+  const factoryApiKey = crypto.randomBytes(16).toString("hex");
   const { data: createdFactory, error: factoryError } = await supabase
     .from("factories")
     .insert({
       name: factoryName,
       receipt_images_per_row: args.receipt_images_per_row,
+      api_key: factoryApiKey,
     })
-    .select("id, name")
+    .select("id, name, api_key")
     .single();
 
   if (factoryError || !createdFactory) {
     throw factoryError;
   }
-  console.log(`  ✓ Factory created (ID: ${createdFactory.id}, Name: '${createdFactory.name}')`);
+  console.log(
+    `  ✓ Factory created (ID: ${createdFactory.id}, Name: '${createdFactory.name}', API Key: ${createdFactory.api_key})`,
+  );
 
   // 3. CREATE ADMIN USER
   console.log(`\n👤 Provisioning admin user '${adminUsername}'...`);
@@ -236,7 +240,9 @@ async function main() {
   console.log("🎉 Client Onboarding Completed Successfully!");
   console.log("=================================================");
   console.log("📋 Summary of Provisioned Resources:");
-  console.log(`  • Factory:   ${createdFactory.name} (ID: ${createdFactory.id})`);
+  console.log(
+    `  • Factory:   ${createdFactory.name} (ID: ${createdFactory.id}) ➜ API Key: ${createdFactory.api_key}`,
+  );
   console.log(
     `  • Admin:     ${createdAdmin.username} / ${args.admin_password} (ID: ${createdAdmin.id})`,
   );

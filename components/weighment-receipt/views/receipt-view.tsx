@@ -1,15 +1,10 @@
 import * as React from "react";
-import {
-  AutomaticReceiptHeader,
-  ManualReceiptHeader,
-  AutomaticReceiptContinuationHeader,
-  ManualReceiptContinuationHeader,
-} from "../sections/header";
+import { WeighmentReceiptHeader, WeighmentReceiptContinuationHeader } from "../sections/header";
 import { ReceiptTransitDetails } from "../sections/transit-details";
-import { AutomaticReceiptWeights, ManualReceiptWeights } from "../sections/weights";
+import { WeighmentReceiptWeights } from "../sections/weights";
 import { ReceiptPhotos, type ReceiptPhotoItem } from "../sections/photos";
 import type { Factory } from "@/app/settings/types";
-import type { CompletedAutomaticWeighment, ManualWeighment } from "@/app/weighments/types";
+import type { Weighment } from "@/app/weighments/types";
 
 export interface CommonReceiptLayoutProps {
   weighment: {
@@ -19,8 +14,10 @@ export interface CommonReceiptLayoutProps {
     out_images: string[];
     in_time: string;
     out_time: string;
-    in_center: { id: number; name: string };
-    out_center: { id: number; name: string };
+    in_center_id: number;
+    in_center_name: string;
+    out_center_id: number;
+    out_center_name: string;
   };
   factory: Factory;
   header: React.ReactNode;
@@ -114,56 +111,30 @@ export const CommonReceiptLayout = React.forwardRef<HTMLDivElement, CommonReceip
   },
 );
 
-export interface AutomaticWeighmentReceiptViewProps {
-  weighment: CompletedAutomaticWeighment;
+export interface WeighmentReceiptViewProps {
+  weighment: Weighment;
   factory: Factory;
 }
 
-export const AutomaticWeighmentReceiptView = React.forwardRef<
-  HTMLDivElement,
-  AutomaticWeighmentReceiptViewProps
->(function AutomaticWeighmentReceiptView({ weighment, factory }, ref) {
-  return (
-    <CommonReceiptLayout
-      ref={ref}
-      weighment={weighment}
-      factory={factory}
-      header={<AutomaticReceiptHeader id={weighment.id} type={weighment.type} factory={factory} />}
-      continuationHeader={
-        <AutomaticReceiptContinuationHeader
-          id={weighment.id}
-          vehicleNumber={weighment.vehicle_number}
-          factory={factory}
-        />
-      }
-      weights={<AutomaticReceiptWeights weighment={weighment} />}
-    />
-  );
-});
-
-export interface ManualWeighmentReceiptViewProps {
-  weighment: ManualWeighment;
-  factory: Factory;
-}
-
-export const ManualWeighmentReceiptView = React.forwardRef<
-  HTMLDivElement,
-  ManualWeighmentReceiptViewProps
->(function ManualWeighmentReceiptView({ weighment, factory }, ref) {
-  return (
-    <CommonReceiptLayout
-      ref={ref}
-      weighment={weighment}
-      factory={factory}
-      header={<ManualReceiptHeader id={weighment.id} type={weighment.type} factory={factory} />}
-      continuationHeader={
-        <ManualReceiptContinuationHeader
-          id={weighment.id}
-          vehicleNumber={weighment.vehicle_number}
-          factory={factory}
-        />
-      }
-      weights={<ManualReceiptWeights weighment={weighment} />}
-    />
-  );
-});
+export const WeighmentReceiptView = React.forwardRef<HTMLDivElement, WeighmentReceiptViewProps>(
+  function WeighmentReceiptView({ weighment, factory }, ref) {
+    return (
+      <CommonReceiptLayout
+        ref={ref}
+        weighment={weighment}
+        factory={factory}
+        header={
+          <WeighmentReceiptHeader id={weighment.id} type={weighment.type} factory={factory} />
+        }
+        continuationHeader={
+          <WeighmentReceiptContinuationHeader
+            id={weighment.id}
+            vehicleNumber={weighment.vehicle_number}
+            factory={factory}
+          />
+        }
+        weights={<WeighmentReceiptWeights weighment={weighment} />}
+      />
+    );
+  },
+);

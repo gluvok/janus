@@ -4,23 +4,14 @@ import { toast } from "@/components/ui/toast";
 import { getErrorMessage } from "@/lib/utils";
 import { useFactoryStore } from "@/stores/use-factory-store";
 import { generateReceiptPdf } from "./generate-pdf";
-import { AutomaticWeighmentReceiptView, ManualWeighmentReceiptView } from "../views/receipt-view";
-import {
-  completedAutomaticWeighmentSchema,
-  manualWeighmentSchema,
-  type AutomaticWeighment,
-  type ManualWeighment,
-} from "@/app/weighments/types";
-
-export type ReceiptMode = "automatic" | "manual";
+import { WeighmentReceiptView } from "../views/receipt-view";
+import { weighmentSchema, type Weighment } from "@/app/weighments/types";
 
 export interface DownloadWeighmentReceiptOptions {
-  mode: ReceiptMode;
   weighment: { id: number; vehicle_number: string };
 }
 
 export async function downloadWeighmentReceipt({
-  mode,
   weighment,
 }: DownloadWeighmentReceiptOptions): Promise<void> {
   toast.add({
@@ -30,49 +21,29 @@ export async function downloadWeighmentReceipt({
   });
 
   try {
-    const endpoint = mode === "automatic" ? "/api/weighments/automatic" : "/api/weighments/manual";
-
     const response = await axios.get<{
-      data: (AutomaticWeighment | ManualWeighment)[];
+      data: Weighment[];
       totalCount: number;
-    }>(endpoint, {
+    }>("/api/weighments", {
       params: { id: weighment.id },
     });
 
     const items = response.data?.data;
-    const verifiedWeighment = Array.isArray(items)
-      ? items.find((w) => w?.id === weighment.id)
-      : null;
+    const verifiedRecord = Array.isArray(items) ? items.find((w) => w?.id === weighment.id) : null;
 
-    if (!verifiedWeighment) {
+    if (!verifiedRecord) {
       throw new Error(`Weighment #${weighment.id} could not be found.`);
     }
+
+    const verifiedWeighment = weighmentSchema.parse(verifiedRecord);
 
     const factory = useFactoryStore.getState().factory;
     if (!factory) {
       throw new Error("Factory configuration not found. Please log in again.");
     }
 
-    let receiptElement: React.ReactElement;
-    let fileName: string;
-
-    if (mode === "automatic") {
-      const completedWeighment = completedAutomaticWeighmentSchema.parse(verifiedWeighment);
-      fileName = `automatic-weighment-${completedWeighment.id}-${completedWeighment.vehicle_number}.pdf`;
-      receiptElement = (
-        <AutomaticWeighmentReceiptView weighment={completedWeighment} factory={factory} />
-      );
-    } else {
-      const recordToValidate = {
-        ...verifiedWeighment,
-        creator_id:
-          (verifiedWeighment as { creator_id?: number }).creator_id ??
-          (verifiedWeighment as any).creator?.id,
-      };
-      const manualWeighment = manualWeighmentSchema.parse(recordToValidate);
-      fileName = `manual-weighment-${manualWeighment.id}-${manualWeighment.vehicle_number}.pdf`;
-      receiptElement = <ManualWeighmentReceiptView weighment={manualWeighment} factory={factory} />;
-    }
+    const fileName = `weighment-${verifiedWeighment.id}-${verifiedWeighment.vehicle_number}.pdf`;
+    const receiptElement = <WeighmentReceiptView weighment={verifiedWeighment} factory={factory} />;
 
     await generateReceiptPdf(receiptElement, fileName);
 

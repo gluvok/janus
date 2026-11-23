@@ -86,7 +86,7 @@ export interface TableStrategy<TState, TPruned> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Centers Table Strategy: Base capabilities + dateRange. No mode, no filters */
+/* Centers Table Strategy: Base capabilities + dateRange. No filters          */
 /* -------------------------------------------------------------------------- */
 
 export type CentersTableState = BaseTableState;
@@ -101,7 +101,7 @@ export const centersStrategy: TableStrategy<CentersTableState, CentersPrunedStat
 };
 
 /* -------------------------------------------------------------------------- */
-/* Users Table Strategy: Base capabilities + dateRange + filters. No mode     */
+/* Users Table Strategy: Base capabilities + dateRange + filters              */
 /* -------------------------------------------------------------------------- */
 
 export type UsersTableState = BaseTableState;
@@ -130,15 +130,45 @@ export const usersStrategy: TableStrategy<UsersTableState, UsersPrunedState> = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* Weighments Table Strategy: Base + dateRange + filters + mode               */
+/* Entries Table Strategy: Base + dateRange + filters                         */
 /* -------------------------------------------------------------------------- */
 
-export interface WeighmentsTableState extends BaseTableState {
-  mode: "automatic" | "manual";
-}
+export type EntriesTableState = BaseTableState;
+export const entriesPrunedSchema = basePrunedStateSchema
+  .extend({
+    filters: z.record(z.string(), z.string()).optional(),
+  })
+  .strict();
+export type EntriesPrunedState = z.infer<typeof entriesPrunedSchema>;
+
+export const entriesStrategy: TableStrategy<EntriesTableState, EntriesPrunedState> = {
+  schema: entriesPrunedSchema,
+  defaultState: {
+    ...hydrateBaseState(undefined, [{ id: "created_at", desc: true }]),
+    columnVisibility: { created_at: false, updated_at: false },
+  },
+  prune: (state) => {
+    const base = pruneBaseState(state);
+    const pruned: EntriesPrunedState = { ...base };
+    if (state.filters && Object.keys(state.filters).length > 0) {
+      pruned.filters = state.filters;
+    }
+    return pruned;
+  },
+  hydrate: (pruned) => ({
+    ...hydrateBaseState(pruned, [{ id: "created_at", desc: true }]),
+    columnVisibility: { created_at: false, updated_at: false, ...pruned?.columnVisibility },
+    filters: pruned?.filters ?? {},
+  }),
+};
+
+/* -------------------------------------------------------------------------- */
+/* Weighments Table Strategy: Base + dateRange + filters                      */
+/* -------------------------------------------------------------------------- */
+
+export type WeighmentsTableState = BaseTableState;
 export const weighmentsPrunedSchema = basePrunedStateSchema
   .extend({
-    mode: z.enum(["automatic", "manual"]).optional(),
     filters: z.record(z.string(), z.string()).optional(),
   })
   .strict();
@@ -147,31 +177,26 @@ export type WeighmentsPrunedState = z.infer<typeof weighmentsPrunedSchema>;
 export const weighmentsStrategy: TableStrategy<WeighmentsTableState, WeighmentsPrunedState> = {
   schema: weighmentsPrunedSchema,
   defaultState: {
-    ...hydrateBaseState(undefined, [{ id: "updated_at", desc: true }]),
+    ...hydrateBaseState(undefined, [{ id: "created_at", desc: true }]),
     columnVisibility: { created_at: false, updated_at: false },
-    mode: "automatic",
   },
   prune: (state) => {
     const base = pruneBaseState(state);
     const pruned: WeighmentsPrunedState = { ...base };
-    if (state.mode && state.mode !== "automatic") {
-      pruned.mode = state.mode;
-    }
     if (state.filters && Object.keys(state.filters).length > 0) {
       pruned.filters = state.filters;
     }
     return pruned;
   },
   hydrate: (pruned) => ({
-    ...hydrateBaseState(pruned, [{ id: "updated_at", desc: true }]),
+    ...hydrateBaseState(pruned, [{ id: "created_at", desc: true }]),
     columnVisibility: { created_at: false, updated_at: false, ...pruned?.columnVisibility },
-    mode: pruned?.mode ?? "automatic",
     filters: pruned?.filters ?? {},
   }),
 };
 
 /* -------------------------------------------------------------------------- */
-/* Tickets Table Strategy: Base capabilities + dateRange + filters. No mode   */
+/* Tickets Table Strategy: Base capabilities + dateRange + filters            */
 /* -------------------------------------------------------------------------- */
 
 export type TicketsTableState = BaseTableState;
@@ -206,6 +231,7 @@ export const ticketsStrategy: TableStrategy<TicketsTableState, TicketsPrunedStat
 export const TABLE_STRATEGIES = {
   centers: centersStrategy,
   users: usersStrategy,
+  entries: entriesStrategy,
   weighments: weighmentsStrategy,
   tickets: ticketsStrategy,
 } as const;
@@ -213,9 +239,7 @@ export const TABLE_STRATEGIES = {
 export type TableId = keyof typeof TABLE_STRATEGIES;
 
 // Unified Table State bag for generic consumer compatibility
-export type TableItemState = BaseTableState & {
-  mode?: "automatic" | "manual";
-};
+export type TableItemState = BaseTableState;
 
 export const DEFAULT_TABLE_ITEM_STATE: TableItemState = {
   search: "",

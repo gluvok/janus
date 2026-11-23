@@ -8,6 +8,7 @@ import { clearDatabase } from "./clear.ts";
 import { seedFactories } from "./factories.ts";
 import { seedUsers } from "./users.ts";
 import { seedCenters } from "./centers.ts";
+import { seedEntries } from "./entries.ts";
 import { seedWeighments } from "./weighments.ts";
 import { seedTickets } from "./tickets.ts";
 import type { SeedContext } from "./types.ts";
@@ -47,11 +48,14 @@ async function main() {
     centerNameMap,
   };
 
-  // 4. Weighments with 100% Valid Unique SVG Photos
-  const { createdAuto } = await seedWeighments(ctx);
+  // 4. Raw Scale Entries
+  const { pairedInEntries, pairedOutEntries, standaloneEntries } = await seedEntries(ctx);
 
-  // 5. Support Tickets
-  await seedTickets({ ctx, createdAuto });
+  // 5. Weighments Pairs (Trigger-driven gross/tare/type computation)
+  await seedWeighments({ pairedInEntries, pairedOutEntries });
+
+  // 6. Support Tickets
+  await seedTickets({ pairedInEntries, standaloneEntries });
 
   console.log("\n=================================================");
   console.log("🎉 Test database seeding complete with zero errors!");

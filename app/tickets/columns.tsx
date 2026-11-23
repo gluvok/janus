@@ -9,21 +9,15 @@ import {
   createUpdatedAtColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
-import { CopyRowAction, FullRowActions } from "@/components/data-table/row-actions";
+import { CopyRowAction } from "@/components/data-table/row-actions";
 import {
   HelpCircleIcon,
   Message01Icon,
   SecurityCheckIcon,
-  UserIcon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { TicketStatusBadge } from "./status-badge";
 import type { Ticket } from "./types";
-
-export interface TicketsTableMeta {
-  onEditTicket: (ticket: Ticket) => void;
-  onDeleteTicket: (ticket: Ticket) => void;
-}
 
 const columnHelper = createColumnHelper<DataTableFeatures, Ticket>();
 
@@ -74,32 +68,23 @@ export const columns = columnHelper.columns([
       icon: Message01Icon,
     },
   }),
-  columnHelper.accessor("automatic_weighment_id", {
-    id: "weighment",
+  columnHelper.accessor("entry_id", {
+    id: "entry",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Weighment" icon={WeightScale01Icon} />
+      <DataTableColumnHeader column={column} title="Entry" icon={WeightScale01Icon} />
     ),
     cell: ({ row }) => {
       const ticket = row.original;
       return (
         <div className="flex items-center gap-1.5 font-mono text-xs">
-          <span className="font-semibold text-foreground">{ticket.weighment.vehicle_number}</span>
-          <span className="text-2xs text-muted-foreground">#{ticket.automatic_weighment_id}</span>
+          <span className="font-semibold text-foreground">{ticket.entry.vehicle_number}</span>
+          <span className="text-2xs text-muted-foreground">#{ticket.entry_id}</span>
         </div>
       );
     },
     meta: {
-      title: "Weighment",
+      title: "Entry",
       icon: WeightScale01Icon,
-    },
-  }),
-  columnHelper.accessor((row) => row.user.name, {
-    id: "user",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="User" icon={UserIcon} />,
-    cell: ({ row }) => <span className="text-xs font-medium">{row.original.user.name}</span>,
-    meta: {
-      title: "User",
-      icon: UserIcon,
     },
   }),
   createCreatedAtColumn(columnHelper),
@@ -107,23 +92,8 @@ export const columns = columnHelper.columns([
   columnHelper.display({
     id: "actions",
     header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row, table }) => {
+    cell: ({ row }) => {
       const ticket = row.original;
-      const meta = table.options.meta as TicketsTableMeta | undefined;
-
-      if (ticket.status === "pending") {
-        return (
-          <FullRowActions
-            copyText={String(ticket.id)}
-            copyLabel="Copy Ticket ID"
-            onEdit={() => meta?.onEditTicket(ticket)}
-            editLabel="Update Ticket"
-            onDelete={() => meta?.onDeleteTicket(ticket)}
-            deleteLabel="Delete Ticket"
-          />
-        );
-      }
-
       return <CopyRowAction copyText={String(ticket.id)} copyLabel="Copy Ticket ID" />;
     },
     enableSorting: false,

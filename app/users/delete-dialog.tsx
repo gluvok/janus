@@ -46,7 +46,7 @@ export function SingleUserDeleteDialog({
       onConfirm={handleConfirm}
     >
       <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-        Accounts cannot be deleted if referenced by existing manual weighments or support tickets.
+        Accounts cannot be deleted if referenced by existing scale entries.
       </div>
     </ConfirmDeleteDialog>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { createColumnHelper, type ColumnDef, type ColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,20 +25,12 @@ import {
   PackageOpenIcon,
   ScaleIcon,
   TruckIcon,
-  UserIcon,
-  WeightIcon,
-  WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { PhotoItem } from "@/components/photos-dialog";
-import type {
-  AutomaticWeighment,
-  AutomaticWeighmentType,
-  ManualWeighment,
-  WeighmentCenter,
-} from "./types";
+import type { Weighment } from "./types";
 
-export interface WeighmentsTableMeta<TWeighment> {
+export interface WeighmentsTableMeta {
   onViewPhotos: (payload: {
     weighmentId: number;
     vehicleNumber: string;
@@ -46,35 +38,13 @@ export interface WeighmentsTableMeta<TWeighment> {
     outCenter: { id: number; name: string } | null;
     images: PhotoItem[];
   }) => void;
-  onDownloadPdf?: (weighment: TWeighment) => void;
+  onDownloadPdf?: (weighment: Weighment) => void;
   downloadingId?: number | null;
 }
 
-export type AutomaticWeighmentsTableMeta = WeighmentsTableMeta<AutomaticWeighment>;
-export type ManualWeighmentsTableMeta = WeighmentsTableMeta<ManualWeighment>;
+const helper = createColumnHelper<DataTableFeatures, Weighment>();
 
-export interface BaseWeighmentRow {
-  id: number;
-  vehicle_number: string;
-  type: AutomaticWeighmentType;
-  gross: number;
-  tare: number | null;
-  net: number | null;
-  in_weight: number;
-  out_weight: number | null;
-  in_center: WeighmentCenter;
-  out_center: WeighmentCenter | null;
-  in_time: string;
-  out_time: string | null;
-  in_images: string[];
-  out_images: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-export function createLeadingWeighmentColumns<TData extends BaseWeighmentRow>(
-  helper: ColumnHelper<DataTableFeatures, TData>,
-): ColumnDef<DataTableFeatures, TData, any>[] {
+export function getWeighmentColumns(): ColumnDef<DataTableFeatures, Weighment, any>[] {
   return [
     createSelectColumn(helper),
     createIdColumn(helper),
@@ -103,18 +73,14 @@ export function createLeadingWeighmentColumns<TData extends BaseWeighmentRow>(
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Net" icon={ScaleIcon} />
       ),
-      cell: ({ row }) => {
-        const net = row.original.net;
-        if (net === null || net === undefined) {
-          return <span className="text-2xs text-muted-foreground italic">-</span>;
-        }
-        return (
-          <div className="flex items-baseline gap-1 font-mono text-xs">
-            <span className="font-bold text-foreground">{Number(net).toLocaleString()}</span>
-            <span className="text-2xs text-muted-foreground">kg</span>
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <div className="flex items-baseline gap-1 font-mono text-xs">
+          <span className="font-bold text-foreground">
+            {Number(row.original.net).toLocaleString()}
+          </span>
+          <span className="text-2xs text-muted-foreground">kg</span>
+        </div>
+      ),
       meta: { title: "Net", icon: ScaleIcon },
     }),
     helper.accessor((row) => row.gross, {
@@ -137,92 +103,42 @@ export function createLeadingWeighmentColumns<TData extends BaseWeighmentRow>(
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Tare" icon={PackageOpenIcon} />
       ),
-      cell: ({ row }) => {
-        const tare = row.original.tare;
-        if (tare === null || tare === undefined) {
-          return <span className="text-2xs text-muted-foreground italic">-</span>;
-        }
-        return (
-          <div className="flex items-baseline gap-1 font-mono text-xs">
-            <span className="font-medium text-foreground">{Number(tare).toLocaleString()}</span>
-            <span className="text-2xs text-muted-foreground">kg</span>
-          </div>
-        );
-      },
-      meta: { title: "Tare", icon: PackageOpenIcon },
-    }),
-    helper.accessor((row) => row.in_weight, {
-      id: "in_weight",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="In Weight" icon={WeightScale01Icon} />
-      ),
       cell: ({ row }) => (
         <div className="flex items-baseline gap-1 font-mono text-xs">
           <span className="font-medium text-foreground">
-            {Number(row.original.in_weight).toLocaleString()}
+            {Number(row.original.tare).toLocaleString()}
           </span>
           <span className="text-2xs text-muted-foreground">kg</span>
         </div>
       ),
-      meta: { title: "In Weight", icon: WeightScale01Icon },
+      meta: { title: "Tare", icon: PackageOpenIcon },
     }),
-    helper.accessor((row) => row.out_weight, {
-      id: "out_weight",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Out Weight" icon={WeightIcon} />
-      ),
-      cell: ({ row }) => {
-        const outWeight = row.original.out_weight;
-        if (outWeight === null || outWeight === undefined) {
-          return <span className="text-2xs text-muted-foreground italic">-</span>;
-        }
-        return (
-          <div className="flex items-baseline gap-1 font-mono text-xs">
-            <span className="font-medium text-foreground">
-              {Number(outWeight).toLocaleString()}
-            </span>
-            <span className="text-2xs text-muted-foreground">kg</span>
-          </div>
-        );
-      },
-      meta: { title: "Out Weight", icon: WeightIcon },
-    }),
-    helper.accessor((row) => row.in_center.name, {
+    helper.accessor((row) => row.in_center_name, {
       id: "in_center",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="In Center" icon={Building02Icon} />
       ),
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-xs font-normal">
-          {row.original.in_center.name}
+          {row.original.in_center_name}
         </Badge>
       ),
       meta: { title: "In Center", icon: Building02Icon },
       enableSorting: false,
     }),
-    helper.accessor((row) => row.out_center?.name ?? "-", {
+    helper.accessor((row) => row.out_center_name, {
       id: "out_center",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Out Center" icon={Building03Icon} />
       ),
-      cell: ({ row }) =>
-        row.original.out_center ? (
-          <Badge variant="secondary" className="text-xs font-normal">
-            {row.original.out_center.name}
-          </Badge>
-        ) : (
-          <span className="text-2xs text-muted-foreground italic">-</span>
-        ),
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="text-xs font-normal">
+          {row.original.out_center_name}
+        </Badge>
+      ),
       meta: { title: "Out Center", icon: Building03Icon },
       enableSorting: false,
     }),
-  ];
-}
-
-export function createTrailingWeighmentColumns<TData extends BaseWeighmentRow>(
-  helper: ColumnHelper<DataTableFeatures, TData>,
-): ColumnDef<DataTableFeatures, TData, any>[] {
-  return [
     helper.accessor((row) => row.in_time, {
       id: "in_time",
       header: ({ column }) => (
@@ -242,7 +158,7 @@ export function createTrailingWeighmentColumns<TData extends BaseWeighmentRow>(
       ),
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {row.original.out_time ? formatDateTime(row.original.out_time) : "-"}
+          {formatDateTime(row.original.out_time)}
         </span>
       ),
       meta: { title: "Out Time", icon: ClockArrowUpIcon },
@@ -253,8 +169,8 @@ export function createTrailingWeighmentColumns<TData extends BaseWeighmentRow>(
         <DataTableColumnHeader column={column} title="Photos" icon={Image01Icon} />
       ),
       cell: ({ row, table }) => {
-        const inImages = row.original.in_images;
-        const outImages = row.original.out_images;
+        const inImages = row.original.in_images ?? [];
+        const outImages = row.original.out_images ?? [];
         const totalCount = inImages.length + outImages.length;
 
         if (totalCount === 0) {
@@ -265,7 +181,7 @@ export function createTrailingWeighmentColumns<TData extends BaseWeighmentRow>(
         const outPhotos: PhotoItem[] = outImages.map((url) => ({ url, direction: "out" }));
         const photos: PhotoItem[] = [...inPhotos, ...outPhotos];
 
-        const meta = table.options.meta as WeighmentsTableMeta<TData> | undefined;
+        const meta = table.options.meta as WeighmentsTableMeta | undefined;
         return (
           <Button
             type="button"
@@ -275,8 +191,8 @@ export function createTrailingWeighmentColumns<TData extends BaseWeighmentRow>(
               meta?.onViewPhotos({
                 weighmentId: row.original.id,
                 vehicleNumber: row.original.vehicle_number,
-                inCenter: row.original.in_center,
-                outCenter: row.original.out_center,
+                inCenter: { id: row.original.in_center_id, name: row.original.in_center_name },
+                outCenter: { id: row.original.out_center_id, name: row.original.out_center_name },
                 images: photos,
               })
             }
@@ -293,75 +209,14 @@ export function createTrailingWeighmentColumns<TData extends BaseWeighmentRow>(
     }),
     createCreatedAtColumn(helper),
     createUpdatedAtColumn(helper),
-  ];
-}
-
-export function createManualCreatorColumn(
-  helper: ColumnHelper<DataTableFeatures, ManualWeighment>,
-): ColumnDef<DataTableFeatures, ManualWeighment, any> {
-  return helper.accessor((row) => row.creator.name, {
-    id: "creator",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Creator" icon={UserIcon} />
-    ),
-    cell: ({ row }) => (
-      <span className="text-xs font-medium text-foreground">{row.original.creator.name}</span>
-    ),
-    meta: { title: "Creator", icon: UserIcon },
-    enableSorting: false,
-  });
-}
-
-export function createAutomaticActionsColumn(
-  helper: ColumnHelper<DataTableFeatures, AutomaticWeighment>,
-): ColumnDef<DataTableFeatures, AutomaticWeighment, any> {
-  return createCopyActionsColumn<AutomaticWeighment>(helper, ({ row, table }) => {
-    const meta = table.options.meta as AutomaticWeighmentsTableMeta | undefined;
-    const isCompleted = row.original.type !== "pending";
-
-    return {
-      copyText: row.original.vehicle_number,
-      copyLabel: "Copy Vehicle No.",
-      onDownloadPdf: isCompleted ? () => meta?.onDownloadPdf?.(row.original) : undefined,
-      isDownloadingPdf: meta?.downloadingId === row.original.id,
-    };
-  });
-}
-
-export function createManualActionsColumn(
-  helper: ColumnHelper<DataTableFeatures, ManualWeighment>,
-): ColumnDef<DataTableFeatures, ManualWeighment, any> {
-  return createCopyActionsColumn<ManualWeighment>(helper, ({ row, table }) => {
-    const meta = table.options.meta as ManualWeighmentsTableMeta | undefined;
-
-    return {
-      copyText: row.original.vehicle_number,
-      copyLabel: "Copy Vehicle No.",
-      onDownloadPdf: () => meta?.onDownloadPdf?.(row.original),
-      isDownloadingPdf: meta?.downloadingId === row.original.id,
-    };
-  });
-}
-
-export function getAutomaticWeighmentColumns(): ColumnDef<
-  DataTableFeatures,
-  AutomaticWeighment,
-  any
->[] {
-  const helper = createColumnHelper<DataTableFeatures, AutomaticWeighment>();
-  return [
-    ...createLeadingWeighmentColumns(helper),
-    ...createTrailingWeighmentColumns(helper),
-    createAutomaticActionsColumn(helper),
-  ];
-}
-
-export function getManualWeighmentColumns(): ColumnDef<DataTableFeatures, ManualWeighment, any>[] {
-  const helper = createColumnHelper<DataTableFeatures, ManualWeighment>();
-  return [
-    ...createLeadingWeighmentColumns(helper),
-    createManualCreatorColumn(helper),
-    ...createTrailingWeighmentColumns(helper),
-    createManualActionsColumn(helper),
+    createCopyActionsColumn<Weighment>(helper, ({ row, table }) => {
+      const meta = table.options.meta as WeighmentsTableMeta | undefined;
+      return {
+        copyText: row.original.vehicle_number,
+        copyLabel: "Copy Vehicle No.",
+        onDownloadPdf: () => meta?.onDownloadPdf?.(row.original),
+        isDownloadingPdf: meta?.downloadingId === row.original.id,
+      };
+    }),
   ];
 }

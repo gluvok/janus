@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { StatusCodes } from "http-status-codes";
 import { LRUCache } from "lru-cache";
@@ -7,6 +8,10 @@ import { type Factory } from "@/app/settings/types";
 
 export const SESSION_COOKIE_NAME = "mesto_session";
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
+export function hashSessionToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 export interface SessionData {
   user: User;
@@ -60,12 +65,12 @@ export class AuthError extends Error {
  */
 export async function createSession(userId: number): Promise<{ token: string; expiresAt: string }> {
   const token = crypto.randomUUID();
+  const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
 
   const { error } = await supabase.from("sessions").insert({
-    token,
+    token_hash: tokenHash,
     user_id: userId,
-    expires_at: expiresAt,
   });
 
   if (error) {
@@ -90,14 +95,15 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
     return cached;
   }
 
-  const nowIso = new Date().toISOString();
+  const tokenHash = hashSessionToken(token);
+  const minCreatedAt = new Date(Date.now() - SESSION_TTL_SECONDS * 1000).toISOString();
 
   const { data, error } = await supabase
     .from("sessions")
     .select(`
       id,
-      token,
-      expires_at,
+      token_hash,
+      created_at,
       user:users!user_id(
         id,
         username,
@@ -115,8 +121,8 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
         )
       )
     `)
-    .eq("token", token)
-    .gt("expires_at", nowIso)
+    .eq("token_hash", tokenHash)
+    .gte("created_at", minCreatedAt)
     .maybeSingle();
 
   if (error || !data || !data.user) {
@@ -145,7 +151,8 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
   };
 
   const sessionData: SessionData = { user, factory: rawUser.factory };
-  const remainingMs = Math.max(0, new Date(data.expires_at).getTime() - Date.now());
+  const sessionAgeMs = Date.now() - new Date(data.created_at).getTime();
+  const remainingMs = Math.max(0, SESSION_TTL_SECONDS * 1000 - sessionAgeMs);
   sessionCache.set(token, sessionData, { ttl: remainingMs });
 
   return sessionData;

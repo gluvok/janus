@@ -5,8 +5,8 @@
 
 export const TABLES_IN_CLEAR_ORDER = [
   "tickets",
-  "automatic_weighments",
-  "manual_weighments",
+  "weighments",
+  "entries",
   "sessions",
   "centers",
   "users",

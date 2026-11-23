@@ -30,7 +30,6 @@ interface DataTableStoreState {
   tables: Record<string, TableItemState>;
   _hasHydrated: boolean;
   setHasHydrated: (hydrated: boolean) => void;
-  setTableMode: (tableId: string, mode: "automatic" | "manual") => void;
 
   getTableState: (tableId: string) => TableItemState;
   setTableSearch: (tableId: string, search: string) => void;
@@ -72,14 +71,6 @@ export const useDataTableStore = create<DataTableStoreState>()(
       tables: {},
       _hasHydrated: false,
       setHasHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
-
-      setTableMode: (tableId, mode) =>
-        set((state) =>
-          updateTableState(state, tableId, (prev) => ({
-            mode,
-            pagination: { ...prev.pagination, pageIndex: 0 },
-          })),
-        ),
 
       getTableState: (tableId) => get().tables[tableId] ?? getDefaultTableState(tableId),
 

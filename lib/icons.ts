@@ -1,6 +1,7 @@
 import {
   Briefcase01Icon,
   Building01Icon,
+  ContainerTruck01Icon,
   CustomerSupportIcon,
   Factory01Icon,
   ImagesIcon,
@@ -17,6 +18,7 @@ export const appIcons = {
   factory: Factory01Icon,
   receiptImages: ImagesIcon,
   weighments: WeightScale01Icon,
+  entries: ContainerTruck01Icon,
   users: UserIcon,
   settings: Settings01Icon,
   tickets: Ticket01Icon,

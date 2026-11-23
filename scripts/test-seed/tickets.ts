@@ -1,69 +1,60 @@
 /**
  * @file scripts/test-seed/tickets.ts
- * @description Provisions support tickets covering all 3 ticket_status variants.
+ * @description Provisions support tickets linked to entries covering all 3 ticket_status variants.
  */
 
 import { supabase } from "../supabase.ts";
-import type { SeedContext } from "./types.ts";
+import type { SeededEntry } from "./entries.ts";
 
 export async function seedTickets({
-  ctx,
-  createdAuto,
+  pairedInEntries,
+  standaloneEntries,
 }: {
-  ctx: SeedContext;
-  createdAuto: Array<{
-    id: number;
-    vehicle_number: string;
-    in_detected_vehicle_number: string | null;
-  }>;
+  pairedInEntries: SeededEntry[];
+  standaloneEntries: SeededEntry[];
 }): Promise<void> {
-  console.log("\n🎫 [5/5] Seeding Support Tickets across all ticket_status variants...");
+  console.log("\n🎫 [6/6] Seeding Support Tickets across all ticket_status variants...");
 
-  const operatorId1 = ctx.userMap.get("operator1")!;
-  const operatorId2 = ctx.userMap.get("operator2")!;
-  const operatorApexId = ctx.userMap.get("operatorApex1")!;
-
-  const ocrMismatchWeighment =
-    createdAuto.find(
-      (w) => w.in_detected_vehicle_number && w.in_detected_vehicle_number !== w.vehicle_number,
-    ) ?? createdAuto[4];
+  const allAvailableEntries = [...pairedInEntries, ...standaloneEntries];
+  if (allAvailableEntries.length < 4) {
+    throw new Error("Insufficient entries to attach support tickets.");
+  }
 
   const ticketConfigs = [
     {
-      concern: `Camera OCR misread plate as '${ocrMismatchWeighment.in_detected_vehicle_number}' on inbound scale.`,
-      reply: `Plate verified manually as '${ocrMismatchWeighment.vehicle_number}' by gate operator.`,
+      concern: `Camera OCR misread plate on scale entry #${allAvailableEntries[0].id}. Vehicle verified manually.`,
+      reply: "Plate verified against gate log and updated in operational record.",
       status: "approved" as const,
-      automatic_weighment_id: ocrMismatchWeighment.id,
-      user_id: operatorId1,
+      entry_id: allAvailableEntries[0].id,
     },
     {
-      concern: "Gross weight fluctuation detected during high wind conditions on platform.",
-      reply: "Axle load re-weighed on auxiliary platform.",
+      concern: `Gross weight fluctuation detected during high wind conditions for entry #${allAvailableEntries[1].id}.`,
+      reply: "Axle load re-weighed and calibrated on auxiliary platform.",
       status: "approved" as const,
-      automatic_weighment_id: createdAuto[1].id,
-      user_id: operatorId2,
+      entry_id: allAvailableEntries[1].id,
     },
     {
-      concern: "Unmatched outbound weighment query awaiting driver delivery invoice.",
+      concern: `Unmatched outbound entry #${allAvailableEntries[2].id} awaiting driver delivery manifest.`,
       reply: null,
       status: "pending" as const,
-      automatic_weighment_id: createdAuto[0].id,
-      user_id: operatorId1,
+      entry_id: allAvailableEntries[2].id,
     },
     {
-      concern: "Request to void completed weighment ticket due to incorrect driver tare claim.",
-      reply: "Rejected. Delivery invoice has already been issued and recorded in ERP.",
+      concern: `Driver contested scale reading #${allAvailableEntries[3].id} citing moisture in trailer.`,
+      reply: "Rejected. Moisture allowance already deducted per standard receiving procedure.",
       status: "rejected" as const,
-      automatic_weighment_id: createdAuto[30].id,
-      user_id: operatorApexId,
+      entry_id: allAvailableEntries[3].id,
     },
   ];
 
   const { data: createdTickets, error: ticketErr } = await supabase
     .from("tickets")
     .insert(ticketConfigs)
-    .select("id");
+    .select("id, status, entry_id");
 
-  if (ticketErr || !createdTickets) throw ticketErr;
+  if (ticketErr || !createdTickets) {
+    throw new Error(`Failed to seed tickets: ${ticketErr?.message}`);
+  }
+
   console.log(`  ✓ Seeded ${createdTickets.length} tickets (approved, pending, rejected).`);
 }

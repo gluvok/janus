@@ -6,6 +6,7 @@
 export interface FactoryConfig {
   name: string;
   receipt_images_per_row: number;
+  api_key?: string;
 }
 
 export interface UserConfig {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { StatusCodes } from "http-status-codes";
-import { SESSION_COOKIE_NAME, invalidateSessionCache } from "@/lib/auth";
+import { SESSION_COOKIE_NAME, invalidateSessionCache, hashSessionToken } from "@/lib/auth";
 import { handleApiRoute } from "@/lib/api-handler";
 import { supabase } from "@/lib/supabase";
 
@@ -12,7 +12,8 @@ export const POST = handleApiRoute(async () => {
   // 1. Clean up database session and in-memory cache if a token was present
   if (token) {
     invalidateSessionCache(token);
-    await supabase.from("sessions").delete().eq("token", token);
+    const tokenHash = hashSessionToken(token);
+    await supabase.from("sessions").delete().eq("token_hash", tokenHash);
   }
 
   const response = NextResponse.json(

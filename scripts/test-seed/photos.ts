@@ -144,8 +144,7 @@ export const COMMONS_PHOTOS: CuratedAsset[] = [
 
 export interface PhotoTarget {
   factoryId: number;
-  mode: "auto" | "manual";
-  weighmentIndex: number;
+  entryIndex: number;
   direction: "in" | "out";
   photoIndex: number;
   plate: string;
@@ -153,18 +152,16 @@ export interface PhotoTarget {
 
 export function buildStoragePath({
   factoryId,
-  mode,
-  weighmentIndex,
+  entryIndex,
   direction,
   photoIndex,
 }: {
   factoryId: number;
-  mode: "auto" | "manual";
-  weighmentIndex: number;
+  entryIndex: number;
   direction: "in" | "out";
   photoIndex: number;
 }): string {
-  return `${factoryId}/weighment_${mode}_${weighmentIndex}_${direction}_${photoIndex}.jpg`;
+  return `${factoryId}/entry_${entryIndex}_${direction}_${photoIndex}.jpg`;
 }
 
 // In-memory cache for downloaded base images to avoid repeated network calls
@@ -252,7 +249,7 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
       if (rlsBlocked || offline) {
         urlMap.set(
           storagePath,
-          `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+          `${asset.url}?transit=${target.factoryId}_${target.entryIndex}_${target.direction}_${target.photoIndex}`,
         );
         return;
       }
@@ -262,7 +259,7 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
       if (!buffer) {
         urlMap.set(
           storagePath,
-          `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+          `${asset.url}?transit=${target.factoryId}_${target.entryIndex}_${target.direction}_${target.photoIndex}`,
         );
         return;
       }
@@ -283,7 +280,7 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
           }
           urlMap.set(
             storagePath,
-            `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+            `${asset.url}?transit=${target.factoryId}_${target.entryIndex}_${target.direction}_${target.photoIndex}`,
           );
           return;
         }
@@ -311,7 +308,7 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
         offline = true;
         urlMap.set(
           storagePath,
-          `${asset.url}?transit=${target.mode}_${target.factoryId}_${target.weighmentIndex}_${target.direction}_${target.photoIndex}`,
+          `${asset.url}?transit=${target.factoryId}_${target.entryIndex}_${target.direction}_${target.photoIndex}`,
         );
       }
     });

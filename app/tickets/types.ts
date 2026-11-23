@@ -4,23 +4,13 @@ export const TICKET_STATUSES = ["pending", "approved", "rejected"] as const;
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 export const ticketStatusEnum = z.enum(TICKET_STATUSES);
 
-export const ticketUserSchema = z
-  .object({
-    id: z.int().positive(),
-    name: z.string().min(1),
-    username: z.string().min(1),
-    factory_id: z.int().positive(),
-  })
-  .strict();
-export type TicketUser = z.infer<typeof ticketUserSchema>;
-
-export const ticketWeighmentSchema = z
+export const ticketEntrySchema = z
   .object({
     id: z.int().positive(),
     vehicle_number: z.string().min(1),
   })
   .strict();
-export type TicketWeighment = z.infer<typeof ticketWeighmentSchema>;
+export type TicketEntry = z.infer<typeof ticketEntrySchema>;
 
 export const ticketSchema = z
   .object({
@@ -28,49 +18,14 @@ export const ticketSchema = z
     concern: z.string().min(1),
     reply: z.string().nullable(),
     status: ticketStatusEnum,
-    automatic_weighment_id: z.int().positive(),
-    user_id: z.int().positive(),
+    entry_id: z.int().positive(),
     created_at: z.string(),
     updated_at: z.string(),
-    user: ticketUserSchema,
-    weighment: ticketWeighmentSchema,
+    entry: ticketEntrySchema,
   })
   .strict();
 
 export type Ticket = z.infer<typeof ticketSchema>;
 
-export const updateTicketSchema = z
-  .object({
-    id: z.int().positive(),
-    concern: z
-      .string()
-      .trim()
-      .min(1, { error: "Concern is required" })
-      .max(1000, { error: "Concern must not exceed 1000 characters" }),
-  })
-  .strict();
-
-export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
-
-export const deleteTicketSchema = z
-  .object({
-    id: z.int().positive(),
-  })
-  .strict();
-
-export type DeleteTicketInput = z.infer<typeof deleteTicketSchema>;
-
-export const ticketFormSchema = z
-  .object({
-    concern: z
-      .string()
-      .trim()
-      .min(1, { error: "Concern is required" })
-      .max(1000, { error: "Concern must not exceed 1000 characters" }),
-  })
-  .strict();
-
-export type TicketFormInput = z.infer<typeof ticketFormSchema>;
-
 export const TICKET_SELECT_PROJECTION =
-  "id, concern, reply, status, automatic_weighment_id, user_id, created_at, updated_at, user:users!user_id!inner(id, name, username, factory_id), weighment:automatic_weighments!automatic_weighment_id!inner(id, vehicle_number)";
+  "id, concern, reply, status, entry_id, created_at, updated_at, entry:entries!entry_id!inner(id, vehicle_number, center:centers!center_id!inner(factory_id))";

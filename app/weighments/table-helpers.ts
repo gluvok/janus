@@ -4,7 +4,6 @@ import type { FacetedFilterOption } from "@/components/data-table";
 import { appIcons } from "@/lib/icons";
 import type { Center } from "@/app/centers/types";
 import type { TableItemState } from "@/lib/table-strategy";
-import type { WeighmentMode } from "./types";
 
 export function formatCenterOptions(centers: Center[], title: string): FacetedFilterOption[] {
   return [
@@ -74,7 +73,6 @@ export function validateAndSanitizeFilters(
 
 export function buildWeighmentsQueryParams(
   tableState: TableItemState,
-  mode: WeighmentMode,
   page: number,
   filters: Record<string, string>,
 ): Record<string, unknown> {
@@ -85,7 +83,6 @@ export function buildWeighmentsQueryParams(
   const toIso = tableState.dateRange?.to;
 
   return {
-    mode,
     page,
     pageSize: pagination.pageSize,
     ...(sorting.length > 0 && {

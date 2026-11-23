@@ -23,12 +23,18 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
   SUPABASE_KEY: z
     .string()
-    .min(1, "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY is required"),
+    .min(
+      1,
+      "SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY is required",
+    ),
 });
 
 const parsedEnv = envSchema.safeParse({
   SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY,
+  SUPABASE_KEY:
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY,
 });
 
 if (!parsedEnv.success) {
