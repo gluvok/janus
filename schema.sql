@@ -352,18 +352,4 @@ CREATE POLICY "Allow read access for mesto bucket"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'mesto');
 
-CREATE POLICY "Allow insert access for mesto bucket"
-ON storage.objects FOR INSERT TO anon, authenticated, service_role
-WITH CHECK (
-    bucket_id = 'mesto' AND
-    name ~ '^[0-9]+/[^/]+$'
-);
-
-CREATE POLICY "Allow update access for mesto bucket"
-ON storage.objects FOR UPDATE TO anon, authenticated, service_role
-USING (bucket_id = 'mesto')
-WITH CHECK (bucket_id = 'mesto');
-
-CREATE POLICY "Allow delete access for mesto bucket"
-ON storage.objects FOR DELETE TO anon, authenticated, service_role
-USING (bucket_id = 'mesto');
+-- No insert/update/delete policies: only the server (service_role, which bypasses RLS) may write.

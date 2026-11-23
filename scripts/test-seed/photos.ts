@@ -325,7 +325,7 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
     );
   } else if (rlsBlocked) {
     console.warn(
-      "  ⚠️ Supabase Storage upload blocked by RLS policy. Please apply the updated policy from schema.sql in Supabase SQL Editor.",
+      "  ⚠️ Supabase Storage upload blocked by RLS policy. Only service_role may write to 'mesto': set SUPABASE_SERVICE_ROLE_KEY.",
     );
     console.log(
       "  ℹ️ Used verified direct open-license Wikimedia Commons photo URLs across all weighments.",
