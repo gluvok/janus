@@ -75,7 +75,7 @@
   --foreground: oklch(0.18 0.015 150);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.015 150);
-  --popover: oklch(1 0 0);
+  --popover: oklch(1 0 0 / 0.6);
   --popover-foreground: oklch(0.18 0.015 150);
   --primary: oklch(0.42 0.065 155);
   --primary-foreground: oklch(0.99 0 0);
@@ -95,7 +95,7 @@
   --chart-4: oklch(0.58 0.12 28);
   --chart-5: oklch(0.54 0.018 150);
   --radius: 0.625rem;
-  --sidebar: oklch(0.986 0.005 130);
+  --sidebar: oklch(0.986 0.005 130 / 0.55);
   --sidebar-foreground: oklch(0.18 0.015 150);
   --sidebar-primary: oklch(0.42 0.065 155);
   --sidebar-primary-foreground: oklch(0.99 0 0);
@@ -110,7 +110,7 @@
   --foreground: oklch(0.965 0.006 140);
   --card: oklch(0.185 0.012 155);
   --card-foreground: oklch(0.965 0.006 140);
-  --popover: oklch(0.185 0.012 155);
+  --popover: oklch(0.185 0.012 155 / 0.6);
   --popover-foreground: oklch(0.965 0.006 140);
   --primary: oklch(0.76 0.055 155);
   --primary-foreground: oklch(0.14 0.012 155);
@@ -129,7 +129,7 @@
   --chart-3: oklch(0.72 0.08 75);
   --chart-4: oklch(0.65 0.12 28);
   --chart-5: oklch(0.65 0.018 150);
-  --sidebar: oklch(0.165 0.012 155);
+  --sidebar: oklch(0.165 0.012 155 / 0.55);
   --sidebar-foreground: oklch(0.965 0.006 140);
   --sidebar-primary: oklch(0.76 0.055 155);
   --sidebar-primary-foreground: oklch(0.14 0.012 155);
@@ -146,6 +146,26 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Soft colour fields behind the glass surfaces; without them blur has nothing to show. */
+    background-image:
+      radial-gradient(
+        at 12% 8%,
+        color-mix(in oklch, var(--primary) 22%, transparent) 0,
+        transparent 42%
+      ),
+      radial-gradient(at 88% 92%, oklch(0.75 0.11 250 / 0.42) 0, transparent 50%),
+      radial-gradient(at 70% 15%, oklch(0.85 0.1 60 / 0.34) 0, transparent 42%);
+    background-attachment: fixed;
+  }
+
+  /* Glass: every overlay shares bg-popover (now translucent); blur what's behind it. */
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    @apply backdrop-blur-xl backdrop-saturate-150;
   }
 
   html {
@@ -180,4 +200,12 @@
   box-shadow:
     inset 2px 2px 5px var(--neu-shade),
     inset -2px -2px 5px var(--neu-light);
+}
+
+/* Claymorphism: puffy primary actions and badges (outer drop + inner highlight/shade). */
+@utility clay {
+  box-shadow:
+    5px 7px 14px var(--neu-shade),
+    inset -3px -4px 6px oklch(0 0 0 / 0.16),
+    inset 3px 4px 6px oklch(1 0 0 / 0.45);
 }

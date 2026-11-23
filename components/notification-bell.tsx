@@ -112,7 +112,7 @@ function BellPopover({ username }: { username: string }) {
       >
         <Bell className="size-[18px]" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] leading-none font-semibold text-primary-foreground tabular-nums">
+          <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary clay px-1 text-[10px] leading-none font-semibold text-primary-foreground tabular-nums">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -121,7 +121,7 @@ function BellPopover({ username }: { username: string }) {
       <PopoverContent
         align="end"
         sideOffset={10}
-        className="w-80 gap-0 overflow-hidden rounded-2xl border border-white/30 bg-popover/55 p-0 shadow-2xl backdrop-blur-xl backdrop-saturate-150 dark:border-white/10"
+        className="w-80 gap-0 overflow-hidden rounded-2xl border border-white/30 p-0 shadow-2xl dark:border-white/10"
       >
         <p className="px-4 pt-3 pb-2 text-xs font-medium text-muted-foreground">Last 24 hours</p>
         {error && items.length === 0 ? (
@@ -157,7 +157,7 @@ function Row({ n, onPick }: { n: DashboardNotification; onPick: () => void }) {
           <span
             aria-hidden
             className={cn(
-              "shrink-0 rounded-lg p-1.5",
+              "shrink-0 rounded-lg p-1.5 clay",
               project.theme?.badgeBg,
               project.theme?.iconColor,
             )}

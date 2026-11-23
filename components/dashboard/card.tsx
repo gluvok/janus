@@ -49,7 +49,7 @@ export function DashboardCard({ name, href, desc, icon: Icon, color, theme }: Da
           <div className="flex items-center justify-between mb-3">
             <div
               className={cn(
-                "p-2 rounded-lg border transition-colors duration-200 shadow-2xs",
+                "p-2 rounded-xl clay transition-colors duration-200",
                 badgeBg,
                 badgeBorder,
                 iconColor,

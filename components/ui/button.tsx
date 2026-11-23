@@ -9,7 +9,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground neu-sm hover:bg-primary/90 active:neu-inset",
+        default:
+          "bg-primary text-primary-foreground clay rounded-xl hover:bg-primary/90 active:neu-inset",
         outline:
           "bg-background neu-sm hover:text-foreground active:neu-inset aria-expanded:text-foreground aria-expanded:neu-inset",
         secondary:
@@ -17,7 +18,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
-          "bg-destructive/10 text-destructive neu-sm active:neu-inset hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          "bg-destructive/10 text-destructive clay rounded-xl active:neu-inset hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
