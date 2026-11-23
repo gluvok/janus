@@ -75,6 +75,7 @@ export const GET = withAuth(async (_req, user, client) => {
         `id, unit, type, created_at, in_entry:entries!in_entry_id!inner(weight, vehicle_number, centers!inner(name, factory_id)${customerJoin}), out_entry:entries!out_entry_id(weight)`,
       )
       .eq("in_entry.centers.factory_id", user.factory_id!)
+      .is("in_entry.deleted_at", null)
       .is("deleted_at", null)
       .gte("created_at", since)
       .order("created_at", { ascending: false })

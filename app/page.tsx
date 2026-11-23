@@ -70,7 +70,7 @@ export default function Page() {
 
       <main className="p-8 w-full min-w-0 space-y-8">
         {canSeeActivity && user ? (
-          <DashboardNotifications username={user.username} heading={heading} />
+          <DashboardNotifications key={user.username} username={user.username} heading={heading} />
         ) : (
           heading
         )}

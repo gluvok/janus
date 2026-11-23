@@ -143,6 +143,7 @@ describe("GET /api/notifications", () => {
     expect(weighments.eq).toHaveBeenCalledWith("in_entry.centers.factory_id", 7);
     expect(entries.gte).toHaveBeenCalledWith("created_at", expect.any(String));
     expect(weighments.gte).toHaveBeenCalledWith("created_at", expect.any(String));
+    expect(weighments.is).toHaveBeenCalledWith("in_entry.deleted_at", null);
     expect(entries.is).toHaveBeenCalledWith("deleted_at", null);
     expect(entries.limit).toHaveBeenCalledWith(20);
   });
