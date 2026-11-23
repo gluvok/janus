@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * @file components/projects/table/use-table.ts
  * @description Hook managing state (sorting, filters, pagination, column preferences, row selection) for dynamic tables.
@@ -5,6 +7,7 @@
  */
 
 import React from "react";
+import { useSearchParams } from "next/navigation";
 import { type EntityRecord } from "@/types";
 import {
   type ColumnDef,
@@ -82,7 +85,8 @@ export function useProjectTable({ projectSlug, primaryIdKey, projectName }: UseP
     Object.entries(savedFilters).map(([id, value]) => ({ id, value })),
   );
   const [rowSelection, setRowSelection] = React.useState({});
-  const [globalFilter, setGlobalFilter] = React.useState("");
+  const searchParams = useSearchParams();
+  const [globalFilter, setGlobalFilter] = React.useState(() => searchParams.get("search") ?? "");
   const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 });
 
   const { setEditingItem, setDeletingItem } = dialogStates;
