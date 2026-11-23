@@ -37,6 +37,15 @@ export default function Page() {
     (hasPageAccess(user.role, ProjectSlug.ENTRIES) ||
       hasPageAccess(user.role, ProjectSlug.WEIGHMENTS));
 
+  const heading = (
+    <div className="space-y-2 flex flex-col items-start text-left">
+      <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Dashboard</h1>
+      <p className="text-muted-foreground text-sm max-w-xl">
+        Welcome back. Access the platform tools, manage entities, and track operations.
+      </p>
+    </div>
+  );
+
   return (
     <>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b">
@@ -60,15 +69,11 @@ export default function Page() {
       </header>
 
       <main className="p-8 w-full min-w-0 space-y-8">
-        <div className="space-y-4">
-          <div className="space-y-2 flex flex-col items-start text-left">
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground text-sm max-w-xl">
-              Welcome back. Access the platform tools, manage entities, and track operations.
-            </p>
-          </div>
-          {canSeeActivity && user && <DashboardNotifications username={user.username} />}
-        </div>
+        {canSeeActivity && user ? (
+          <DashboardNotifications username={user.username} heading={heading} />
+        ) : (
+          heading
+        )}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {filteredProjects.map((project) => (
