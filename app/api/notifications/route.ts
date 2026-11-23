@@ -52,13 +52,13 @@ export const GET = withAuth(async (_req, user, client) => {
   const since = subHours(new Date(), WINDOW_HOURS).toISOString();
   const isBase = user.role === Role.BASE;
   const userId = parseInt(user.sub, 10);
-  const customerJoin = isBase ? "customers!inner(user_id)" : "customers(user_id)";
+  const customerJoin = isBase ? ", customers!inner(user_id)" : "";
 
   const entriesQuery = () => {
     const q = client
       .from("entries")
       .select(
-        `id, vehicle_number, detected_vehicle_number, weight, status, auto_approved, created_at, centers!inner(name, factory_id), created_by_user:users!created_by(role), ${customerJoin}`,
+        `id, vehicle_number, detected_vehicle_number, weight, status, auto_approved, created_at, centers!inner(name, factory_id), created_by_user:users!created_by(role)${customerJoin}`,
       )
       .eq("centers.factory_id", user.factory_id!)
       .is("deleted_at", null)
@@ -72,7 +72,7 @@ export const GET = withAuth(async (_req, user, client) => {
     const q = client
       .from("weighments")
       .select(
-        `id, unit, type, created_at, in_entry:entries!in_entry_id!inner(weight, vehicle_number, centers!inner(name, factory_id), ${customerJoin}), out_entry:entries!out_entry_id(weight)`,
+        `id, unit, type, created_at, in_entry:entries!in_entry_id!inner(weight, vehicle_number, centers!inner(name, factory_id)${customerJoin}), out_entry:entries!out_entry_id(weight)`,
       )
       .eq("in_entry.centers.factory_id", user.factory_id!)
       .is("deleted_at", null)
