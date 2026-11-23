@@ -4,4 +4,3 @@
  */
 
 export * from "./card";
-export { DashboardNotifications } from "./notifications";
