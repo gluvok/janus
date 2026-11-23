@@ -185,7 +185,7 @@ function NotificationRow({ n }: { n: DashboardNotification }) {
           </span>
           <time
             dateTime={n.created_at}
-            className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums sm:order-last sm:ml-0 sm:w-20 sm:text-right"
+            className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums whitespace-nowrap sm:order-last sm:ml-0 sm:w-24 sm:text-right"
           >
             {formatDistanceToNowStrict(new Date(n.created_at), { addSuffix: true })}
           </time>
