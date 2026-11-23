@@ -8,7 +8,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogoHorizontal } from "@/components/logo";
+import { Logo, LogoHorizontal } from "@/components/logo";
 
 import { NavMain } from "./nav/main";
 import { NavSecondary } from "./nav/secondary";
@@ -23,6 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 
 /**
@@ -49,13 +50,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [hydrated, user]);
 
   return (
-    <Sidebar variant="inset" {...props}>
+    <Sidebar variant="sidebar" collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/">
-                <LogoHorizontal size={64} />
+                <LogoHorizontal size={64} className="group-data-[collapsible=icon]:hidden" />
+                <Logo size={24} className="hidden group-data-[collapsible=icon]:block" />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -68,6 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser user={activeUser} />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
