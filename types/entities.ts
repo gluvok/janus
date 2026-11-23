@@ -236,3 +236,29 @@ export type EntityRecord =
   | Factory
   | User
   | Ticket;
+
+interface NotificationBase {
+  id: number;
+  vehicle_number: string;
+  center_name: string | null;
+  created_at: string;
+}
+
+/** Dashboard bell item: one new entry or one newly merged weighment. */
+export type DashboardNotification =
+  | (NotificationBase & {
+      kind: "entry";
+      detected_vehicle_number: string | null;
+      weight: number;
+      status: EntryStatus;
+      auto_approved: boolean;
+      source: EntrySource;
+    })
+  | (NotificationBase & {
+      kind: "weighment";
+      in_weight: number;
+      out_weight: number;
+      net_weight: number;
+      unit: Unit;
+      type: WeighmentType;
+    });

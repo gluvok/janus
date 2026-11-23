@@ -29,6 +29,7 @@ export const ApiRoutes = {
   USERS: "/api/users",
   SETTINGS: "/api/settings",
   TICKETS: "/api/tickets",
+  NOTIFICATIONS: "/api/notifications",
   HEALTH: "/api/health",
   DATA_WEIGHMENTS: "/api/data/weighments",
   DATA_ENTRIES: "/api/data/entries",
