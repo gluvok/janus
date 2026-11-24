@@ -7,7 +7,6 @@ import { type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 
 export const SESSION_COOKIE_NAME = "mesto_session";
-export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 export function hashSessionToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -63,10 +62,9 @@ export class AuthError extends Error {
 /**
  * Creates a persistent database session for the given user ID.
  */
-export async function createSession(userId: number): Promise<{ token: string; expiresAt: string }> {
+export async function createSession(userId: number): Promise<{ token: string }> {
   const token = crypto.randomUUID();
   const tokenHash = hashSessionToken(token);
-  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
 
   const { error } = await supabase.from("sessions").insert({
     token_hash: tokenHash,
@@ -80,7 +78,7 @@ export async function createSession(userId: number): Promise<{ token: string; ex
     );
   }
 
-  return { token, expiresAt };
+  return { token };
 }
 
 /**
@@ -96,7 +94,6 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
   }
 
   const tokenHash = hashSessionToken(token);
-  const minCreatedAt = new Date(Date.now() - SESSION_TTL_SECONDS * 1000).toISOString();
 
   const { data, error } = await supabase
     .from("sessions")
@@ -122,7 +119,6 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
       )
     `)
     .eq("token_hash", tokenHash)
-    .gte("created_at", minCreatedAt)
     .maybeSingle();
 
   if (error || !data || !data.user) {
@@ -151,9 +147,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
   };
 
   const sessionData: SessionData = { user, factory: rawUser.factory };
-  const sessionAgeMs = Date.now() - new Date(data.created_at).getTime();
-  const remainingMs = Math.max(0, SESSION_TTL_SECONDS * 1000 - sessionAgeMs);
-  sessionCache.set(token, sessionData, { ttl: remainingMs });
+  sessionCache.set(token, sessionData);
 
   return sessionData;
 }
@@ -267,10 +261,7 @@ export async function getServerSession(): Promise<SessionData | null> {
 export async function requireServerSession(): Promise<SessionData> {
   const session = await getServerSession();
   if (!session) {
-    throw new AuthError(
-      "Session expired or invalid. Please log in again.",
-      StatusCodes.UNAUTHORIZED,
-    );
+    throw new AuthError("Unauthorized. Please log in again.", StatusCodes.UNAUTHORIZED);
   }
   return session;
 }

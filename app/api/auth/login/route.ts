@@ -4,7 +4,7 @@ import { z } from "zod";
 import argon2 from "argon2";
 import { supabase } from "@/lib/supabase";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
-import { createSession, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from "@/lib/auth";
+import { createSession, SESSION_COOKIE_NAME } from "@/lib/auth";
 
 const loginSchema = z
   .object({
@@ -97,7 +97,6 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: SESSION_TTL_SECONDS,
     });
 
     return response;

@@ -28,6 +28,12 @@ const MODULE_CONFIGS: Record<string, ModuleConfig> = {
       "text-amber-900 bg-amber-600/10 border-amber-300/40 dark:text-amber-200 dark:bg-amber-950/30 dark:border-amber-800/40",
     actionLabel: "View weighments",
   },
+  Entries: {
+    category: "Scale",
+    accentClass:
+      "text-emerald-900 bg-emerald-600/10 border-emerald-300/40 dark:text-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800/40",
+    actionLabel: "View entries",
+  },
   Centers: {
     category: "Facilities",
     accentClass:
@@ -45,6 +51,12 @@ const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     accentClass: "text-primary bg-primary/10 border-primary/30",
     actionLabel: "View tickets",
   },
+};
+
+const DEFAULT_MODULE_CONFIG: ModuleConfig = {
+  category: "General",
+  accentClass: "text-foreground bg-muted border-border",
+  actionLabel: "View module",
 };
 
 export default function Home() {
@@ -76,10 +88,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Core Operational Module Cards (4-Column Layout) */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Core Operational Module Cards (Responsive Grid Layout) */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {mainNavItems.map((section: NavItem) => {
-          const config = MODULE_CONFIGS[section.title];
+          const config = MODULE_CONFIGS[section.title] ?? DEFAULT_MODULE_CONFIG;
 
           return (
             <Link key={section.title} href={section.url} className="group outline-none flex">
