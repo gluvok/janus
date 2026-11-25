@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
+import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import {
   parsePagination,
@@ -54,12 +55,37 @@ const TABLE_FACTORY_COLUMNS: Record<string, string> = {
   centers: "factory_id",
   users: "factory_id",
   factories: "id",
-  entries: "center.factory_id",
-  entries_view: "factory_id",
-  weighments: "in_center.factory_id",
-  weighments_view: "factory_id",
-  tickets: "entry.center.factory_id",
+  automatic_entries_view: "factory_id",
+  manual_entries_view: "factory_id",
+  automatic_weighments_view: "factory_id",
+  manual_weighments_view: "factory_id",
+  automatic_tickets_view: "factory_id",
+  manual_tickets_view: "factory_id",
 };
+
+export const commaSeparatedIdsSchema = z
+  .string()
+  .transform((val) =>
+    val
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => !Number.isNaN(n) && n > 0),
+  )
+  .pipe(z.array(z.number().int().positive()));
+
+export function applyCommaSeparatedIdFilter(
+  query: any,
+  paramValue: string | null | undefined,
+  column: string,
+): any {
+  const trimmed = paramValue?.trim();
+  if (!trimmed || trimmed === "all") return query;
+  const parsed = commaSeparatedIdsSchema.safeParse(trimmed);
+  if (parsed.success && parsed.data.length > 0) {
+    return query.in(column, parsed.data);
+  }
+  return query;
+}
 
 export interface PaginatedEntityQueryOptions<TCol extends string> {
   request: Request;

@@ -27,6 +27,14 @@ export const basePrunedStateSchema = z.object({
 
 export type BasePrunedState = z.infer<typeof basePrunedStateSchema>;
 
+export const filteredPrunedStateSchema = basePrunedStateSchema
+  .extend({
+    filters: z.record(z.string(), z.string()).optional(),
+  })
+  .strict();
+
+export type FilteredPrunedState = z.infer<typeof filteredPrunedStateSchema>;
+
 export function pruneBaseState(state: BaseTableState): BasePrunedState {
   const pruned: BasePrunedState = {};
 
@@ -85,6 +93,32 @@ export interface TableStrategy<TState, TPruned> {
   hydrate: (pruned?: TPruned) => TState;
 }
 
+function createFilteredTableStrategy(
+  defaultColumnVisibility: ColumnVisibilityState = {},
+  defaultSorting: SortingState = [{ id: "created_at", desc: true }],
+): TableStrategy<BaseTableState, FilteredPrunedState> {
+  return {
+    schema: filteredPrunedStateSchema,
+    defaultState: {
+      ...hydrateBaseState(undefined, defaultSorting),
+      columnVisibility: defaultColumnVisibility,
+    },
+    prune: (state) => {
+      const base = pruneBaseState(state);
+      const pruned: FilteredPrunedState = { ...base };
+      if (state.filters && Object.keys(state.filters).length > 0) {
+        pruned.filters = state.filters;
+      }
+      return pruned;
+    },
+    hydrate: (pruned) => ({
+      ...hydrateBaseState(pruned, defaultSorting),
+      columnVisibility: { ...defaultColumnVisibility, ...pruned?.columnVisibility },
+      filters: pruned?.filters ?? {},
+    }),
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /* Centers Table Strategy: Base capabilities + dateRange. No filters          */
 /* -------------------------------------------------------------------------- */
@@ -105,124 +139,68 @@ export const centersStrategy: TableStrategy<CentersTableState, CentersPrunedStat
 /* -------------------------------------------------------------------------- */
 
 export type UsersTableState = BaseTableState;
-export const usersPrunedSchema = basePrunedStateSchema
-  .extend({
-    filters: z.record(z.string(), z.string()).optional(),
-  })
-  .strict();
-export type UsersPrunedState = z.infer<typeof usersPrunedSchema>;
+export const usersPrunedSchema = filteredPrunedStateSchema;
+export type UsersPrunedState = FilteredPrunedState;
 
-export const usersStrategy: TableStrategy<UsersTableState, UsersPrunedState> = {
-  schema: usersPrunedSchema,
-  defaultState: hydrateBaseState(undefined, [{ id: "id", desc: true }]),
-  prune: (state) => {
-    const base = pruneBaseState(state);
-    const pruned: UsersPrunedState = { ...base };
-    if (state.filters && Object.keys(state.filters).length > 0) {
-      pruned.filters = state.filters;
-    }
-    return pruned;
-  },
-  hydrate: (pruned) => ({
-    ...hydrateBaseState(pruned, [{ id: "id", desc: true }]),
-    filters: pruned?.filters ?? {},
-  }),
-};
+export const usersStrategy: TableStrategy<UsersTableState, UsersPrunedState> =
+  createFilteredTableStrategy({}, [{ id: "id", desc: true }]);
 
 /* -------------------------------------------------------------------------- */
-/* Entries Table Strategy: Base + dateRange + filters                         */
+/* Entries Table Strategies: Automatic & Manual                               */
 /* -------------------------------------------------------------------------- */
 
-export type EntriesTableState = BaseTableState;
-export const entriesPrunedSchema = basePrunedStateSchema
-  .extend({
-    filters: z.record(z.string(), z.string()).optional(),
-  })
-  .strict();
-export type EntriesPrunedState = z.infer<typeof entriesPrunedSchema>;
+export const automaticEntriesStrategy = createFilteredTableStrategy({
+  center_id: false,
+  created_at: false,
+  updated_at: false,
+});
 
-export const entriesStrategy: TableStrategy<EntriesTableState, EntriesPrunedState> = {
-  schema: entriesPrunedSchema,
-  defaultState: {
-    ...hydrateBaseState(undefined, [{ id: "created_at", desc: true }]),
-    columnVisibility: { created_at: false, updated_at: false },
-  },
-  prune: (state) => {
-    const base = pruneBaseState(state);
-    const pruned: EntriesPrunedState = { ...base };
-    if (state.filters && Object.keys(state.filters).length > 0) {
-      pruned.filters = state.filters;
-    }
-    return pruned;
-  },
-  hydrate: (pruned) => ({
-    ...hydrateBaseState(pruned, [{ id: "created_at", desc: true }]),
-    columnVisibility: { created_at: false, updated_at: false, ...pruned?.columnVisibility },
-    filters: pruned?.filters ?? {},
-  }),
-};
+export const manualEntriesStrategy = createFilteredTableStrategy({
+  center_id: false,
+  creator_id: false,
+  created_at: false,
+  updated_at: false,
+});
 
 /* -------------------------------------------------------------------------- */
-/* Weighments Table Strategy: Base + dateRange + filters                      */
+/* Weighments Table Strategies: Automatic & Manual                            */
 /* -------------------------------------------------------------------------- */
 
-export type WeighmentsTableState = BaseTableState;
-export const weighmentsPrunedSchema = basePrunedStateSchema
-  .extend({
-    filters: z.record(z.string(), z.string()).optional(),
-  })
-  .strict();
-export type WeighmentsPrunedState = z.infer<typeof weighmentsPrunedSchema>;
+export const automaticWeighmentsStrategy = createFilteredTableStrategy({
+  in_entry_id: false,
+  out_entry_id: false,
+  in_center_id: false,
+  out_center_id: false,
+  created_at: false,
+  updated_at: false,
+});
 
-export const weighmentsStrategy: TableStrategy<WeighmentsTableState, WeighmentsPrunedState> = {
-  schema: weighmentsPrunedSchema,
-  defaultState: {
-    ...hydrateBaseState(undefined, [{ id: "created_at", desc: true }]),
-    columnVisibility: { created_at: false, updated_at: false },
-  },
-  prune: (state) => {
-    const base = pruneBaseState(state);
-    const pruned: WeighmentsPrunedState = { ...base };
-    if (state.filters && Object.keys(state.filters).length > 0) {
-      pruned.filters = state.filters;
-    }
-    return pruned;
-  },
-  hydrate: (pruned) => ({
-    ...hydrateBaseState(pruned, [{ id: "created_at", desc: true }]),
-    columnVisibility: { created_at: false, updated_at: false, ...pruned?.columnVisibility },
-    filters: pruned?.filters ?? {},
-  }),
-};
+export const manualWeighmentsStrategy = createFilteredTableStrategy({
+  in_entry_id: false,
+  out_entry_id: false,
+  in_center_id: false,
+  out_center_id: false,
+  in_creator_id: false,
+  in_creator_username: false,
+  out_creator_id: false,
+  out_creator_username: false,
+  created_at: false,
+  updated_at: false,
+});
 
 /* -------------------------------------------------------------------------- */
-/* Tickets Table Strategy: Base capabilities + dateRange + filters            */
+/* Tickets Table Strategies: Automatic & Manual                               */
 /* -------------------------------------------------------------------------- */
 
-export type TicketsTableState = BaseTableState;
-export const ticketsPrunedSchema = basePrunedStateSchema
-  .extend({
-    filters: z.record(z.string(), z.string()).optional(),
-  })
-  .strict();
-export type TicketsPrunedState = z.infer<typeof ticketsPrunedSchema>;
+export const automaticTicketsStrategy = createFilteredTableStrategy({
+  entry_id: false,
+  creator_id: false,
+});
 
-export const ticketsStrategy: TableStrategy<TicketsTableState, TicketsPrunedState> = {
-  schema: ticketsPrunedSchema,
-  defaultState: hydrateBaseState(undefined, [{ id: "created_at", desc: true }]),
-  prune: (state) => {
-    const base = pruneBaseState(state);
-    const pruned: TicketsPrunedState = { ...base };
-    if (state.filters && Object.keys(state.filters).length > 0) {
-      pruned.filters = state.filters;
-    }
-    return pruned;
-  },
-  hydrate: (pruned) => ({
-    ...hydrateBaseState(pruned, [{ id: "created_at", desc: true }]),
-    filters: pruned?.filters ?? {},
-  }),
-};
+export const manualTicketsStrategy = createFilteredTableStrategy({
+  entry_id: false,
+  creator_id: false,
+});
 
 /* -------------------------------------------------------------------------- */
 /* Declarative Table Registry                                                 */
@@ -231,9 +209,12 @@ export const ticketsStrategy: TableStrategy<TicketsTableState, TicketsPrunedStat
 export const TABLE_STRATEGIES = {
   centers: centersStrategy,
   users: usersStrategy,
-  entries: entriesStrategy,
-  weighments: weighmentsStrategy,
-  tickets: ticketsStrategy,
+  automatic_entries: automaticEntriesStrategy,
+  manual_entries: manualEntriesStrategy,
+  automatic_weighments: automaticWeighmentsStrategy,
+  manual_weighments: manualWeighmentsStrategy,
+  automatic_tickets: automaticTicketsStrategy,
+  manual_tickets: manualTicketsStrategy,
 } as const;
 
 export type TableId = keyof typeof TABLE_STRATEGIES;

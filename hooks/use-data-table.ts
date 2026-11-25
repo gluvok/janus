@@ -135,6 +135,9 @@ export function useDataTable<TData extends RowData>({
     store.resetTableSorting(tableId);
   }, [store, tableId]);
 
+  const fetchDataRef = useRef(fetchData);
+  fetchDataRef.current = fetchData;
+
   // Serialized extraParams and filters string for dependency stability
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
   const filtersKey = useMemo(() => JSON.stringify(tableState.filters ?? {}), [tableState.filters]);
@@ -142,6 +145,8 @@ export function useDataTable<TData extends RowData>({
   // Data fetching routine with sequence counter to prevent race conditions
   const fetchTableData = useCallback(async () => {
     const activeSearch = debouncedSearch;
+    const parsedFilters = JSON.parse(filtersKey) as Record<string, string>;
+    const parsedExtraParams = JSON.parse(extraParamsKey) as Record<string, unknown>;
 
     const queryParams: Record<string, unknown> = {
       page: pagination.pageIndex + 1,
@@ -152,8 +157,8 @@ export function useDataTable<TData extends RowData>({
       ...(activeSearch && { search: activeSearch }),
       ...(fromIso && { from: fromIso }),
       ...(toIso && { to: toIso }),
-      ...tableState.filters,
-      ...extraParams,
+      ...parsedFilters,
+      ...parsedExtraParams,
     };
 
     const currentRequestId = ++requestIdRef.current;
@@ -161,7 +166,7 @@ export function useDataTable<TData extends RowData>({
     setError(null);
 
     try {
-      const res = await fetchData(queryParams);
+      const res = await fetchDataRef.current(queryParams);
       if (currentRequestId === requestIdRef.current) {
         setData(res.data ?? []);
         setTotalCount(res.totalCount ?? 0);
@@ -182,11 +187,8 @@ export function useDataTable<TData extends RowData>({
     debouncedSearch,
     fromIso,
     toIso,
-    fetchData,
     filtersKey,
     extraParamsKey,
-    tableState.filters,
-    extraParams,
   ]);
 
   useEffect(() => {

@@ -1,41 +1,55 @@
 /**
  * @file lib/weighments-query.ts
- * @description Dedicated backend query utilities for weighments querying weighments_view.
+ * @description Dedicated backend query utilities for automatic and manual weighments views.
  */
 
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { executePaginatedEntityQuery } from "@/lib/api-query";
+import {
+  executePaginatedEntityQuery,
+  commaSeparatedIdsSchema,
+  applyCommaSeparatedIdFilter,
+} from "@/lib/api-query";
 import {
   weighmentTypeSchema,
-  WEIGHMENT_SELECT_PROJECTION,
-  type Weighment,
+  AUTOMATIC_WEIGHMENT_SELECT_PROJECTION,
+  MANUAL_WEIGHMENT_SELECT_PROJECTION,
+  type AutomaticWeighment,
+  type ManualWeighment,
 } from "@/app/weighments/types";
 
-export const ALLOWED_WEIGHMENT_SORT_COLUMNS = [
+export const ALLOWED_AUTOMATIC_WEIGHMENT_SORT_COLUMNS = [
   "id",
   "vehicle_number",
   "gross",
   "tare",
   "net",
   "type",
+  "in_entry_id",
+  "out_entry_id",
+  "in_center_id",
+  "in_center_name",
+  "out_center_id",
+  "out_center_name",
   "in_time",
   "out_time",
   "created_at",
   "updated_at",
 ] as const;
 
-export type WeighmentSortColumn = (typeof ALLOWED_WEIGHMENT_SORT_COLUMNS)[number];
+export type AutomaticWeighmentSortColumn =
+  (typeof ALLOWED_AUTOMATIC_WEIGHMENT_SORT_COLUMNS)[number];
 
-const commaSeparatedIdsSchema = z
-  .string()
-  .transform((val) =>
-    val
-      .split(",")
-      .map((s) => Number(s.trim()))
-      .filter((n) => !Number.isNaN(n) && n > 0),
-  )
-  .pipe(z.array(z.number().int().positive()));
+export const ALLOWED_MANUAL_WEIGHMENT_SORT_COLUMNS = [
+  ...ALLOWED_AUTOMATIC_WEIGHMENT_SORT_COLUMNS,
+  "in_creator_id",
+  "in_creator_name",
+  "in_creator_username",
+  "out_creator_id",
+  "out_creator_name",
+  "out_creator_username",
+] as const;
+
+export type ManualWeighmentSortColumn = (typeof ALLOWED_MANUAL_WEIGHMENT_SORT_COLUMNS)[number];
 
 export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchParams): any {
   let filteredQuery = query;
@@ -50,20 +64,16 @@ export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchP
   }
 
   // Filter by in_center_id and out_center_id
-  const centerFilters: readonly { param: string; column: string }[] = [
-    { param: "in_center_id", column: "in_center_id" },
-    { param: "out_center_id", column: "out_center_id" },
-  ];
-
-  for (const { param, column } of centerFilters) {
-    const paramVal = searchParams.get(param)?.trim();
-    if (paramVal && paramVal !== "all") {
-      const parsed = commaSeparatedIdsSchema.safeParse(paramVal);
-      if (parsed.success && parsed.data.length > 0) {
-        filteredQuery = filteredQuery.in(column, parsed.data);
-      }
-    }
-  }
+  filteredQuery = applyCommaSeparatedIdFilter(
+    filteredQuery,
+    searchParams.get("in_center_id"),
+    "in_center_id",
+  );
+  filteredQuery = applyCommaSeparatedIdFilter(
+    filteredQuery,
+    searchParams.get("out_center_id"),
+    "out_center_id",
+  );
 
   // Filter by combined centers (in_center or out_center)
   const centerParam = searchParams.get("center_ids") || searchParams.get("center_id");
@@ -92,16 +102,61 @@ export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchP
   return filteredQuery;
 }
 
-export async function executeWeighmentsQuery(request: Request): Promise<NextResponse> {
-  return executePaginatedEntityQuery<WeighmentSortColumn, Weighment>({
+export function applyManualWeighmentFilters(query: any, searchParams: URLSearchParams): any {
+  let filteredQuery = applyCommonWeighmentFilters(query, searchParams);
+  filteredQuery = applyCommaSeparatedIdFilter(
+    filteredQuery,
+    searchParams.get("in_creator_id"),
+    "in_creator_id",
+  );
+  filteredQuery = applyCommaSeparatedIdFilter(
+    filteredQuery,
+    searchParams.get("out_creator_id"),
+    "out_creator_id",
+  );
+  return filteredQuery;
+}
+
+export async function executeAutomaticWeighmentsQuery(request: Request): Promise<NextResponse> {
+  return executePaginatedEntityQuery<AutomaticWeighmentSortColumn, AutomaticWeighment>({
     request,
-    table: "weighments_view",
-    select: WEIGHMENT_SELECT_PROJECTION,
-    allowedSortColumns: ALLOWED_WEIGHMENT_SORT_COLUMNS,
+    table: "automatic_weighments_view",
+    select: AUTOMATIC_WEIGHMENT_SELECT_PROJECTION,
+    allowedSortColumns: ALLOWED_AUTOMATIC_WEIGHMENT_SORT_COLUMNS,
     defaultSort: { col: "created_at", ascending: false },
     searchColumns: ["vehicle_number", "in_center_name", "out_center_name"],
-    integerColumns: ["id", "in_entry_id", "out_entry_id"],
+    integerColumns: ["id", "in_entry_id", "out_entry_id", "in_center_id", "out_center_id"],
     numericColumns: ["net", "gross", "tare"],
-    applyCustomFilters: (query, params) => applyCommonWeighmentFilters(query, params),
+    applyCustomFilters: applyCommonWeighmentFilters,
+  });
+}
+
+export async function executeManualWeighmentsQuery(request: Request): Promise<NextResponse> {
+  return executePaginatedEntityQuery<ManualWeighmentSortColumn, ManualWeighment>({
+    request,
+    table: "manual_weighments_view",
+    select: MANUAL_WEIGHMENT_SELECT_PROJECTION,
+    allowedSortColumns: ALLOWED_MANUAL_WEIGHMENT_SORT_COLUMNS,
+    defaultSort: { col: "created_at", ascending: false },
+    searchColumns: [
+      "vehicle_number",
+      "in_center_name",
+      "out_center_name",
+      "in_creator_name",
+      "in_creator_username",
+      "out_creator_name",
+      "out_creator_username",
+    ],
+    integerColumns: [
+      "id",
+      "in_entry_id",
+      "out_entry_id",
+      "in_center_id",
+      "out_center_id",
+      "in_creator_id",
+      "out_creator_id",
+    ],
+    numericColumns: ["net", "gross", "tare"],
+    applyCustomFilters: applyManualWeighmentFilters,
   });
 }
