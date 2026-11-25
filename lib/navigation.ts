@@ -9,7 +9,7 @@ export interface NavItem {
   description?: string;
 }
 
-export const mainNavItems: NavItem[] = [
+export const operationsNavItems: NavItem[] = [
   {
     title: "Weighments",
     url: "/weighments",
@@ -23,6 +23,15 @@ export const mainNavItems: NavItem[] = [
     description: "Raw scale readings, vehicle plates, and transit camera captures.",
   },
   {
+    title: "Tickets",
+    url: "/tickets",
+    icon: appIcons.tickets,
+    description: "Support tickets and issue tracking.",
+  },
+];
+
+export const managementNavItems: NavItem[] = [
+  {
     title: "Centers",
     url: "/centers",
     icon: appIcons.centers,
@@ -34,15 +43,9 @@ export const mainNavItems: NavItem[] = [
     icon: appIcons.users,
     description: "Configure system operators, roles, and access credentials.",
   },
-  {
-    title: "Tickets",
-    url: "/tickets",
-    icon: appIcons.tickets,
-    description: "Support tickets and issue tracking.",
-  },
 ];
 
-export const secondaryNavItems: NavItem[] = [
+export const systemNavItems: NavItem[] = [
   {
     title: "Settings",
     url: "#settings",
@@ -63,14 +66,22 @@ export const secondaryNavItems: NavItem[] = [
   },
 ];
 
-const allNavItems: NavItem[] = [...mainNavItems, ...secondaryNavItems];
+const allNavItems: NavItem[] = [...operationsNavItems, ...managementNavItems, ...systemNavItems];
 
 const routeTitleMap: Record<string, string> = allNavItems.reduce(
   (acc, item) => {
     acc[item.url] = item.title;
     return acc;
   },
-  { "/": "Home" } as Record<string, string>,
+  {
+    "/": "Home",
+    "/weighments/automatic": "Automatic Weighments",
+    "/weighments/manual": "Manual Weighments",
+    "/entries/automatic": "Automatic Entries",
+    "/entries/manual": "Manual Entries",
+    "/tickets/automatic": "Automatic Tickets",
+    "/tickets/manual": "Manual Tickets",
+  } as Record<string, string>,
 );
 
 export function getRouteTitle(pathname: string | null | undefined): string {

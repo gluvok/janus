@@ -33,7 +33,8 @@ export function NavGroup({ label, items, onItemClick, className }: NavGroupProps
         <SidebarMenu>
           {items.map((item) => {
             const isAction = item.url.startsWith("#");
-            const isActive = !isAction && pathname === item.url;
+            const isActive =
+              !isAction && (pathname === item.url || pathname.startsWith(`${item.url}/`));
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton

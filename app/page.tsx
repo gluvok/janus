@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { mainNavItems, type NavItem } from "@/lib/navigation";
+import { operationsNavItems, managementNavItems, type NavItem } from "@/lib/navigation";
 import { ArrowRight01Icon, Factory01Icon } from "@hugeicons/core-free-icons";
 import { useFactoryStore } from "@/stores/use-factory-store";
 import { cn } from "@/lib/utils";
@@ -37,18 +37,19 @@ const MODULE_CONFIGS: Record<string, ModuleConfig> = {
   Centers: {
     category: "Facilities",
     accentClass:
-      "text-stone-800 bg-stone-500/10 border-stone-300/50 dark:text-stone-200 dark:bg-stone-900/30 dark:border-stone-700/50",
+      "text-blue-900 bg-blue-600/10 border-blue-300/40 dark:text-blue-200 dark:bg-blue-950/30 dark:border-blue-800/40",
     actionLabel: "Manage centers",
   },
   Users: {
     category: "Access",
     accentClass:
-      "text-zinc-900 bg-zinc-600/10 border-zinc-300/50 dark:text-zinc-100 dark:bg-zinc-800/40 dark:border-zinc-700/50",
+      "text-violet-900 bg-violet-600/10 border-violet-300/40 dark:text-violet-200 dark:bg-violet-950/30 dark:border-violet-800/40",
     actionLabel: "Manage users",
   },
   Tickets: {
     category: "Support",
-    accentClass: "text-primary bg-primary/10 border-primary/30",
+    accentClass:
+      "text-rose-900 bg-rose-600/10 border-rose-300/40 dark:text-rose-200 dark:bg-rose-950/30 dark:border-rose-800/40",
     actionLabel: "View tickets",
   },
 };
@@ -58,6 +59,8 @@ const DEFAULT_MODULE_CONFIG: ModuleConfig = {
   accentClass: "text-foreground bg-muted border-border",
   actionLabel: "View module",
 };
+
+const dashboardNavItems: NavItem[] = [...operationsNavItems, ...managementNavItems];
 
 export default function Home() {
   const factory = useFactoryStore((state) => state.factory);
@@ -90,7 +93,7 @@ export default function Home() {
 
       {/* Core Operational Module Cards (Responsive Grid Layout) */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {mainNavItems.map((section: NavItem) => {
+        {dashboardNavItems.map((section: NavItem) => {
           const config = MODULE_CONFIGS[section.title] ?? DEFAULT_MODULE_CONFIG;
 
           return (

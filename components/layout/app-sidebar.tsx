@@ -17,7 +17,7 @@ import {
 import { NavGroup } from "./nav-group";
 import { NavUser, type UserProps } from "./nav-user";
 import { SettingsDialog } from "@/components/settings-dialog";
-import { mainNavItems, secondaryNavItems } from "@/lib/navigation";
+import { operationsNavItems, managementNavItems, systemNavItems } from "@/lib/navigation";
 import { useUserStore } from "@/stores/use-user-store";
 
 function getInitials(name: string): string {
@@ -72,10 +72,11 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <NavGroup label="Main" items={mainNavItems} />
+          <NavGroup label="Operations" items={operationsNavItems} />
+          <NavGroup label="Management" items={managementNavItems} />
           <NavGroup
-            label="Secondary"
-            items={secondaryNavItems}
+            label="System"
+            items={systemNavItems}
             onItemClick={(item) => {
               if (isMobile) setOpenMobile(false);
               if (item.url === "#settings" || item.title === "Settings") {
