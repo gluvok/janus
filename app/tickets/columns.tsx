@@ -3,17 +3,18 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import {
   DataTableColumnHeader,
+  createCopyActionsColumn,
   createCreatedAtColumn,
   createIdColumn,
   createSelectColumn,
   createUpdatedAtColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
-import { CopyRowAction } from "@/components/data-table/row-actions";
 import {
   HelpCircleIcon,
   Message01Icon,
   SecurityCheckIcon,
+  UserEdit01Icon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
 import { TicketStatusBadge } from "./status-badge";
@@ -68,8 +69,8 @@ export const columns = columnHelper.columns([
       icon: Message01Icon,
     },
   }),
-  columnHelper.accessor("entry_id", {
-    id: "entry",
+  columnHelper.accessor("vehicle_number", {
+    id: "vehicle_number",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Entry" icon={WeightScale01Icon} />
     ),
@@ -77,8 +78,8 @@ export const columns = columnHelper.columns([
       const ticket = row.original;
       return (
         <div className="flex items-center gap-1.5 font-mono text-xs">
-          <span className="font-semibold text-foreground">{ticket.entry.vehicle_number}</span>
           <span className="text-2xs text-muted-foreground">#{ticket.entry_id}</span>
+          <span className="font-semibold text-foreground">{ticket.vehicle_number}</span>
         </div>
       );
     },
@@ -87,16 +88,55 @@ export const columns = columnHelper.columns([
       icon: WeightScale01Icon,
     },
   }),
-  createCreatedAtColumn(columnHelper),
-  createUpdatedAtColumn(columnHelper),
-  columnHelper.display({
-    id: "actions",
-    header: () => <span className="sr-only">Actions</span>,
+  columnHelper.accessor("entry_id", {
+    id: "entry_id",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Entry ID" icon={WeightScale01Icon} />
+    ),
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-muted-foreground">#{row.original.entry_id}</span>
+    ),
+    meta: {
+      title: "Entry ID",
+      icon: WeightScale01Icon,
+    },
+  }),
+  columnHelper.accessor("creator_name", {
+    id: "creator_name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Created By" icon={UserEdit01Icon} />
+    ),
     cell: ({ row }) => {
       const ticket = row.original;
-      return <CopyRowAction copyText={String(ticket.id)} copyLabel="Copy Ticket ID" />;
+      return (
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="font-mono text-2xs text-muted-foreground">#{ticket.creator_id}</span>
+          <span className="font-medium text-foreground">{ticket.creator_name}</span>
+        </div>
+      );
     },
-    enableSorting: false,
-    enableHiding: false,
+    meta: {
+      title: "Created By",
+      icon: UserEdit01Icon,
+    },
   }),
+  columnHelper.accessor("creator_id", {
+    id: "creator_id",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Creator ID" icon={UserEdit01Icon} />
+    ),
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-muted-foreground">#{row.original.creator_id}</span>
+    ),
+    meta: {
+      title: "Creator ID",
+      icon: UserEdit01Icon,
+    },
+  }),
+  createCreatedAtColumn(columnHelper),
+  createUpdatedAtColumn(columnHelper),
+  createCopyActionsColumn<Ticket>(columnHelper, ({ row }) => ({
+    copyText: String(row.original.id),
+    copyLabel: "Copy Ticket ID",
+  })),
 ]);

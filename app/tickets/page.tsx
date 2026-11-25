@@ -1,11 +1,16 @@
-import type { Metadata } from "next";
-import { TicketsDataTable } from "./data-table";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Tickets | Mesto",
-  description: "Support tickets and issue tracking.",
-};
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useModeStore } from "@/stores/use-mode-store";
 
 export default function TicketsPage() {
-  return <TicketsDataTable />;
+  const router = useRouter();
+  const mode = useModeStore((s) => s.modes.tickets);
+
+  useEffect(() => {
+    router.replace(`/tickets/${mode}`);
+  }, [mode, router]);
+
+  return null;
 }
