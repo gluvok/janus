@@ -166,6 +166,34 @@ export const useDataTableStore = create<DataTableStoreState>()(
             },
       ),
       partialize: (state) => ({ tables: state.tables }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<DataTableStoreState> | undefined;
+        if (!persisted?.tables || typeof persisted.tables !== "object") {
+          return currentState;
+        }
+        const mergedTables: Record<string, TableItemState> = {};
+        for (const [tableId, tableState] of Object.entries(persisted.tables)) {
+          if (!tableState) continue;
+          const defaultState = getDefaultTableState(tableId);
+          mergedTables[tableId] = {
+            ...defaultState,
+            ...tableState,
+            pagination: {
+              ...defaultState.pagination,
+              ...tableState.pagination,
+            },
+            columnVisibility: {
+              ...defaultState.columnVisibility,
+              ...tableState.columnVisibility,
+            },
+            filters: tableState.filters ?? defaultState.filters,
+          };
+        }
+        return {
+          ...currentState,
+          tables: mergedTables,
+        };
+      },
       onRehydrateStorage: (state) => {
         return () => {
           state.setHasHydrated(true);

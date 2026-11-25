@@ -26,14 +26,17 @@ import {
   Layers01Icon,
   PackageOpenIcon,
   ScaleIcon,
+  SecurityCheckIcon,
   TruckIcon,
   UserArrowLeftRightIcon,
   UserCheck01Icon,
   WeightScale01Icon,
 } from "@hugeicons/core-free-icons";
+import { RoleBadge } from "@/components/role-badge";
 import { WeighmentTypeBadge } from "@/components/weighment-type-badge";
 import type { PhotoItem } from "@/components/photos-dialog";
 import type { EntityMode } from "@/stores/use-mode-store";
+import type { UserRole } from "@/app/users/types";
 import type { ManualWeighment, Weighment } from "./types";
 
 function isManualWeighment(row: Weighment): row is ManualWeighment {
@@ -173,6 +176,24 @@ function createCreatorUsernameColumn(
   });
 }
 
+function createCreatorRoleColumn(
+  id: "in_creator_role" | "out_creator_role",
+  title: string,
+): ColumnDef<DataTableFeatures, Weighment, UserRole | undefined> {
+  return helper.accessor((row) => (isManualWeighment(row) ? row[id] : undefined), {
+    id,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={title} icon={SecurityCheckIcon} />
+    ),
+    cell: ({ row }) => {
+      const record = row.original;
+      if (!isManualWeighment(record)) return null;
+      return <RoleBadge role={record[id]} />;
+    },
+    meta: { title, icon: SecurityCheckIcon },
+  });
+}
+
 const BASE_PRE_COLUMNS: ColumnDef<DataTableFeatures, Weighment, any>[] = [
   createSelectColumn(helper),
   createIdColumn(helper),
@@ -284,6 +305,7 @@ const MANUAL_HIDDEN_COLUMNS: ColumnDef<DataTableFeatures, Weighment, any>[] = [
     "in_creator_username",
     DEFAULT_COLUMN_METADATA.in_creator_username.label,
   ),
+  createCreatorRoleColumn("in_creator_role", DEFAULT_COLUMN_METADATA.in_creator_role.label),
   createNumericIdColumn(
     "out_creator_id",
     DEFAULT_COLUMN_METADATA.out_creator_id.label,
@@ -294,6 +316,7 @@ const MANUAL_HIDDEN_COLUMNS: ColumnDef<DataTableFeatures, Weighment, any>[] = [
     "out_creator_username",
     DEFAULT_COLUMN_METADATA.out_creator_username.label,
   ),
+  createCreatorRoleColumn("out_creator_role", DEFAULT_COLUMN_METADATA.out_creator_role.label),
 ];
 
 const BASE_POST_COLUMNS: ColumnDef<DataTableFeatures, Weighment, any>[] = [

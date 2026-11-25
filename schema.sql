@@ -255,7 +255,6 @@ SELECT
   e.vehicle_number,
   e.weight,
   e.images,
-  e.idempotency_key,
   e.created_at,
   e.updated_at,
   e.deleted_at
@@ -272,6 +271,7 @@ SELECT
   e.creator_id,
   u.name AS creator_name,
   u.username AS creator_username,
+  u.role AS creator_role,
   e.vehicle_number,
   e.weight,
   e.images,
@@ -336,9 +336,11 @@ SELECT
   ie.creator_id AS in_creator_id,
   iu.name AS in_creator_name,
   iu.username AS in_creator_username,
+  iu.role AS in_creator_role,
   oe.creator_id AS out_creator_id,
   ou.name AS out_creator_name,
   ou.username AS out_creator_username,
+  ou.role AS out_creator_role,
   w.created_at,
   w.updated_at,
   w.deleted_at
@@ -355,6 +357,8 @@ CREATE OR REPLACE VIEW automatic_tickets_view WITH (security_invoker = true) AS
 SELECT
   t.id,
   c.factory_id,
+  e.center_id,
+  c.name AS center_name,
   t.concern,
   t.reply,
   t.status,
@@ -363,6 +367,7 @@ SELECT
   t.creator_id,
   u.name AS creator_name,
   u.username AS creator_username,
+  u.role AS creator_role,
   t.created_at,
   t.updated_at
 FROM public.automatic_tickets t
@@ -375,19 +380,27 @@ CREATE OR REPLACE VIEW manual_tickets_view WITH (security_invoker = true) AS
 SELECT
   t.id,
   c.factory_id,
+  e.center_id,
+  c.name AS center_name,
   t.concern,
   t.reply,
   t.status,
   t.entry_id,
   e.vehicle_number,
+  e.creator_id AS entry_creator_id,
+  eu.name AS entry_creator_name,
+  eu.username AS entry_creator_username,
+  eu.role AS entry_creator_role,
   t.creator_id,
   u.name AS creator_name,
   u.username AS creator_username,
+  u.role AS creator_role,
   t.created_at,
   t.updated_at
 FROM public.manual_tickets t
 JOIN public.manual_entries e ON e.id = t.entry_id
 JOIN public.centers c ON c.id = e.center_id
+JOIN public.users eu ON eu.id = e.creator_id
 JOIN public.users u ON u.id = t.creator_id;
 
 -- ----------------------------------------------------------------------------

@@ -15,7 +15,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Building02Icon,
-  FingerPrintIcon,
   Image01Icon,
   ScaleIcon,
   TruckIcon,
@@ -35,6 +34,8 @@ export interface EntriesTableMeta {
     outCenter: { id: number; name: string } | null;
     images: PhotoItem[];
   }) => void;
+  onDownloadPdf?: (entry: EntryRow) => void;
+  isDownloadingPdf?: (id: number) => boolean;
 }
 
 const helper = createColumnHelper<DataTableFeatures, EntryRow>();
@@ -57,7 +58,7 @@ const leadingSharedColumns: ColumnDef<DataTableFeatures, EntryRow, any>[] = [
   helper.accessor((row) => row.weight, {
     id: "weight",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Scale Weight" icon={ScaleIcon} />
+      <DataTableColumnHeader column={column} title="Weight" icon={ScaleIcon} />
     ),
     cell: ({ row }) => (
       <div className="flex items-baseline gap-1 font-mono text-xs">
@@ -67,7 +68,7 @@ const leadingSharedColumns: ColumnDef<DataTableFeatures, EntryRow, any>[] = [
         <span className="text-2xs text-muted-foreground">kg</span>
       </div>
     ),
-    meta: { title: "Scale Weight", icon: ScaleIcon },
+    meta: { title: "Weight", icon: ScaleIcon },
   }),
   helper.accessor((row) => row.center_name, {
     id: "center_name",
@@ -136,29 +137,6 @@ const photosColumn: ColumnDef<DataTableFeatures, EntryRow, any> = helper.display
   enableSorting: false,
 });
 
-const idempotencyKeyColumn: ColumnDef<DataTableFeatures, EntryRow, any> = helper.accessor(
-  (row) => ("idempotency_key" in row ? row.idempotency_key : ""),
-  {
-    id: "idempotency_key",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Idempotency Key" icon={FingerPrintIcon} />
-    ),
-    cell: ({ row }) => {
-      if (!("idempotency_key" in row.original)) return null;
-      return (
-        <span
-          className="font-mono text-3xs text-muted-foreground max-w-28 truncate block"
-          title={row.original.idempotency_key}
-        >
-          {row.original.idempotency_key}
-        </span>
-      );
-    },
-    meta: { title: "Idempotency Key", icon: FingerPrintIcon },
-    enableSorting: false,
-  },
-);
-
 const manualCreatorColumns: ColumnDef<DataTableFeatures, EntryRow, any>[] = [
   helper.accessor((row) => ("creator_name" in row ? row.creator_name : ""), {
     id: "creator_name",
@@ -194,15 +172,20 @@ const manualCreatorColumns: ColumnDef<DataTableFeatures, EntryRow, any>[] = [
 const trailingSharedColumns: ColumnDef<DataTableFeatures, EntryRow, any>[] = [
   createCreatedAtColumn(helper),
   createUpdatedAtColumn(helper),
-  createCopyActionsColumn<EntryRow>(helper, ({ row }) => ({
-    copyText: row.original.vehicle_number,
-    copyLabel: "Copy Vehicle No.",
-  })),
+  createCopyActionsColumn<EntryRow>(helper, ({ row, table }) => {
+    const meta = table.options.meta as EntriesTableMeta | undefined;
+    return {
+      copyText: row.original.vehicle_number,
+      copyLabel: "Copy Vehicle No.",
+      onDownloadPdf: meta?.onDownloadPdf ? () => meta.onDownloadPdf?.(row.original) : undefined,
+      isDownloadingPdf: meta?.isDownloadingPdf?.(row.original.id) ?? false,
+    };
+  }),
 ];
 
 export function getEntryColumns(mode: EntityMode): ColumnDef<DataTableFeatures, EntryRow, any>[] {
   if (mode === "automatic") {
-    return [...leadingSharedColumns, photosColumn, idempotencyKeyColumn, ...trailingSharedColumns];
+    return [...leadingSharedColumns, photosColumn, ...trailingSharedColumns];
   }
 
   return [...leadingSharedColumns, ...manualCreatorColumns, photosColumn, ...trailingSharedColumns];

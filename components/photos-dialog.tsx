@@ -29,6 +29,7 @@ export interface PhotosDialogProps {
   inCenter: { id: number; name: string };
   outCenter?: { id: number; name: string } | null;
   images: PhotoItem[];
+  entityLabel?: "Weighment" | "Entry";
 }
 
 export function PhotosDialog({
@@ -39,6 +40,7 @@ export function PhotosDialog({
   inCenter,
   outCenter,
   images,
+  entityLabel = "Weighment",
 }: PhotosDialogProps) {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(1);
@@ -74,28 +76,30 @@ export function PhotosDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl gap-4 p-5">
+      <DialogContent className="sm:max-w-xl gap-4 p-5 border-border/75 bg-card shadow-md">
         <DialogHeader className="flex flex-row items-center justify-between gap-2 pr-6">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
               <HugeiconsIcon icon={Image01Icon} className="size-4" />
             </div>
             <div className="flex flex-col min-w-0 gap-0.5">
               <div className="flex items-center gap-2">
                 <DialogTitle className="text-sm font-semibold truncate">
-                  Weighment #{weighmentId} {vehicleNumber}
+                  {entityLabel} #{weighmentId} {vehicleNumber}
                 </DialogTitle>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-2xs font-medium shrink-0",
-                    directionLabel === "Inbound"
-                      ? "text-primary border-primary/25 bg-primary/10"
-                      : "text-terracotta border-terracotta/25 bg-terracotta/10",
-                  )}
-                >
-                  {directionLabel}
-                </Badge>
+                {entityLabel !== "Entry" && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-2xs font-medium shrink-0",
+                      directionLabel === "Inbound"
+                        ? "text-primary border-primary/25 bg-primary/10"
+                        : "text-terracotta border-terracotta/25 bg-terracotta/10",
+                    )}
+                  >
+                    {directionLabel}
+                  </Badge>
+                )}
               </div>
               <div className="text-xs text-muted-foreground truncate">{subtitle}</div>
             </div>
@@ -103,7 +107,7 @@ export function PhotosDialog({
           {count > 0 && (
             <Badge
               variant="outline"
-              className="text-2xs font-normal text-muted-foreground shrink-0"
+              className="text-2xs font-normal border-border/75 text-muted-foreground shrink-0"
             >
               {current} of {count}
             </Badge>
@@ -111,7 +115,7 @@ export function PhotosDialog({
         </DialogHeader>
 
         {images.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-12 text-center text-muted-foreground">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border/75 border-dashed bg-muted/25 py-12 text-center text-muted-foreground">
             <HugeiconsIcon icon={Image01Icon} className="size-8 text-muted-foreground/60" />
             <p className="text-xs">No photos available.</p>
           </div>
@@ -122,10 +126,10 @@ export function PhotosDialog({
                 <CarouselContent>
                   {images.map((item, idx) => (
                     <CarouselItem key={`${item.url}-${idx}`}>
-                      <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
+                      <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border border-border/75 bg-muted/30">
                         <img
                           src={item.url}
-                          alt={`Weighment #${weighmentId} ${vehicleNumber} photo ${idx + 1} of ${images.length}`}
+                          alt={`${entityLabel} #${weighmentId} ${vehicleNumber} photo ${idx + 1} of ${images.length}`}
                           className="h-full w-full object-contain"
                           loading="lazy"
                         />

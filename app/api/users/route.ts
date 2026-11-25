@@ -7,6 +7,7 @@ import {
 } from "@/lib/api-query";
 import { handleApiRoute, validationErrorResponse, type ApiContext } from "@/lib/api-handler";
 import {
+  USER_ROLES,
   createUserSchema,
   updateUserSchema,
   deleteUserSchema,
@@ -39,6 +40,7 @@ export const GET = handleApiRoute(async (request: Request) => {
     defaultSort: { col: "id", ascending: false },
     searchColumns: ["name", "username"],
     integerColumns: ["id"],
+    enumColumns: [{ column: "role", values: USER_ROLES }],
     applyCustomFilters: (query, params) => {
       const roleParam = params.get("role")?.trim();
       if (roleParam && roleParam !== "all") {

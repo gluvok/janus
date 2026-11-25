@@ -95,7 +95,7 @@ export function BootingScreen({
   if (!isUserInitialized || !hasTableHydrated) {
     return (
       <div
-        className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-background select-none"
+        className="flex h-screen w-screen flex-col items-center justify-center gap-5 bg-background px-4 select-none"
         aria-live="polite"
         aria-busy={true}
       >
@@ -116,7 +116,7 @@ export function BootingScreen({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 pt-2 text-xs font-medium text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-full border border-border/75 bg-card/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-2xs">
           <Spinner className="size-3.5 text-primary" />
           <span className="animate-pulse">Booting up...</span>
         </div>
@@ -132,7 +132,7 @@ export function BootingScreen({
     <SidebarProvider defaultOpen={defaultOpen} className="h-full">
       <AppSidebar />
       <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">
-        <header className="grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b px-3 sm:px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
+        <header className="grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border/75 bg-background/85 backdrop-blur-xs px-3 sm:px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
           <div className="col-start-1 flex min-w-0 items-center gap-2">
             <SidebarTrigger className="-ml-1 shrink-0" />
             <Separator orientation="vertical" className="mr-2 my-auto shrink-0 data-vertical:h-4" />
@@ -145,7 +145,7 @@ export function BootingScreen({
             <AppHeaderControls />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-2 sm:gap-3 p-2 sm:p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">
+        <div className="flex flex-1 flex-col gap-2.5 sm:gap-3.5 p-2.5 sm:p-4 md:px-6 md:py-4 min-w-0 min-h-0 overflow-hidden">
           {children}
         </div>
       </SidebarInset>

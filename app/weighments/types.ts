@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { userRoleEnum } from "@/app/users/types";
 
 export const WEIGHMENT_TYPES = ["in", "out", "void"] as const;
 export type WeighmentType = (typeof WEIGHMENT_TYPES)[number];
@@ -66,9 +67,11 @@ export const manualWeighmentSchema = automaticWeighmentSchema
     in_creator_id: z.int().positive(),
     in_creator_name: z.string().min(1),
     in_creator_username: z.string().min(1),
+    in_creator_role: userRoleEnum,
     out_creator_id: z.int().positive(),
     out_creator_name: z.string().min(1),
     out_creator_username: z.string().min(1),
+    out_creator_role: userRoleEnum,
   })
   .strict();
 
@@ -93,9 +96,11 @@ export const MANUAL_WEIGHMENT_SELECT_PROJECTION = `
   in_creator_id,
   in_creator_name,
   in_creator_username,
+  in_creator_role,
   out_creator_id,
   out_creator_name,
   out_creator_username,
+  out_creator_role,
   in_images,
   out_images,
   images,

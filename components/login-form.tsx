@@ -9,7 +9,7 @@ import axios from "axios";
 import { cn, getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
@@ -78,57 +78,59 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="border border-border/80 shadow-xs">
-        <CardHeader className="space-y-1">
+      <Card className="border border-border/75 bg-card/95 shadow-xs rounded-xl">
+        <CardHeader className="flex flex-col gap-1.5">
           <CardTitle className="text-lg font-bold tracking-tight">Login to your account</CardTitle>
           <CardDescription className="text-xs text-muted-foreground">
             Enter your system username and password to access the platform.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Field data-invalid={Boolean(errors.username)}>
-              <FieldLabel htmlFor="login-username">
-                <span>Username</span>
-                <span className="text-destructive font-semibold" aria-hidden="true">
-                  *
-                </span>
-              </FieldLabel>
-              <Input
-                id="login-username"
-                placeholder="e.g. alex_operator"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                autoComplete="username"
-                {...register("username")}
-                aria-invalid={Boolean(errors.username)}
-                className="h-8 text-xs font-mono"
-              />
-              {errors.username?.message && (
-                <FieldError errors={[{ message: errors.username.message }]} />
-              )}
-            </Field>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <FieldGroup>
+              <Field data-invalid={Boolean(errors.username)}>
+                <FieldLabel htmlFor="login-username">
+                  <span>Username</span>
+                  <span className="text-destructive font-semibold" aria-hidden="true">
+                    *
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="login-username"
+                  placeholder="e.g. alex_operator"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="username"
+                  {...register("username")}
+                  aria-invalid={Boolean(errors.username)}
+                  className="h-8 text-xs font-mono"
+                />
+                {errors.username?.message && (
+                  <FieldError errors={[{ message: errors.username.message }]} />
+                )}
+              </Field>
 
-            <Field data-invalid={Boolean(errors.password)}>
-              <FieldLabel htmlFor="login-password">
-                <span>Password</span>
-                <span className="text-destructive font-semibold" aria-hidden="true">
-                  *
-                </span>
-              </FieldLabel>
-              <PasswordInput
-                id="login-password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                {...register("password")}
-                aria-invalid={Boolean(errors.password)}
-                className="h-8 text-xs"
-              />
-              {errors.password?.message && (
-                <FieldError errors={[{ message: errors.password.message }]} />
-              )}
-            </Field>
+              <Field data-invalid={Boolean(errors.password)}>
+                <FieldLabel htmlFor="login-password">
+                  <span>Password</span>
+                  <span className="text-destructive font-semibold" aria-hidden="true">
+                    *
+                  </span>
+                </FieldLabel>
+                <PasswordInput
+                  id="login-password"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  {...register("password")}
+                  aria-invalid={Boolean(errors.password)}
+                  className="h-8 text-xs"
+                />
+                {errors.password?.message && (
+                  <FieldError errors={[{ message: errors.password.message }]} />
+                )}
+              </Field>
+            </FieldGroup>
 
             <Button
               type="submit"

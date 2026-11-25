@@ -49,7 +49,7 @@ export function DataTablePagination<TData extends RowData>({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-between gap-2.5 px-2 py-2 sm:flex-row transition-opacity duration-150",
+        "flex flex-col items-center justify-between gap-3 px-2.5 py-2 sm:flex-row transition-opacity duration-150",
         loading && "opacity-40 pointer-events-none select-none",
       )}
     >

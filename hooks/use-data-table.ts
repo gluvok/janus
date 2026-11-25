@@ -17,11 +17,7 @@ import type { DateRange } from "react-day-picker";
 import { features, type DataTableFeatures } from "@/components/data-table/features";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getErrorMessage } from "@/lib/utils";
-import {
-  DEFAULT_TABLE_ITEM_STATE,
-  useDataTableStore,
-  useTableHydrated,
-} from "@/stores/use-data-table-store";
+import { useDataTableStore, useTableHydrated } from "@/stores/use-data-table-store";
 
 export interface UseDataTableOptions<TData extends RowData> {
   tableId: string;
@@ -53,7 +49,7 @@ export function useDataTable<TData extends RowData>({
 }: UseDataTableOptions<TData>) {
   const hasHydrated = useTableHydrated();
   const store = useDataTableStore();
-  const tableState = store.tables[tableId] ?? DEFAULT_TABLE_ITEM_STATE;
+  const tableState = store.getTableState(tableId);
 
   const [data, setData] = useState<TData[]>(initialData?.data ?? []);
   const [totalCount, setTotalCount] = useState<number>(initialData?.totalCount ?? 0);

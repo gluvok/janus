@@ -14,6 +14,7 @@ import {
 import { Building02Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { appIcons } from "@/lib/icons";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
+import { useWeighmentPdfDownload } from "@/hooks/use-weighment-pdf-download";
 import type { Center } from "@/app/centers/types";
 import type { User } from "@/app/users/types";
 import type { EntityMode } from "@/stores/use-mode-store";
@@ -90,11 +91,15 @@ export function EntriesDataTable({ mode }: EntriesDataTableProps) {
     loadCreators();
   }, [mode]);
 
+  const { downloadEntryReceipt, downloadingId } = useWeighmentPdfDownload();
+
   const tableMeta: EntriesTableMeta = useMemo(
     () => ({
       onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
+      onDownloadPdf: (entry) => downloadEntryReceipt(entry, mode),
+      isDownloadingPdf: (id) => downloadingId === id,
     }),
-    [],
+    [downloadEntryReceipt, downloadingId, mode],
   );
 
   const columns = useMemo(() => getEntryColumns(mode), [mode]);
@@ -162,6 +167,7 @@ export function EntriesDataTable({ mode }: EntriesDataTableProps) {
         inCenter={photosDialogState.inCenter}
         outCenter={photosDialogState.outCenter}
         images={photosDialogState.images}
+        entityLabel="Entry"
       />
     </div>
   );

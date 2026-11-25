@@ -182,8 +182,10 @@ export const manualWeighmentsStrategy = createFilteredTableStrategy({
   out_center_id: false,
   in_creator_id: false,
   in_creator_username: false,
+  in_creator_role: false,
   out_creator_id: false,
   out_creator_username: false,
+  out_creator_role: false,
   created_at: false,
   updated_at: false,
 });
@@ -194,12 +196,19 @@ export const manualWeighmentsStrategy = createFilteredTableStrategy({
 
 export const automaticTicketsStrategy = createFilteredTableStrategy({
   entry_id: false,
+  center_id: false,
   creator_id: false,
+  creator_role: false,
 });
 
 export const manualTicketsStrategy = createFilteredTableStrategy({
   entry_id: false,
+  center_id: false,
   creator_id: false,
+  creator_role: false,
+  entry_creator_id: false,
+  entry_creator_username: false,
+  entry_creator_role: false,
 });
 
 /* -------------------------------------------------------------------------- */

@@ -65,9 +65,9 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-1">
+    <div className="flex flex-1 min-h-0 flex-col gap-6 overflow-y-auto p-1 sm:p-2">
       {/* Top Welcome Header with Factory Badge */}
-      <div className="flex flex-col gap-3 pb-2 border-b border-border/50 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 pb-3 border-b border-border/75 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-bold tracking-tight font-heading text-foreground">
             Operational Dashboard
@@ -77,7 +77,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground shadow-2xs sm:self-auto">
+        <div className="flex items-center gap-2 self-start rounded-lg border border-border/75 bg-card/85 px-3.5 py-2 text-xs font-medium text-foreground shadow-2xs sm:self-auto">
           <HugeiconsIcon icon={Factory01Icon} className="size-4 text-muted-foreground" />
           <span>{factory.name}</span>
         </div>
@@ -90,8 +90,8 @@ export default function Home() {
 
           return (
             <Link key={section.title} href={section.url} className="group outline-none flex">
-              <Card className="flex flex-col justify-between gap-0 py-0 w-full border border-border/80 bg-card/70 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-xs cursor-pointer rounded-xl overflow-hidden">
-                <CardHeader className="p-3 pb-0 space-y-0 flex flex-row items-center justify-between">
+              <Card className="flex flex-col justify-between gap-0 py-0 w-full border border-border/75 bg-card/85 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-xs cursor-pointer rounded-xl overflow-hidden">
+                <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between gap-2">
                   <div
                     className={cn(
                       "flex size-9 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105",
@@ -100,11 +100,11 @@ export default function Home() {
                   >
                     <HugeiconsIcon icon={section.icon} className="size-4.5" />
                   </div>
-                  <span className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
+                  <span className="rounded-md border border-border/75 bg-muted/60 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                     {config.category}
                   </span>
                 </CardHeader>
-                <CardContent className="px-3 pt-2 pb-2 space-y-1 flex-1">
+                <CardContent className="px-4 pt-3 pb-2 flex flex-col gap-1.5 flex-1">
                   <CardTitle className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
                     {section.title}
                   </CardTitle>
@@ -114,7 +114,7 @@ export default function Home() {
                     </CardDescription>
                   )}
                 </CardContent>
-                <CardFooter className="px-3 pt-0 pb-3 flex items-center justify-between text-2xs font-medium text-muted-foreground/80 group-hover:text-primary transition-colors">
+                <CardFooter className="px-4 pt-0 pb-3.5 flex items-center justify-between text-2xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
                   <span>{config.actionLabel}</span>
                   <HugeiconsIcon
                     icon={ArrowRight01Icon}

@@ -8,14 +8,17 @@ import {
   executePaginatedEntityQuery,
   commaSeparatedIdsSchema,
   applyCommaSeparatedIdFilter,
+  applyCommaSeparatedEnumFilter,
 } from "@/lib/api-query";
 import {
+  WEIGHMENT_TYPES,
   weighmentTypeSchema,
   AUTOMATIC_WEIGHMENT_SELECT_PROJECTION,
   MANUAL_WEIGHMENT_SELECT_PROJECTION,
   type AutomaticWeighment,
   type ManualWeighment,
 } from "@/app/weighments/types";
+import { USER_ROLES } from "@/app/users/types";
 
 export const ALLOWED_AUTOMATIC_WEIGHMENT_SORT_COLUMNS = [
   "id",
@@ -44,9 +47,11 @@ export const ALLOWED_MANUAL_WEIGHMENT_SORT_COLUMNS = [
   "in_creator_id",
   "in_creator_name",
   "in_creator_username",
+  "in_creator_role",
   "out_creator_id",
   "out_creator_name",
   "out_creator_username",
+  "out_creator_role",
 ] as const;
 
 export type ManualWeighmentSortColumn = (typeof ALLOWED_MANUAL_WEIGHMENT_SORT_COLUMNS)[number];
@@ -91,13 +96,12 @@ export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchP
   }
 
   // Filter by type ('in' | 'out' | 'void')
-  const typeParam = searchParams.get("type")?.trim();
-  if (typeParam && typeParam !== "all") {
-    const parsedType = weighmentTypeSchema.safeParse(typeParam);
-    if (parsedType.success) {
-      filteredQuery = filteredQuery.eq("type", parsedType.data);
-    }
-  }
+  filteredQuery = applyCommaSeparatedEnumFilter(
+    filteredQuery,
+    searchParams.get("type"),
+    "type",
+    weighmentTypeSchema,
+  );
 
   return filteredQuery;
 }
@@ -125,8 +129,9 @@ export async function executeAutomaticWeighmentsQuery(request: Request): Promise
     allowedSortColumns: ALLOWED_AUTOMATIC_WEIGHMENT_SORT_COLUMNS,
     defaultSort: { col: "created_at", ascending: false },
     searchColumns: ["vehicle_number", "in_center_name", "out_center_name"],
-    integerColumns: ["id", "in_entry_id", "out_entry_id", "in_center_id", "out_center_id"],
+    integerColumns: ["id"],
     numericColumns: ["net", "gross", "tare"],
+    enumColumns: [{ column: "type", values: WEIGHMENT_TYPES }],
     applyCustomFilters: applyCommonWeighmentFilters,
   });
 }
@@ -147,16 +152,13 @@ export async function executeManualWeighmentsQuery(request: Request): Promise<Ne
       "out_creator_name",
       "out_creator_username",
     ],
-    integerColumns: [
-      "id",
-      "in_entry_id",
-      "out_entry_id",
-      "in_center_id",
-      "out_center_id",
-      "in_creator_id",
-      "out_creator_id",
-    ],
+    integerColumns: ["id"],
     numericColumns: ["net", "gross", "tare"],
+    enumColumns: [
+      { column: "type", values: WEIGHMENT_TYPES },
+      { column: "in_creator_role", values: USER_ROLES },
+      { column: "out_creator_role", values: USER_ROLES },
+    ],
     applyCustomFilters: applyManualWeighmentFilters,
   });
 }

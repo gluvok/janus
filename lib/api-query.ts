@@ -87,18 +87,52 @@ export function applyCommaSeparatedIdFilter(
   return query;
 }
 
-export interface PaginatedEntityQueryOptions<TCol extends string> {
-  request: Request;
+export function applyCommaSeparatedEnumFilter<T extends string>(
+  query: any,
+  paramValue: string | null | undefined,
+  column: string,
+  schema: z.ZodType<T>,
+): any {
+  const trimmed = paramValue?.trim();
+  if (!trimmed || trimmed === "all") return query;
+  const values = trimmed
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => schema.safeParse(s))
+    .filter((r): r is { success: true; data: T } => r.success)
+    .map((r) => r.data);
+  if (values.length === 1) {
+    return query.eq(column, values[0]);
+  }
+  if (values.length > 1) {
+    return query.in(column, values);
+  }
+  return query;
+}
+
+export interface EnumColumnConfig {
+  column: string;
+  values: readonly string[];
+}
+
+export interface BaseEntityQueryConfig {
   table: string;
   select?: string;
-  allowedSortColumns: readonly TCol[];
-  defaultSort: SortRule<TCol>;
   searchColumns?: readonly string[];
   textColumns?: readonly string[];
   integerColumns?: readonly string[];
   numericColumns?: readonly string[];
+  enumColumns?: readonly EnumColumnConfig[];
+  integerFilterColumns?: readonly string[];
   extraOrConditions?: readonly string[];
   applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
+}
+
+export interface PaginatedEntityQueryOptions<TCol extends string> extends BaseEntityQueryConfig {
+  request: Request;
+  allowedSortColumns: readonly TCol[];
+  defaultSort: SortRule<TCol>;
 }
 
 /**
@@ -111,20 +145,14 @@ export function buildBaseEntityQuery({
   textColumns = [],
   integerColumns = [],
   numericColumns = [],
+  enumColumns = [],
+  integerFilterColumns = [],
   extraOrConditions = [],
   applyCustomFilters,
   factoryId,
   searchParams,
   countExact,
-}: {
-  table: string;
-  select?: string;
-  searchColumns?: readonly string[];
-  textColumns?: readonly string[];
-  integerColumns?: readonly string[];
-  numericColumns?: readonly string[];
-  extraOrConditions?: readonly string[];
-  applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
+}: BaseEntityQueryConfig & {
   factoryId: number;
   searchParams: URLSearchParams;
   countExact: boolean;
@@ -163,6 +191,17 @@ export function buildBaseEntityQuery({
       }
     }
 
+    // Enum columns with IN (case-insensitive substring match against enum values)
+    if (enumColumns.length > 0) {
+      const lowerSearch = search.toLowerCase();
+      for (const { column, values } of enumColumns) {
+        const matches = values.filter((val) => val.toLowerCase().includes(lowerSearch));
+        if (matches.length > 0) {
+          conditions.push(`${column}.in.(${matches.join(",")})`);
+        }
+      }
+    }
+
     // Extra OR conditions (e.g. relations subquery matches)
     if (extraOrConditions.length > 0) {
       conditions.push(...extraOrConditions);
@@ -184,6 +223,10 @@ export function buildBaseEntityQuery({
 
   query = applyDateRange(query, searchParams);
 
+  for (const col of integerFilterColumns) {
+    query = applyCommaSeparatedIdFilter(query, searchParams.get(col), col);
+  }
+
   if (applyCustomFilters) {
     query = applyCustomFilters(query, searchParams);
   }
@@ -204,6 +247,8 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   textColumns = [],
   integerColumns = [],
   numericColumns = [],
+  enumColumns = [],
+  integerFilterColumns = [],
   extraOrConditions = [],
   applyCustomFilters,
   factoryId,
@@ -221,6 +266,8 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
     textColumns,
     integerColumns,
     numericColumns,
+    enumColumns,
+    integerFilterColumns,
     extraOrConditions,
     applyCustomFilters,
     factoryId,
@@ -251,6 +298,8 @@ export async function buildAllEntityResult<TCol extends string, TData = unknown>
   textColumns = [],
   integerColumns = [],
   numericColumns = [],
+  enumColumns = [],
+  integerFilterColumns = [],
   extraOrConditions = [],
   applyCustomFilters,
   factoryId,
@@ -267,6 +316,8 @@ export async function buildAllEntityResult<TCol extends string, TData = unknown>
     textColumns,
     integerColumns,
     numericColumns,
+    enumColumns,
+    integerFilterColumns,
     extraOrConditions,
     applyCustomFilters,
     factoryId,

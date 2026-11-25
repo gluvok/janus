@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { userRoleEnum } from "@/app/users/types";
 
 const baseEntryFields = {
   id: z.int().positive(),
@@ -21,7 +22,6 @@ const baseEntryFields = {
 export const automaticEntrySchema = z
   .object({
     ...baseEntryFields,
-    idempotency_key: z.string().min(1),
   })
   .strict();
 
@@ -35,7 +35,6 @@ export const AUTOMATIC_ENTRY_SELECT_PROJECTION = `
   vehicle_number,
   weight,
   images,
-  idempotency_key,
   created_at,
   updated_at,
   deleted_at
@@ -47,6 +46,7 @@ export const manualEntrySchema = z
     creator_id: z.int().positive(),
     creator_name: z.string().min(1),
     creator_username: z.string().min(1),
+    creator_role: userRoleEnum,
   })
   .strict();
 
@@ -60,6 +60,7 @@ export const MANUAL_ENTRY_SELECT_PROJECTION = `
   creator_id,
   creator_name,
   creator_username,
+  creator_role,
   vehicle_number,
   weight,
   images,

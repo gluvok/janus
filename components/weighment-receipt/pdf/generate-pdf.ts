@@ -12,6 +12,9 @@ export async function generateReceiptPdf(
   offscreenContainer.style.left = "-9999px";
   offscreenContainer.style.top = "0";
   offscreenContainer.style.zIndex = "-9999";
+  offscreenContainer.style.backgroundColor = "#faf7f0";
+  offscreenContainer.style.color = "#1f241d";
+  offscreenContainer.style.colorScheme = "light";
   offscreenContainer.className = "font-sans antialiased";
   document.body.appendChild(offscreenContainer);
 
@@ -60,7 +63,7 @@ export async function generateReceiptPdf(
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#faf7f0",
         logging: false,
       });
 

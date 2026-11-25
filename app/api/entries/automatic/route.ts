@@ -19,9 +19,10 @@ export const GET = handleApiRoute(async (request: Request) => {
     select: AUTOMATIC_ENTRY_SELECT_PROJECTION,
     allowedSortColumns: ALLOWED_SORT_COLUMNS,
     defaultSort: { col: "created_at", ascending: false },
-    searchColumns: ["vehicle_number", "idempotency_key", "center_name"],
-    integerColumns: ["id", "center_id"],
+    searchColumns: ["vehicle_number", "center_name"],
+    integerColumns: ["id"],
     numericColumns: ["weight"],
+    integerFilterColumns: ["id"],
     applyCustomFilters: (query, params) =>
       applyCommaSeparatedIdFilter(
         query,

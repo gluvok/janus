@@ -23,8 +23,17 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Sorting05Icon } from "@hugeicons/core-free-icons";
 import { SortableSortChip, SortChipOverlay } from "./sortable-sort-chip";
-import { DEFAULT_COLUMN_METADATA } from "./columns";
+import { DEFAULT_COLUMN_METADATA, type ColumnMetaConfig } from "./columns";
 import { DataTableClearButton } from "./clear-button";
+
+function getColumnMetadata(columnId: string): ColumnMetaConfig {
+  return (
+    DEFAULT_COLUMN_METADATA[columnId] ?? {
+      label: columnId.replace(/_/g, " "),
+      icon: undefined,
+    }
+  );
+}
 
 export interface DataTableCriteriaBarProps {
   hasActiveSorts: boolean;
@@ -119,7 +128,7 @@ export function DataTableCriteriaBar({
               strategy={horizontalListSortingStrategy}
             >
               {sorting.map((sortRule, index) => {
-                const meta = DEFAULT_COLUMN_METADATA[sortRule.id];
+                const meta = getColumnMetadata(sortRule.id);
                 return (
                   <SortableSortChip
                     key={sortRule.id}
@@ -139,14 +148,19 @@ export function DataTableCriteriaBar({
             <DataTableClearButton label="Clear sorts" onClick={onResetSorts} />
 
             <DragOverlay>
-              {activeSortRule && activeSortIndex !== -1 ? (
-                <SortChipOverlay
-                  sortRule={activeSortRule}
-                  index={activeSortIndex}
-                  colTitle={DEFAULT_COLUMN_METADATA[activeSortRule.id].label}
-                  colIcon={DEFAULT_COLUMN_METADATA[activeSortRule.id].icon}
-                />
-              ) : null}
+              {activeSortRule && activeSortIndex !== -1
+                ? (() => {
+                    const activeMeta = getColumnMetadata(activeSortRule.id);
+                    return (
+                      <SortChipOverlay
+                        sortRule={activeSortRule}
+                        index={activeSortIndex}
+                        colTitle={activeMeta.label}
+                        colIcon={activeMeta.icon}
+                      />
+                    );
+                  })()
+                : null}
             </DragOverlay>
           </div>
         </DndContext>

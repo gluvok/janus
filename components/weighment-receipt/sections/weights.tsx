@@ -1,5 +1,3 @@
-import * as React from "react";
-
 interface WeightMetricCardProps {
   label: string;
   value: number;
@@ -34,7 +32,7 @@ interface CommonWeightsData {
 
 export function WeighmentReceiptWeights({ weighment }: { weighment: CommonWeightsData }) {
   return (
-    <div className="py-1.5 border-b border-[#e2dccb] rounded-none bg-white flex flex-col gap-1.5">
+    <div className="rounded-lg border border-[#e2dccb] bg-[#fdfbf6] p-4 flex flex-col gap-1.5">
       <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-[#e2dccb] items-start">
         <WeightMetricCard
           label="Gross Weight"
@@ -56,6 +54,27 @@ export function WeighmentReceiptWeights({ weighment }: { weighment: CommonWeight
           <span className="text-3xs font-semibold text-[#4a6741]/85">Certified net payload</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function EntryReceiptWeight({ weight }: { weight: number }) {
+  return (
+    <div className="rounded-lg border border-[#e2dccb] bg-[#fdfbf6] p-4 flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-1 min-w-0">
+        <span className="font-heading text-3xs text-[#4a6741] font-bold">
+          Recorded Scale Weight
+        </span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-mono text-2xl font-black text-[#4a6741] tabular-nums tracking-tight">
+            {Number(weight).toLocaleString()}
+          </span>
+          <span className="text-xs font-bold text-[#4a6741]/85">kg</span>
+        </div>
+      </div>
+      <span className="rounded-md border border-[#4a6741]/25 bg-[#4a6741]/10 px-2.5 py-1 font-heading text-3xs font-semibold text-[#4a6741] shrink-0">
+        Verified Scale Capture
+      </span>
     </div>
   );
 }
