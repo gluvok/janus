@@ -14,7 +14,7 @@ export async function seedFactories(): Promise<{
   console.log("\n🏭 [1/5] Ensuring Core Factories...");
 
   const factoryConfigs: FactoryConfig[] = [
-    { name: "Mesto Industrial Alpha", receipt_images_per_row: 2 },
+    { name: "Meow Meow factory name", receipt_images_per_row: 2 },
     { name: "Apex Agro Logistics", receipt_images_per_row: 2 },
   ];
 
@@ -50,7 +50,7 @@ export async function seedFactories(): Promise<{
     }
   }
 
-  const primaryFactoryId = factoryMap.get("Mesto Industrial Alpha")!;
+  const primaryFactoryId = factoryMap.get("Meow Meow factory name")!;
   const secondaryFactoryId = factoryMap.get("Apex Agro Logistics")!;
   console.log(`  ✓ Factories ready (Alpha: ${primaryFactoryId}, Apex: ${secondaryFactoryId})`);
 
