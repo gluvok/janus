@@ -471,7 +471,7 @@ BEGIN
     entry_table
   ) INTO in_rec USING NEW.in_entry_id;
 
-  IF NOT FOUND THEN
+  IF in_rec IS NULL THEN
     RAISE EXCEPTION 'Referenced in_entry (%) or out_entry (%) not found', NEW.in_entry_id, NEW.out_entry_id;
   END IF;
 
@@ -483,7 +483,7 @@ BEGIN
     entry_table
   ) INTO out_rec USING NEW.out_entry_id;
 
-  IF NOT FOUND THEN
+  IF out_rec IS NULL THEN
     RAISE EXCEPTION 'Referenced in_entry (%) or out_entry (%) not found', NEW.in_entry_id, NEW.out_entry_id;
   END IF;
 

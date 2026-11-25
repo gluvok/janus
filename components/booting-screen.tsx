@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { AppSidebar, AppBreadcrumb, AppHeaderControls } from "@/components/layout";
+import { AppSidebar, AppBreadcrumb, AppHeaderControls, AppModeSwitcher } from "@/components/layout";
 import type { User } from "@/app/users/types";
 import type { Factory } from "@/app/settings/types";
 
@@ -132,13 +132,18 @@ export function BootingScreen({
     <SidebarProvider defaultOpen={defaultOpen} className="h-full">
       <AppSidebar />
       <SidebarInset className="min-w-0 h-svh max-h-svh flex flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 my-auto data-vertical:h-4" />
+        <header className="grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b px-3 sm:px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">
+          <div className="col-start-1 flex min-w-0 items-center gap-2">
+            <SidebarTrigger className="-ml-1 shrink-0" />
+            <Separator orientation="vertical" className="mr-2 my-auto shrink-0 data-vertical:h-4" />
             <AppBreadcrumb />
           </div>
-          <AppHeaderControls />
+          <div className="col-start-2 justify-self-center">
+            <AppModeSwitcher />
+          </div>
+          <div className="col-start-3 justify-self-end">
+            <AppHeaderControls />
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-2 sm:gap-3 p-2 sm:p-3 md:px-6 md:py-3.5 min-w-0 min-h-0 overflow-hidden">
           {children}

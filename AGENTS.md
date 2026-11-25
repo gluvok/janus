@@ -67,10 +67,11 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 5. Continuous Quality & Verification Loop
 
-**Always run `pnpm type-check`, `pnpm lint`, and `pnpm fmt` in a loop to fix warnings and errors.**
+**Always run `pnpm type-check`, `pnpm lint`, and scoped `oxfmt` (`pnpm exec oxfmt <files>`) in a loop to fix warnings and errors.**
 
 - Run verification commands after every meaningful change.
 - Never stop until 0 errors and 0 warnings are achieved across all checks.
+- Do not run `pnpm build` (gets stuck in the experimental sandbox), and avoid `pnpm fmt` without args (checks `docs/shadcn`).
 
 ## 6. Consult Local Documentation First
 
