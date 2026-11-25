@@ -5,9 +5,21 @@
 -- 0. Safe Idempotent Cleanup (Reverse Dependency Order)
 -- Safe to execute on both fresh (empty) and existing databases.
 -- ----------------------------------------------------------------------------
+DROP VIEW IF EXISTS public.manual_tickets_view CASCADE;
+DROP VIEW IF EXISTS public.automatic_tickets_view CASCADE;
+DROP VIEW IF EXISTS public.manual_weighments_view CASCADE;
+DROP VIEW IF EXISTS public.automatic_weighments_view CASCADE;
+DROP VIEW IF EXISTS public.manual_entries_view CASCADE;
+DROP VIEW IF EXISTS public.automatic_entries_view CASCADE;
 DROP VIEW IF EXISTS public.weighments_view CASCADE;
 DROP VIEW IF EXISTS public.entries_view CASCADE;
 
+DROP TABLE IF EXISTS public.manual_tickets CASCADE;
+DROP TABLE IF EXISTS public.automatic_tickets CASCADE;
+DROP TABLE IF EXISTS public.manual_weighments CASCADE;
+DROP TABLE IF EXISTS public.automatic_weighments CASCADE;
+DROP TABLE IF EXISTS public.manual_entries CASCADE;
+DROP TABLE IF EXISTS public.automatic_entries CASCADE;
 DROP TABLE IF EXISTS public.tickets CASCADE;
 DROP TABLE IF EXISTS public.weighments CASCADE;
 DROP TABLE IF EXISTS public.entries CASCADE;
@@ -105,14 +117,13 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_user_id ON sessions (user_id);
 
 -- ----------------------------------------------------------------------------
--- 4. Weighment Tables: Entries, Weighments, Tickets
+-- 4. Weighment Tables: Automatic & Manual Entries, Weighments, Tickets
 -- ----------------------------------------------------------------------------
 
--- Entries table (raw weigh readings at centers)
-CREATE TABLE entries (
+-- Automatic Entries table (raw automated scale readings at centers)
+CREATE TABLE automatic_entries (
   id SERIAL PRIMARY KEY,
   center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
-  creator_id INT DEFAULT NULL REFERENCES users(id) ON DELETE RESTRICT,
   vehicle_number TEXT NOT NULL,
   weight DECIMAL(10, 2) NOT NULL CHECK (weight > 0),
   images TEXT[] NOT NULL DEFAULT '{}',
@@ -120,19 +131,37 @@ CREATE TABLE entries (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ,
-  CONSTRAINT chk_entries_vehicle CHECK (length(trim(vehicle_number)) BETWEEN 8 AND 11)
+  CONSTRAINT chk_automatic_entries_vehicle CHECK (length(trim(vehicle_number)) BETWEEN 8 AND 11)
 );
-CREATE INDEX idx_entries_center_id ON entries (center_id);
-CREATE INDEX idx_entries_creator_id ON entries (creator_id);
-CREATE INDEX idx_entries_vehicle_number ON entries (vehicle_number);
-CREATE INDEX idx_entries_created_at ON entries (created_at DESC);
-CREATE INDEX idx_entries_vehicle_trgm ON entries USING gin (vehicle_number gin_trgm_ops);
+CREATE INDEX idx_automatic_entries_center_id ON automatic_entries (center_id);
+CREATE INDEX idx_automatic_entries_vehicle_number ON automatic_entries (vehicle_number);
+CREATE INDEX idx_automatic_entries_created_at ON automatic_entries (created_at DESC);
+CREATE INDEX idx_automatic_entries_vehicle_trgm ON automatic_entries USING gin (vehicle_number gin_trgm_ops);
 
--- Weighments table (pairs an in-entry with an out-entry; indexed for scale)
-CREATE TABLE weighments (
+-- Manual Entries table (raw operator-entered scale readings at centers)
+CREATE TABLE manual_entries (
   id SERIAL PRIMARY KEY,
-  in_entry_id INT NOT NULL REFERENCES entries(id) ON DELETE RESTRICT,
-  out_entry_id INT NOT NULL REFERENCES entries(id) ON DELETE RESTRICT,
+  center_id INT NOT NULL REFERENCES centers(id) ON DELETE RESTRICT,
+  creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  vehicle_number TEXT NOT NULL,
+  weight DECIMAL(10, 2) NOT NULL CHECK (weight > 0),
+  images TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
+  CONSTRAINT chk_manual_entries_vehicle CHECK (length(trim(vehicle_number)) BETWEEN 8 AND 11)
+);
+CREATE INDEX idx_manual_entries_center_id ON manual_entries (center_id);
+CREATE INDEX idx_manual_entries_creator_id ON manual_entries (creator_id);
+CREATE INDEX idx_manual_entries_vehicle_number ON manual_entries (vehicle_number);
+CREATE INDEX idx_manual_entries_created_at ON manual_entries (created_at DESC);
+CREATE INDEX idx_manual_entries_vehicle_trgm ON manual_entries USING gin (vehicle_number gin_trgm_ops);
+
+-- Automatic Weighments table (pairs automatic in-entry and out-entry)
+CREATE TABLE automatic_weighments (
+  id SERIAL PRIMARY KEY,
+  in_entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE RESTRICT,
+  out_entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE RESTRICT,
   gross DECIMAL(10, 2) NOT NULL CHECK (gross > 0),
   tare  DECIMAL(10, 2) NOT NULL CHECK (tare >= 0),
   net   DECIMAL(10, 2) GENERATED ALWAYS AS (gross - tare) STORED,
@@ -140,48 +169,126 @@ CREATE TABLE weighments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ,
-  CONSTRAINT uq_weighments_in_entry UNIQUE (in_entry_id),
-  CONSTRAINT uq_weighments_out_entry UNIQUE (out_entry_id),
-  CONSTRAINT chk_weighments_distinct_entries CHECK (out_entry_id <> in_entry_id),
-  CONSTRAINT chk_weighments_gross_tare CHECK (gross >= tare)
+  CONSTRAINT uq_automatic_weighments_in_entry UNIQUE (in_entry_id),
+  CONSTRAINT uq_automatic_weighments_out_entry UNIQUE (out_entry_id),
+  CONSTRAINT chk_automatic_weighments_distinct_entries CHECK (out_entry_id <> in_entry_id),
+  CONSTRAINT chk_automatic_weighments_gross_tare CHECK (gross >= tare)
 );
-CREATE INDEX idx_weighments_created_at ON weighments (created_at DESC);
-CREATE INDEX idx_weighments_in_entry ON weighments (in_entry_id);
-CREATE INDEX idx_weighments_out_entry ON weighments (out_entry_id);
-CREATE INDEX idx_weighments_gross ON weighments (gross);
-CREATE INDEX idx_weighments_tare  ON weighments (tare);
-CREATE INDEX idx_weighments_net   ON weighments (net);
-CREATE INDEX idx_weighments_type  ON weighments (type);
+CREATE INDEX idx_automatic_weighments_created_at ON automatic_weighments (created_at DESC);
+CREATE INDEX idx_automatic_weighments_in_entry ON automatic_weighments (in_entry_id);
+CREATE INDEX idx_automatic_weighments_out_entry ON automatic_weighments (out_entry_id);
+CREATE INDEX idx_automatic_weighments_gross ON automatic_weighments (gross);
+CREATE INDEX idx_automatic_weighments_tare  ON automatic_weighments (tare);
+CREATE INDEX idx_automatic_weighments_net   ON automatic_weighments (net);
+CREATE INDEX idx_automatic_weighments_type  ON automatic_weighments (type);
 
--- Tickets table (issues/concerns raised on entries)
-CREATE TABLE tickets (
+-- Manual Weighments table (pairs manual in-entry and out-entry)
+CREATE TABLE manual_weighments (
+  id SERIAL PRIMARY KEY,
+  in_entry_id INT NOT NULL REFERENCES manual_entries(id) ON DELETE RESTRICT,
+  out_entry_id INT NOT NULL REFERENCES manual_entries(id) ON DELETE RESTRICT,
+  gross DECIMAL(10, 2) NOT NULL CHECK (gross > 0),
+  tare  DECIMAL(10, 2) NOT NULL CHECK (tare >= 0),
+  net   DECIMAL(10, 2) GENERATED ALWAYS AS (gross - tare) STORED,
+  type  weighment_type NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
+  CONSTRAINT uq_manual_weighments_in_entry UNIQUE (in_entry_id),
+  CONSTRAINT uq_manual_weighments_out_entry UNIQUE (out_entry_id),
+  CONSTRAINT chk_manual_weighments_distinct_entries CHECK (out_entry_id <> in_entry_id),
+  CONSTRAINT chk_manual_weighments_gross_tare CHECK (gross >= tare)
+);
+CREATE INDEX idx_manual_weighments_created_at ON manual_weighments (created_at DESC);
+CREATE INDEX idx_manual_weighments_in_entry ON manual_weighments (in_entry_id);
+CREATE INDEX idx_manual_weighments_out_entry ON manual_weighments (out_entry_id);
+CREATE INDEX idx_manual_weighments_gross ON manual_weighments (gross);
+CREATE INDEX idx_manual_weighments_tare  ON manual_weighments (tare);
+CREATE INDEX idx_manual_weighments_net   ON manual_weighments (net);
+CREATE INDEX idx_manual_weighments_type  ON manual_weighments (type);
+
+-- Automatic Tickets table (issues/concerns raised on automatic entries)
+CREATE TABLE automatic_tickets (
   id SERIAL PRIMARY KEY,
   concern TEXT NOT NULL,
   reply TEXT,
   status ticket_status NOT NULL DEFAULT 'pending',
-  entry_id INT NOT NULL REFERENCES entries(id) ON DELETE RESTRICT,
+  entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE RESTRICT,
+  creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT chk_tickets_concern CHECK (length(trim(concern)) > 0)
+  CONSTRAINT chk_automatic_tickets_concern CHECK (length(trim(concern)) > 0)
 );
-CREATE INDEX idx_tickets_entry_id ON tickets (entry_id);
-CREATE INDEX idx_tickets_status ON tickets (status);
-CREATE INDEX idx_tickets_created_at ON tickets (created_at DESC);
+CREATE INDEX idx_automatic_tickets_entry_id ON automatic_tickets (entry_id);
+CREATE INDEX idx_automatic_tickets_creator_id ON automatic_tickets (creator_id);
+CREATE INDEX idx_automatic_tickets_status ON automatic_tickets (status);
+CREATE INDEX idx_automatic_tickets_created_at ON automatic_tickets (created_at DESC);
+
+-- Manual Tickets table (issues/concerns raised on manual entries)
+CREATE TABLE manual_tickets (
+  id SERIAL PRIMARY KEY,
+  concern TEXT NOT NULL,
+  reply TEXT,
+  status ticket_status NOT NULL DEFAULT 'pending',
+  entry_id INT NOT NULL REFERENCES manual_entries(id) ON DELETE RESTRICT,
+  creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT chk_manual_tickets_concern CHECK (length(trim(concern)) > 0)
+);
+CREATE INDEX idx_manual_tickets_entry_id ON manual_tickets (entry_id);
+CREATE INDEX idx_manual_tickets_creator_id ON manual_tickets (creator_id);
+CREATE INDEX idx_manual_tickets_status ON manual_tickets (status);
+CREATE INDEX idx_manual_tickets_created_at ON manual_tickets (created_at DESC);
 
 -- ----------------------------------------------------------------------------
 -- 5. Views
 -- ----------------------------------------------------------------------------
 
--- Security invoker view joining paired weighments with in/out entries & centers
--- Exposes factory_id for tenancy filtering and center names for sorting/display
-CREATE OR REPLACE VIEW weighments_view WITH (security_invoker = true) AS
+-- Security invoker view exposing automatic entries with center details
+CREATE OR REPLACE VIEW automatic_entries_view WITH (security_invoker = true) AS
+SELECT
+  e.id,
+  c.factory_id,
+  e.center_id,
+  c.name AS center_name,
+  e.vehicle_number,
+  e.weight,
+  e.images,
+  e.idempotency_key,
+  e.created_at,
+  e.updated_at,
+  e.deleted_at
+FROM public.automatic_entries e
+JOIN public.centers c ON c.id = e.center_id;
+
+-- Security invoker view exposing manual entries with center and creator details
+CREATE OR REPLACE VIEW manual_entries_view WITH (security_invoker = true) AS
+SELECT
+  e.id,
+  c.factory_id,
+  e.center_id,
+  c.name AS center_name,
+  e.creator_id,
+  u.name AS creator_name,
+  u.username AS creator_username,
+  e.vehicle_number,
+  e.weight,
+  e.images,
+  e.created_at,
+  e.updated_at,
+  e.deleted_at
+FROM public.manual_entries e
+JOIN public.centers c ON c.id = e.center_id
+JOIN public.users u ON u.id = e.creator_id;
+
+-- Security invoker view joining paired automatic weighments with in/out entries & centers
+CREATE OR REPLACE VIEW automatic_weighments_view WITH (security_invoker = true) AS
 SELECT
   w.id,
   ic.factory_id,
   w.in_entry_id,
   w.out_entry_id,
-  ie.creator_id AS in_creator_id,
-  oe.creator_id AS out_creator_id,
   ie.vehicle_number,
   w.gross,
   w.tare,
@@ -199,32 +306,89 @@ SELECT
   w.created_at,
   w.updated_at,
   w.deleted_at
-FROM public.weighments w
-JOIN public.entries ie ON ie.id = w.in_entry_id
+FROM public.automatic_weighments w
+JOIN public.automatic_entries ie ON ie.id = w.in_entry_id
 JOIN public.centers ic ON ic.id = ie.center_id
-JOIN public.entries oe ON oe.id = w.out_entry_id
+JOIN public.automatic_entries oe ON oe.id = w.out_entry_id
 JOIN public.centers oc ON oc.id = oe.center_id;
 
--- Security invoker view exposing raw entries with center and creator details
-CREATE OR REPLACE VIEW entries_view WITH (security_invoker = true) AS
+-- Security invoker view joining paired manual weighments with in/out entries, centers & creators
+CREATE OR REPLACE VIEW manual_weighments_view WITH (security_invoker = true) AS
 SELECT
-  e.id,
+  w.id,
+  ic.factory_id,
+  w.in_entry_id,
+  w.out_entry_id,
+  ie.vehicle_number,
+  w.gross,
+  w.tare,
+  w.net,
+  w.type,
+  ie.created_at AS in_time,
+  oe.created_at AS out_time,
+  ie.center_id AS in_center_id,
+  ic.name AS in_center_name,
+  oe.center_id AS out_center_id,
+  oc.name AS out_center_name,
+  ie.images AS in_images,
+  oe.images AS out_images,
+  ie.images || oe.images AS images,
+  ie.creator_id AS in_creator_id,
+  iu.name AS in_creator_name,
+  iu.username AS in_creator_username,
+  oe.creator_id AS out_creator_id,
+  ou.name AS out_creator_name,
+  ou.username AS out_creator_username,
+  w.created_at,
+  w.updated_at,
+  w.deleted_at
+FROM public.manual_weighments w
+JOIN public.manual_entries ie ON ie.id = w.in_entry_id
+JOIN public.centers ic ON ic.id = ie.center_id
+JOIN public.users iu ON iu.id = ie.creator_id
+JOIN public.manual_entries oe ON oe.id = w.out_entry_id
+JOIN public.centers oc ON oc.id = oe.center_id
+JOIN public.users ou ON ou.id = oe.creator_id;
+
+-- Security invoker view exposing automatic tickets with entry, factory, and creator details
+CREATE OR REPLACE VIEW automatic_tickets_view WITH (security_invoker = true) AS
+SELECT
+  t.id,
   c.factory_id,
-  e.center_id,
-  c.name AS center_name,
-  e.creator_id,
+  t.concern,
+  t.reply,
+  t.status,
+  t.entry_id,
+  e.vehicle_number,
+  t.creator_id,
   u.name AS creator_name,
   u.username AS creator_username,
-  e.vehicle_number,
-  e.weight,
-  e.images,
-  e.idempotency_key,
-  e.created_at,
-  e.updated_at,
-  e.deleted_at
-FROM public.entries e
+  t.created_at,
+  t.updated_at
+FROM public.automatic_tickets t
+JOIN public.automatic_entries e ON e.id = t.entry_id
 JOIN public.centers c ON c.id = e.center_id
-LEFT JOIN public.users u ON u.id = e.creator_id;
+JOIN public.users u ON u.id = t.creator_id;
+
+-- Security invoker view exposing manual tickets with entry, factory, and creator details
+CREATE OR REPLACE VIEW manual_tickets_view WITH (security_invoker = true) AS
+SELECT
+  t.id,
+  c.factory_id,
+  t.concern,
+  t.reply,
+  t.status,
+  t.entry_id,
+  e.vehicle_number,
+  t.creator_id,
+  u.name AS creator_name,
+  u.username AS creator_username,
+  t.created_at,
+  t.updated_at
+FROM public.manual_tickets t
+JOIN public.manual_entries e ON e.id = t.entry_id
+JOIN public.centers c ON c.id = e.center_id
+JOIN public.users u ON u.id = t.creator_id;
 
 -- ----------------------------------------------------------------------------
 -- 6. Triggers & Stored Procedures
@@ -251,14 +415,23 @@ CREATE TRIGGER trg_users_timestamp
 CREATE TRIGGER trg_sessions_timestamp
   BEFORE UPDATE ON sessions FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
-CREATE TRIGGER trg_entries_timestamp
-  BEFORE UPDATE ON entries FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER trg_automatic_entries_timestamp
+  BEFORE UPDATE ON automatic_entries FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
-CREATE TRIGGER trg_weighments_timestamp
-  BEFORE UPDATE ON weighments FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER trg_manual_entries_timestamp
+  BEFORE UPDATE ON manual_entries FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
-CREATE TRIGGER trg_tickets_timestamp
-  BEFORE UPDATE ON tickets FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+CREATE TRIGGER trg_automatic_weighments_timestamp
+  BEFORE UPDATE ON automatic_weighments FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+
+CREATE TRIGGER trg_manual_weighments_timestamp
+  BEFORE UPDATE ON manual_weighments FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+
+CREATE TRIGGER trg_automatic_tickets_timestamp
+  BEFORE UPDATE ON automatic_tickets FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+
+CREATE TRIGGER trg_manual_tickets_timestamp
+  BEFORE UPDATE ON manual_tickets FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 -- Invalidate user sessions when password, username, role, or deletion status changes
 CREATE OR REPLACE FUNCTION trigger_invalidate_sessions()
@@ -282,20 +455,35 @@ CREATE TRIGGER trg_invalidate_sessions
 CREATE OR REPLACE FUNCTION trigger_weighments_auto_populate()
 RETURNS TRIGGER AS $$
 DECLARE
+  entry_table text := TG_ARGV[0];
   in_rec RECORD;
   out_rec RECORD;
 BEGIN
-  SELECT e.weight, e.vehicle_number, c.factory_id INTO in_rec
-    FROM public.entries e
-    JOIN public.centers c ON c.id = e.center_id
-   WHERE e.id = NEW.in_entry_id;
+  IF entry_table NOT IN ('automatic_entries', 'manual_entries') THEN
+    RAISE EXCEPTION 'Invalid entry table argument: %', entry_table;
+  END IF;
 
-  SELECT e.weight, e.vehicle_number, c.factory_id INTO out_rec
-    FROM public.entries e
-    JOIN public.centers c ON c.id = e.center_id
-   WHERE e.id = NEW.out_entry_id;
+  EXECUTE format(
+    'SELECT e.weight, e.vehicle_number, c.factory_id
+       FROM public.%I e
+       JOIN public.centers c ON c.id = e.center_id
+      WHERE e.id = $1',
+    entry_table
+  ) INTO in_rec USING NEW.in_entry_id;
 
-  IF in_rec IS NULL OR out_rec IS NULL THEN
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Referenced in_entry (%) or out_entry (%) not found', NEW.in_entry_id, NEW.out_entry_id;
+  END IF;
+
+  EXECUTE format(
+    'SELECT e.weight, e.vehicle_number, c.factory_id
+       FROM public.%I e
+       JOIN public.centers c ON c.id = e.center_id
+      WHERE e.id = $1',
+    entry_table
+  ) INTO out_rec USING NEW.out_entry_id;
+
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'Referenced in_entry (%) or out_entry (%) not found', NEW.in_entry_id, NEW.out_entry_id;
   END IF;
 
@@ -316,9 +504,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_weighments_auto_populate
-  BEFORE INSERT OR UPDATE OF in_entry_id, out_entry_id ON weighments
-  FOR EACH ROW EXECUTE FUNCTION trigger_weighments_auto_populate();
+CREATE TRIGGER trg_automatic_weighments_auto_populate
+  BEFORE INSERT OR UPDATE OF in_entry_id, out_entry_id ON automatic_weighments
+  FOR EACH ROW EXECUTE FUNCTION trigger_weighments_auto_populate('automatic_entries');
+
+CREATE TRIGGER trg_manual_weighments_auto_populate
+  BEFORE INSERT OR UPDATE OF in_entry_id, out_entry_id ON manual_weighments
+  FOR EACH ROW EXECUTE FUNCTION trigger_weighments_auto_populate('manual_entries');
 
 -- Sequence reset procedures for database testing and seed isolation
 CREATE OR REPLACE FUNCTION reset_table_sequence(p_table text)
@@ -346,9 +538,12 @@ BEGIN
   PERFORM reset_table_sequence('centers');
   PERFORM reset_table_sequence('users');
   PERFORM reset_table_sequence('sessions');
-  PERFORM reset_table_sequence('entries');
-  PERFORM reset_table_sequence('weighments');
-  PERFORM reset_table_sequence('tickets');
+  PERFORM reset_table_sequence('automatic_entries');
+  PERFORM reset_table_sequence('manual_entries');
+  PERFORM reset_table_sequence('automatic_weighments');
+  PERFORM reset_table_sequence('manual_weighments');
+  PERFORM reset_table_sequence('automatic_tickets');
+  PERFORM reset_table_sequence('manual_tickets');
 END;
 $$ LANGUAGE plpgsql;
 

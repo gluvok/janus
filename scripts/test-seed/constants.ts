@@ -4,9 +4,12 @@
  */
 
 export const TABLES_IN_CLEAR_ORDER = [
-  "tickets",
-  "weighments",
-  "entries",
+  "manual_tickets",
+  "automatic_tickets",
+  "manual_weighments",
+  "automatic_weighments",
+  "manual_entries",
+  "automatic_entries",
   "sessions",
   "centers",
   "users",

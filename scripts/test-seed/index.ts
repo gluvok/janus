@@ -48,14 +48,14 @@ async function main() {
     centerNameMap,
   };
 
-  // 4. Raw Scale Entries
-  const { pairedInEntries, pairedOutEntries, standaloneEntries } = await seedEntries(ctx);
+  // 4. Raw Scale Entries (Automatic & Manual)
+  const { automatic, manual } = await seedEntries(ctx);
 
   // 5. Weighments Pairs (Trigger-driven gross/tare/type computation)
-  await seedWeighments({ pairedInEntries, pairedOutEntries });
+  await seedWeighments({ automatic, manual });
 
-  // 6. Support Tickets
-  await seedTickets({ pairedInEntries, standaloneEntries });
+  // 6. Support Tickets (Automatic & Manual)
+  await seedTickets({ ctx, automatic, manual });
 
   console.log("\n=================================================");
   console.log("🎉 Test database seeding complete with zero errors!");

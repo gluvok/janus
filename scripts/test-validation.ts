@@ -126,7 +126,7 @@ function deriveWeighment(
 
 // ------------------------------------------------------------------------------
 // 3. SCHEMA CONSTRAINT INVARIANTS
-// Reference: schema.sql lines 50, 54-55, 70-71, 89-90, 117, 123, 145-146
+// Reference: schema.sql (factories, centers, users, automatic_*, manual_*)
 // ------------------------------------------------------------------------------
 console.log("\n📐 [3/5] Testing Schema Constraint Invariants...");
 
@@ -174,7 +174,9 @@ assert.ok(validateEntryVehicle("DL1A1234")); // 8
 assert.ok(validateEntryVehicle("HR26DQ5551A")); // 11
 assert.ok(!validateEntryVehicle("MH123")); // 5 < 8
 assert.ok(!validateEntryVehicle("MH12AB123456")); // 12 > 11
-console.log("  ✓ chk_entries_vehicle (8 to 11 chars) verified.");
+console.log(
+  "  ✓ chk_automatic_entries_vehicle & chk_manual_entries_vehicle (8 to 11 chars) verified.",
+);
 
 function validateEntryWeight(weight: number): boolean {
   return typeof weight === "number" && weight > 0;
@@ -183,7 +185,7 @@ function validateEntryWeight(weight: number): boolean {
 assert.ok(validateEntryWeight(25000));
 assert.ok(!validateEntryWeight(0));
 assert.ok(!validateEntryWeight(-500));
-console.log("  ✓ chk_entries_weight_positive verified.");
+console.log("  ✓ automatic_entries & manual_entries positive weight constraint verified.");
 
 function validateWeighmentDistinctEntries(inId: number, outId: number): boolean {
   return inId !== outId;
@@ -191,7 +193,9 @@ function validateWeighmentDistinctEntries(inId: number, outId: number): boolean 
 
 assert.ok(validateWeighmentDistinctEntries(1, 2));
 assert.ok(!validateWeighmentDistinctEntries(5, 5));
-console.log("  ✓ chk_weighments_distinct_entries verified.");
+console.log(
+  "  ✓ chk_automatic_weighments_distinct_entries & chk_manual_weighments_distinct_entries verified.",
+);
 
 function validateWeighmentWeights(gross: number, tare: number): boolean {
   return gross > 0 && tare >= 0 && gross >= tare;
@@ -201,7 +205,29 @@ assert.ok(validateWeighmentWeights(38000, 14000));
 assert.ok(validateWeighmentWeights(15000, 15000));
 assert.ok(!validateWeighmentWeights(14000, 38000)); // gross must be >= tare
 assert.ok(!validateWeighmentWeights(0, 0)); // gross must be > 0
-console.log("  ✓ chk_weighments_gross_tare invariants verified.");
+console.log(
+  "  ✓ chk_automatic_weighments_gross_tare & chk_manual_weighments_gross_tare invariants verified.",
+);
+
+function validateTicketConcern(concern: string): boolean {
+  return typeof concern === "string" && concern.trim().length > 0;
+}
+
+assert.ok(validateTicketConcern("Plate OCR mismatch"));
+assert.ok(!validateTicketConcern(""));
+assert.ok(!validateTicketConcern("   "));
+console.log("  ✓ chk_automatic_tickets_concern & chk_manual_tickets_concern invariants verified.");
+
+function validateRequiredCreatorId(creatorId: unknown): boolean {
+  return typeof creatorId === "number" && Number.isInteger(creatorId) && creatorId > 0;
+}
+
+assert.ok(validateRequiredCreatorId(1));
+assert.ok(!validateRequiredCreatorId(null));
+assert.ok(!validateRequiredCreatorId(0));
+console.log(
+  "  ✓ manual_entries, automatic_tickets & manual_tickets non-null creator_id invariant verified.",
+);
 
 // ------------------------------------------------------------------------------
 // 4. DATABASE ENUM SET INVARIANTS

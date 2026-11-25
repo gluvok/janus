@@ -1,6 +1,6 @@
 /**
  * @file scripts/test-seed/entries.ts
- * @description Generates tenant-isolated scale entries with verified open-license photos in Supabase Storage.
+ * @description Generates tenant-isolated automatic and manual scale entries with verified open-license photos in Supabase Storage.
  */
 
 import crypto from "node:crypto";
@@ -9,10 +9,9 @@ import { SAMPLE_PLATES, daysAgo } from "./constants.ts";
 import { buildStoragePath, uploadAndVerifyPhotos, type PhotoTarget } from "./photos.ts";
 import type { SeedContext } from "./types.ts";
 
-export interface SeededEntry {
+export interface SeededAutomaticEntry {
   id: number;
   center_id: number;
-  creator_id: number | null;
   vehicle_number: string;
   weight: number;
   images: string[];
@@ -21,14 +20,79 @@ export interface SeededEntry {
   updated_at: string;
 }
 
+export interface SeededManualEntry {
+  id: number;
+  center_id: number;
+  creator_id: number;
+  vehicle_number: string;
+  weight: number;
+  images: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EntryGroup<T> {
+  pairedInEntries: T[];
+  pairedOutEntries: T[];
+  standaloneEntries: T[];
+}
+
 export interface SeededEntriesResult {
-  pairedInEntries: SeededEntry[];
-  pairedOutEntries: SeededEntry[];
-  standaloneEntries: SeededEntry[];
+  automatic: EntryGroup<SeededAutomaticEntry>;
+  manual: EntryGroup<SeededManualEntry>;
+}
+
+interface BaseEntrySpec {
+  kind: "automatic" | "manual";
+  center_id: number;
+  creator_id?: number;
+  vehicle_number: string;
+  weight: number;
+  photoPaths: string[];
+  idempotency_key?: string;
+  created_at: string;
+  updated_at: string;
+  role?: "pairedIn" | "pairedOut" | "standalone";
+}
+
+function getRequiredUserId(userMap: Map<string, number>, username: string): number {
+  const id = userMap.get(username);
+  if (id === undefined) {
+    throw new Error(`Missing required seeded user '${username}' in userMap.`);
+  }
+  return id;
+}
+
+function pairOutWeight(inWeight: number, index: number, deltaIn: number, deltaOut: number): number {
+  const scenario = index % 3;
+  if (scenario === 0) return inWeight - deltaIn;
+  if (scenario === 1) return inWeight + deltaOut;
+  return inWeight;
+}
+
+function splitGroup<T>(specs: BaseEntrySpec[], rows: T[]): EntryGroup<T> {
+  const pairedInEntries: T[] = [];
+  const pairedOutEntries: T[] = [];
+  const standaloneEntries: T[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const role = specs[i].role;
+    if (role === "pairedIn") {
+      pairedInEntries.push(rows[i]);
+    } else if (role === "pairedOut") {
+      pairedOutEntries.push(rows[i]);
+    } else {
+      standaloneEntries.push(rows[i]);
+    }
+  }
+
+  return { pairedInEntries, pairedOutEntries, standaloneEntries };
 }
 
 export async function seedEntries(ctx: SeedContext): Promise<SeededEntriesResult> {
-  console.log("\n⚖️ [4/6] Seeding Raw Scale Entries with unique photos & idempotency keys...");
+  console.log(
+    "\n⚖️ [4/6] Seeding Automatic & Manual Scale Entries with unique photos & idempotency keys...",
+  );
 
   const { primaryFactoryId, secondaryFactoryId, userMap, primaryCenterIds, secondaryCenterIds } =
     ctx;
@@ -39,278 +103,188 @@ export async function seedEntries(ctx: SeedContext): Promise<SeededEntriesResult
     return buildStoragePath(target);
   }
 
-  interface EntrySpec {
-    center_id: number;
-    creator_id: number | null;
-    vehicle_number: string;
-    weight: number;
-    photoPaths: string[];
-    idempotency_key: string;
-    created_at: string;
-    updated_at: string;
-    isPairedIn?: boolean;
-    isPairedOut?: boolean;
-    pairIndex?: number;
-  }
+  const operator1Id = getRequiredUserId(userMap, "operator1");
+  const operator2Id = getRequiredUserId(userMap, "operator2");
+  const operatorApexId = getRequiredUserId(userMap, "operatorApex1");
 
-  const specs: EntrySpec[] = [];
-
-  const operator1Id = userMap.get("operator1") ?? null;
-  const operator2Id = userMap.get("operator2") ?? null;
-  const operatorApexId = userMap.get("operatorApex1") ?? null;
-
+  const specs: BaseEntrySpec[] = [];
   let globalEntryIndex = 0;
 
-  // --- FACTORY 1 (Alpha): 30 Paired Cycles + 10 Standalone Entries ---
-  for (let i = 0; i < 30; i++) {
-    const plate = SAMPLE_PLATES[i % SAMPLE_PLATES.length];
-    const inCenterId = primaryCenterIds[i % primaryCenterIds.length];
-    const outCenterId = primaryCenterIds[(i + 1) % primaryCenterIds.length];
+  const nextPhotos = (factoryId: number, direction: "in" | "out", plate: string): string[] => {
+    const idx = globalEntryIndex++;
+    return Array.from({ length: 2 }, (_, p) =>
+      registerPhoto({ factoryId, entryIndex: idx, direction, photoIndex: p, plate }),
+    );
+  };
 
-    const inTime = daysAgo(Math.floor(i / 3), (i % 24) * 20);
-    const outTime = daysAgo(Math.floor(i / 3), (i % 24) * 20 - 45);
+  function addPairedAndStandalone(opts: {
+    kind: "automatic" | "manual";
+    factoryId: number;
+    centerIds: number[];
+    pairedCount: number;
+    standaloneCount: number;
+    plateOffset: number;
+    baseInWeight: number;
+    inCreatorId?: number;
+    outCreatorId?: number;
+  }) {
+    for (let i = 0; i < opts.pairedCount; i++) {
+      const plate = SAMPLE_PLATES[(i + opts.plateOffset) % SAMPLE_PLATES.length];
+      const inCenterId = opts.centerIds[i % opts.centerIds.length];
+      const outCenterId = opts.centerIds[(i + 1) % opts.centerIds.length];
+      const inTime = daysAgo(Math.floor(i / 3), (i % 24) * 20);
+      const outTime = daysAgo(Math.floor(i / 3), (i % 24) * 20 - 45);
+      const inWeight = opts.baseInWeight + ((i * 370) % 15000);
+      const outWeight = pairOutWeight(
+        inWeight,
+        i,
+        10000 + ((i * 150) % 3000),
+        9500 + ((i * 200) % 4000),
+      );
 
-    const inWeight = 25000 + ((i * 370) % 15000);
-    let outWeight: number;
+      specs.push({
+        kind: opts.kind,
+        center_id: inCenterId,
+        creator_id: opts.inCreatorId,
+        vehicle_number: plate,
+        weight: inWeight,
+        photoPaths: nextPhotos(opts.factoryId, "in", plate),
+        idempotency_key: opts.kind === "automatic" ? crypto.randomUUIDv7() : undefined,
+        created_at: inTime,
+        updated_at: inTime,
+        role: "pairedIn",
+      });
 
-    const scenario = i % 3;
-    if (scenario === 0) {
-      // Inbound delivery: in > out -> weighment type 'in'
-      outWeight = inWeight - 10000 - ((i * 150) % 3000);
-    } else if (scenario === 1) {
-      // Outbound dispatch: in < out -> weighment type 'out'
-      outWeight = inWeight + 9500 + ((i * 200) % 4000);
-    } else {
-      // Void pass-through: in == out -> weighment type 'void'
-      outWeight = inWeight;
+      specs.push({
+        kind: opts.kind,
+        center_id: outCenterId,
+        creator_id: opts.outCreatorId,
+        vehicle_number: plate,
+        weight: outWeight,
+        photoPaths: nextPhotos(opts.factoryId, "out", plate),
+        idempotency_key: opts.kind === "automatic" ? crypto.randomUUIDv7() : undefined,
+        created_at: outTime,
+        updated_at: outTime,
+        role: "pairedOut",
+      });
     }
 
-    const inPhotoCount = 2;
-    const inPhotoPaths = Array.from({ length: inPhotoCount }, (_, p) =>
-      registerPhoto({
-        factoryId: primaryFactoryId,
-        entryIndex: globalEntryIndex,
-        direction: "in",
-        photoIndex: p,
-        plate,
-      }),
-    );
-    globalEntryIndex++;
+    for (let s = 0; s < opts.standaloneCount; s++) {
+      const plate = SAMPLE_PLATES[(s + opts.plateOffset + 5) % SAMPLE_PLATES.length];
+      const centerId = opts.centerIds[s % opts.centerIds.length];
+      const time = daysAgo(s, s * 30 + 10);
+      const weight = 20000 + ((s * 410) % 10000);
 
-    const outPhotoCount = 2;
-    const outPhotoPaths = Array.from({ length: outPhotoCount }, (_, p) =>
-      registerPhoto({
-        factoryId: primaryFactoryId,
-        entryIndex: globalEntryIndex,
-        direction: "out",
-        photoIndex: p,
-        plate,
-      }),
-    );
-    globalEntryIndex++;
-
-    const inCreator = i % 2 === 0 ? operator1Id : null;
-    const outCreator = i % 2 === 0 ? operator2Id : null;
-
-    specs.push({
-      center_id: inCenterId,
-      creator_id: inCreator,
-      vehicle_number: plate,
-      weight: inWeight,
-      photoPaths: inPhotoPaths,
-      idempotency_key: crypto.randomUUIDv7(),
-      created_at: inTime,
-      updated_at: inTime,
-      isPairedIn: true,
-      pairIndex: i,
-    });
-
-    specs.push({
-      center_id: outCenterId,
-      creator_id: outCreator,
-      vehicle_number: plate,
-      weight: outWeight,
-      photoPaths: outPhotoPaths,
-      idempotency_key: crypto.randomUUIDv7(),
-      created_at: outTime,
-      updated_at: outTime,
-      isPairedOut: true,
-      pairIndex: i,
-    });
-  }
-
-  // Factory 1 Standalone Entries (10 records)
-  for (let s = 0; s < 10; s++) {
-    const plate = SAMPLE_PLATES[(s + 7) % SAMPLE_PLATES.length];
-    const centerId = primaryCenterIds[s % primaryCenterIds.length];
-    const time = daysAgo(s, s * 30 + 10);
-    const weight = 20000 + ((s * 410) % 10000);
-
-    const photoPaths = Array.from({ length: 2 }, (_, p) =>
-      registerPhoto({
-        factoryId: primaryFactoryId,
-        entryIndex: globalEntryIndex,
-        direction: "in",
-        photoIndex: p,
-        plate,
-      }),
-    );
-    globalEntryIndex++;
-
-    specs.push({
-      center_id: centerId,
-      creator_id: s % 3 === 0 ? operator1Id : null,
-      vehicle_number: plate,
-      weight,
-      photoPaths,
-      idempotency_key: crypto.randomUUIDv7(),
-      created_at: time,
-      updated_at: time,
-    });
-  }
-
-  // --- FACTORY 2 (Apex): 15 Paired Cycles + 5 Standalone Entries ---
-  for (let i = 0; i < 15; i++) {
-    const plate = SAMPLE_PLATES[(i + 4) % SAMPLE_PLATES.length];
-    const inCenterId = secondaryCenterIds[i % secondaryCenterIds.length];
-    const outCenterId = secondaryCenterIds[(i + 1) % secondaryCenterIds.length];
-
-    const inTime = daysAgo(Math.floor(i / 2), (i % 18) * 25);
-    const outTime = daysAgo(Math.floor(i / 2), (i % 18) * 25 - 40);
-
-    const inWeight = 22000 + ((i * 320) % 11000);
-    let outWeight: number;
-
-    const scenario = i % 3;
-    if (scenario === 0) {
-      outWeight = inWeight - 8500;
-    } else if (scenario === 1) {
-      outWeight = inWeight + 9000;
-    } else {
-      outWeight = inWeight;
+      specs.push({
+        kind: opts.kind,
+        center_id: centerId,
+        creator_id: opts.inCreatorId,
+        vehicle_number: plate,
+        weight,
+        photoPaths: nextPhotos(opts.factoryId, "in", plate),
+        idempotency_key: opts.kind === "automatic" ? crypto.randomUUIDv7() : undefined,
+        created_at: time,
+        updated_at: time,
+        role: "standalone",
+      });
     }
-
-    const inPhotoPaths = Array.from({ length: 2 }, (_, p) =>
-      registerPhoto({
-        factoryId: secondaryFactoryId,
-        entryIndex: globalEntryIndex,
-        direction: "in",
-        photoIndex: p,
-        plate,
-      }),
-    );
-    globalEntryIndex++;
-
-    const outPhotoPaths = Array.from({ length: 2 }, (_, p) =>
-      registerPhoto({
-        factoryId: secondaryFactoryId,
-        entryIndex: globalEntryIndex,
-        direction: "out",
-        photoIndex: p,
-        plate,
-      }),
-    );
-    globalEntryIndex++;
-
-    specs.push({
-      center_id: inCenterId,
-      creator_id: operatorApexId,
-      vehicle_number: plate,
-      weight: inWeight,
-      photoPaths: inPhotoPaths,
-      idempotency_key: crypto.randomUUIDv7(),
-      created_at: inTime,
-      updated_at: inTime,
-      isPairedIn: true,
-      pairIndex: i + 30,
-    });
-
-    specs.push({
-      center_id: outCenterId,
-      creator_id: operatorApexId,
-      vehicle_number: plate,
-      weight: outWeight,
-      photoPaths: outPhotoPaths,
-      idempotency_key: crypto.randomUUIDv7(),
-      created_at: outTime,
-      updated_at: outTime,
-      isPairedOut: true,
-      pairIndex: i + 30,
-    });
   }
 
-  // Factory 2 Standalone Entries (5 records)
-  for (let s = 0; s < 5; s++) {
-    const plate = SAMPLE_PLATES[(s + 2) % SAMPLE_PLATES.length];
-    const centerId = secondaryCenterIds[s % secondaryCenterIds.length];
-    const time = daysAgo(s, s * 25 + 15);
-    const weight = 21000 + ((s * 330) % 9000);
+  // Automatic entries: Factory 1 (20 paired + 6 standalone) and Factory 2 (10 paired + 4 standalone)
+  addPairedAndStandalone({
+    kind: "automatic",
+    factoryId: primaryFactoryId,
+    centerIds: primaryCenterIds,
+    pairedCount: 20,
+    standaloneCount: 6,
+    plateOffset: 0,
+    baseInWeight: 25000,
+  });
+  addPairedAndStandalone({
+    kind: "automatic",
+    factoryId: secondaryFactoryId,
+    centerIds: secondaryCenterIds,
+    pairedCount: 10,
+    standaloneCount: 4,
+    plateOffset: 4,
+    baseInWeight: 22000,
+  });
 
-    const photoPaths = Array.from({ length: 2 }, (_, p) =>
-      registerPhoto({
-        factoryId: secondaryFactoryId,
-        entryIndex: globalEntryIndex,
-        direction: "in",
-        photoIndex: p,
-        plate,
-      }),
-    );
-    globalEntryIndex++;
+  // Manual entries: Factory 1 (15 paired + 5 standalone) and Factory 2 (10 paired + 4 standalone)
+  addPairedAndStandalone({
+    kind: "manual",
+    factoryId: primaryFactoryId,
+    centerIds: primaryCenterIds,
+    pairedCount: 15,
+    standaloneCount: 5,
+    plateOffset: 2,
+    baseInWeight: 26000,
+    inCreatorId: operator1Id,
+    outCreatorId: operator2Id,
+  });
+  addPairedAndStandalone({
+    kind: "manual",
+    factoryId: secondaryFactoryId,
+    centerIds: secondaryCenterIds,
+    pairedCount: 10,
+    standaloneCount: 4,
+    plateOffset: 6,
+    baseInWeight: 23000,
+    inCreatorId: operatorApexId,
+    outCreatorId: operatorApexId,
+  });
 
-    specs.push({
-      center_id: centerId,
-      creator_id: operatorApexId,
-      vehicle_number: plate,
-      weight,
-      photoPaths,
-      idempotency_key: crypto.randomUUIDv7(),
-      created_at: time,
-      updated_at: time,
-    });
-  }
-
-  // Upload or fallback all photos in parallel and verify live HTTP 200
   const resolvedPhotoUrls = await uploadAndVerifyPhotos(photoTargets);
 
-  const entriesToInsert = specs.map((spec) => ({
-    center_id: spec.center_id,
-    creator_id: spec.creator_id,
-    vehicle_number: spec.vehicle_number,
-    weight: spec.weight,
-    images: spec.photoPaths.map((p) => resolvedPhotoUrls.get(p) ?? p),
-    idempotency_key: spec.idempotency_key,
-    created_at: spec.created_at,
-    updated_at: spec.updated_at,
-  }));
+  const autoSpecs = specs.filter((s) => s.kind === "automatic");
+  const manualSpecs = specs.filter((s) => s.kind === "manual");
 
-  const { data: createdEntries, error: entriesErr } = await supabase
-    .from("entries")
-    .insert(entriesToInsert)
+  const { data: createdAuto, error: autoErr } = await supabase
+    .from("automatic_entries")
+    .insert(
+      autoSpecs.map((spec) => ({
+        center_id: spec.center_id,
+        vehicle_number: spec.vehicle_number,
+        weight: spec.weight,
+        images: spec.photoPaths.map((p) => resolvedPhotoUrls.get(p) ?? p),
+        idempotency_key: spec.idempotency_key!,
+        created_at: spec.created_at,
+        updated_at: spec.updated_at,
+      })),
+    )
     .select(
-      "id, center_id, creator_id, vehicle_number, weight, images, idempotency_key, created_at, updated_at",
+      "id, center_id, vehicle_number, weight, images, idempotency_key, created_at, updated_at",
     );
 
-  if (entriesErr || !createdEntries) {
-    throw new Error(`Failed to seed entries: ${entriesErr?.message}`);
+  if (autoErr || !createdAuto) {
+    throw new Error(`Failed to seed automatic_entries: ${autoErr?.message}`);
   }
 
-  console.log(`  ✓ Seeded ${createdEntries.length} scale entries across both factories.`);
+  const { data: createdManual, error: manualErr } = await supabase
+    .from("manual_entries")
+    .insert(
+      manualSpecs.map((spec) => ({
+        center_id: spec.center_id,
+        creator_id: spec.creator_id!,
+        vehicle_number: spec.vehicle_number,
+        weight: spec.weight,
+        images: spec.photoPaths.map((p) => resolvedPhotoUrls.get(p) ?? p),
+        created_at: spec.created_at,
+        updated_at: spec.updated_at,
+      })),
+    )
+    .select("id, center_id, creator_id, vehicle_number, weight, images, created_at, updated_at");
 
-  const pairedInEntries: SeededEntry[] = [];
-  const pairedOutEntries: SeededEntry[] = [];
-  const standaloneEntries: SeededEntry[] = [];
-
-  for (let i = 0; i < createdEntries.length; i++) {
-    const spec = specs[i];
-    const entry = createdEntries[i] as SeededEntry;
-    if (spec.isPairedIn) {
-      pairedInEntries.push(entry);
-    } else if (spec.isPairedOut) {
-      pairedOutEntries.push(entry);
-    } else {
-      standaloneEntries.push(entry);
-    }
+  if (manualErr || !createdManual) {
+    throw new Error(`Failed to seed manual_entries: ${manualErr?.message}`);
   }
 
-  return { pairedInEntries, pairedOutEntries, standaloneEntries };
+  console.log(
+    `  ✓ Seeded ${createdAuto.length} automatic_entries and ${createdManual.length} manual_entries across both factories.`,
+  );
+
+  return {
+    automatic: splitGroup(autoSpecs, createdAuto as SeededAutomaticEntry[]),
+    manual: splitGroup(manualSpecs, createdManual as SeededManualEntry[]),
+  };
 }

@@ -1,43 +1,71 @@
 /**
  * @file scripts/test-seed/weighments.ts
- * @description Generates completed weighments pairing in_entries and out_entries strictly validating triggers.
+ * @description Generates completed automatic and manual weighments pairing in/out entries and invoking triggers.
  */
 
 import { supabase } from "../supabase.ts";
-import type { SeededEntry } from "./entries.ts";
+import type { EntryGroup, SeededAutomaticEntry, SeededManualEntry } from "./entries.ts";
 
-export async function seedWeighments({
-  pairedInEntries,
-  pairedOutEntries,
-}: {
-  pairedInEntries: SeededEntry[];
-  pairedOutEntries: SeededEntry[];
-}): Promise<Array<{ id: number; in_entry_id: number; out_entry_id: number }>> {
-  console.log("\n🚛 [5/6] Seeding Weighment Pairs (invoking trigger_weighments_auto_populate)...");
+export interface SeededWeighmentRow {
+  id: number;
+  in_entry_id: number;
+  out_entry_id: number;
+}
 
+async function insertWeighmentBatch(
+  table: "automatic_weighments" | "manual_weighments",
+  pairedInEntries: Array<{ id: number }>,
+  pairedOutEntries: Array<{ id: number }>,
+): Promise<SeededWeighmentRow[]> {
   if (pairedInEntries.length !== pairedOutEntries.length) {
     throw new Error(
-      `Mismatched entry pairs: ${pairedInEntries.length} in-entries vs ${pairedOutEntries.length} out-entries`,
+      `Mismatched ${table} pairs: ${pairedInEntries.length} in-entries vs ${pairedOutEntries.length} out-entries`,
     );
   }
 
-  const weighmentInserts = pairedInEntries.map((inEntry, i) => ({
+  const inserts = pairedInEntries.map((inEntry, i) => ({
     in_entry_id: inEntry.id,
     out_entry_id: pairedOutEntries[i].id,
   }));
 
-  const { data: createdWeighments, error: weighmentErr } = await supabase
-    .from("weighments")
-    .insert(weighmentInserts)
+  const { data, error } = await supabase
+    .from(table)
+    .insert(inserts)
     .select("id, in_entry_id, out_entry_id, gross, tare, net, type");
 
-  if (weighmentErr || !createdWeighments) {
-    throw new Error(`Failed to seed weighments: ${weighmentErr?.message}`);
+  if (error || !data) {
+    throw new Error(`Failed to seed ${table}: ${error?.message}`);
   }
 
+  return data;
+}
+
+export async function seedWeighments({
+  automatic,
+  manual,
+}: {
+  automatic: EntryGroup<SeededAutomaticEntry>;
+  manual: EntryGroup<SeededManualEntry>;
+}): Promise<{
+  automatic: SeededWeighmentRow[];
+  manual: SeededWeighmentRow[];
+}> {
   console.log(
-    `  ✓ Seeded ${createdWeighments.length} weighment cycles (gross, tare, net, type computed automatically).`,
+    "\n🚛 [5/6] Seeding Automatic & Manual Weighment Pairs (invoking trigger_weighments_auto_populate)...",
   );
 
-  return createdWeighments;
+  const [createdAuto, createdManual] = await Promise.all([
+    insertWeighmentBatch(
+      "automatic_weighments",
+      automatic.pairedInEntries,
+      automatic.pairedOutEntries,
+    ),
+    insertWeighmentBatch("manual_weighments", manual.pairedInEntries, manual.pairedOutEntries),
+  ]);
+
+  console.log(
+    `  ✓ Seeded ${createdAuto.length} automatic_weighments and ${createdManual.length} manual_weighments (gross, tare, net, type computed automatically).`,
+  );
+
+  return { automatic: createdAuto, manual: createdManual };
 }
