@@ -7,13 +7,340 @@ links:
   doc: https://tanstack.com/table/latest/docs/overview
 ---
 
-<ComponentPreview
-  styleName="base-nova"
-  name="data-table-demo"
-  align="start"
-  previewClassName="items-start h-auto px-4 md:px-8"
-  hideCode
-/>
+```tsx
+"use client"
+
+import * as React from "react"
+import {
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  createColumnHelper,
+  createFilteredRowModel,
+  createPaginatedRowModel,
+  createSortedRowModel,
+  filterFn_includesString,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_text,
+  tableFeatures,
+  useTable,
+  type ColumnFiltersState,
+  type ColumnVisibilityState,
+  type SortingState,
+} from "@tanstack/react-table"
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+
+// New in v9: declare the features this table uses — anything you don't
+// register is tree-shaken out of the bundle.
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  filterFns: { includesString: filterFn_includesString },
+  sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text },
+})
+
+const columnHelper = createColumnHelper<typeof features, Payment>()
+
+const data: Payment[] = [
+  {
+    id: "m5gr84i9",
+    amount: 316,
+    status: "success",
+    email: "ken99@example.com",
+  },
+  {
+    id: "3u1reuv4",
+    amount: 242,
+    status: "success",
+    email: "Abe45@example.com",
+  },
+  {
+    id: "derv1ws0",
+    amount: 837,
+    status: "processing",
+    email: "Monserrat44@example.com",
+  },
+  {
+    id: "5kma53ae",
+    amount: 874,
+    status: "success",
+    email: "Silas22@example.com",
+  },
+  {
+    id: "bhqecj4p",
+    amount: 721,
+    status: "failed",
+    email: "carmella@example.com",
+  },
+]
+
+export type Payment = {
+  id: string
+  amount: number
+  status: "pending" | "processing" | "success" | "failed"
+  email: string
+}
+
+export const columns = columnHelper.columns([
+  columnHelper.display({
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        indeterminate={
+          table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  }),
+  columnHelper.accessor("status", {
+    header: "Status",
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("status")}</div>
+    ),
+  }),
+  columnHelper.accessor("email", {
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Email
+          <ArrowUpDown />
+        </Button>
+      )
+    },
+    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
+  }),
+  columnHelper.accessor("amount", {
+    header: () => <div className="text-right">Amount</div>,
+    cell: ({ row }) => {
+      const amount = parseFloat(row.getValue("amount"))
+
+      // Format the amount as a dollar amount.
+      const formatted = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(amount)
+
+      return <div className="text-right font-medium">{formatted}</div>
+    },
+  }),
+  columnHelper.display({
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row }) => {
+      const payment = row.original
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="icon-xs" />}
+          >
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(payment.id)}
+              >
+                Copy payment ID
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem>View customer</DropdownMenuItem>
+              <DropdownMenuItem>View payment details</DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    },
+  }),
+])
+
+export function DataTableDemo() {
+  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<ColumnVisibilityState>({})
+  const [rowSelection, setRowSelection] = React.useState({})
+
+  const table = useTable({
+    features,
+    data,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+    },
+  })
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center py-4">
+        <Input
+          placeholder="Filter emails..."
+          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("email")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" className="ml-auto" />}
+          >
+            Columns <ChevronDown />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuGroup>
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="overflow-hidden rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder ? null : (
+                        <table.FlexRender header={header} />
+                      )}
+                    </TableHead>
+                  )
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      <table.FlexRender cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+```
 
 ## Introduction
 
@@ -65,11 +392,11 @@ We are going to build a table to show recent payments. Here's what our data look
 
 ```tsx showLineNumbers
 type Payment = {
-  id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
-};
+  id: string
+  amount: number
+  status: "pending" | "processing" | "success" | "failed"
+  email: string
+}
 
 export const payments: Payment[] = [
   {
@@ -85,7 +412,7 @@ export const payments: Payment[] = [
     email: "example@gmail.com",
   },
   // ...
-];
+]
 ```
 
 ## Project Structure
@@ -126,7 +453,7 @@ import {
   sortFn_alphanumeric,
   sortFn_text,
   tableFeatures,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table"
 
 // New in v9: declare the features this table uses — anything you don't
 // register is tree-shaken out of the bundle.
@@ -141,11 +468,11 @@ export const features = tableFeatures({
   sortedRowModel: createSortedRowModel(),
   filterFns: { includesString: filterFn_includesString },
   sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text },
-});
+})
 
 // Pass this as the first generic argument to `ColumnDef`, `Column`, `Table`,
 // and `Row` so each type knows which feature APIs are available.
-export type DataTableFeatures = typeof features;
+export type DataTableFeatures = typeof features
 ```
 
 <Callout className="mt-4">
@@ -165,23 +492,23 @@ Let's start by building a basic table.
 First, we'll define our columns.
 
 ```tsx showLineNumbers title="app/payments/columns.tsx" {3,5,16-17,19-29}
-"use client";
+"use client"
 
-import { createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table"
 
-import { type DataTableFeatures } from "./data-table-features";
+import { type DataTableFeatures } from "./data-table-features"
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 export type Payment = {
-  id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
-};
+  id: string
+  amount: number
+  status: "pending" | "processing" | "success" | "failed"
+  email: string
+}
 
 // Use `accessor` for data columns and `display` for columns without one.
-const columnHelper = createColumnHelper<DataTableFeatures, Payment>();
+const columnHelper = createColumnHelper<DataTableFeatures, Payment>()
 
 export const columns = columnHelper.columns([
   columnHelper.accessor("status", {
@@ -193,7 +520,7 @@ export const columns = columnHelper.columns([
   columnHelper.accessor("amount", {
     header: "Amount",
   }),
-]);
+])
 ```
 
 <Callout className="mt-4">
@@ -209,9 +536,9 @@ formatted, sorted and filtered.
 Next, we'll create a `<DataTable />` component to render our table.
 
 ```tsx showLineNumbers title="app/payments/data-table.tsx"
-"use client";
+"use client"
 
-import { useTable, type ColumnDef, type RowData } from "@tanstack/react-table";
+import { useTable, type ColumnDef, type RowData } from "@tanstack/react-table"
 
 import {
   Table,
@@ -220,21 +547,24 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table"
 
-import { features, type DataTableFeatures } from "./data-table-features";
+import { features, type DataTableFeatures } from "./data-table-features"
 
 interface DataTableProps<TData extends RowData> {
-  columns: ColumnDef<DataTableFeatures, TData>[];
-  data: TData[];
+  columns: ColumnDef<DataTableFeatures, TData>[]
+  data: TData[]
 }
 
-export function DataTable<TData extends RowData>({ columns, data }: DataTableProps<TData>) {
+export function DataTable<TData extends RowData>({
+  columns,
+  data,
+}: DataTableProps<TData>) {
   const table = useTable({
     features,
     data,
     columns,
-  });
+  })
 
   return (
     <div className="overflow-hidden rounded-md border">
@@ -245,9 +575,11 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
               {headerGroup.headers.map((header) => {
                 return (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                    {header.isPlaceholder ? null : (
+                      <table.FlexRender header={header} />
+                    )}
                   </TableHead>
-                );
+                )
               })}
             </TableRow>
           ))}
@@ -255,7 +587,10 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     <table.FlexRender cell={cell} />
@@ -273,7 +608,7 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
         </TableBody>
       </Table>
     </div>
-  );
+  )
 }
 ```
 
@@ -296,8 +631,8 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
 Finally, we'll render our table in our page component.
 
 ```tsx showLineNumbers title="app/payments/page.tsx" {22}
-import { columns, Payment } from "./columns";
-import { DataTable } from "./data-table";
+import { columns, Payment } from "./columns"
+import { DataTable } from "./data-table"
 
 async function getData(): Promise<Payment[]> {
   // Fetch data from your API here.
@@ -309,17 +644,17 @@ async function getData(): Promise<Payment[]> {
       email: "m@example.com",
     },
     // ...
-  ];
+  ]
 }
 
 export default async function DemoPage() {
-  const data = await getData();
+  const data = await getData()
 
   return (
     <div className="container mx-auto py-10">
       <DataTable columns={columns} data={data} />
     </div>
-  );
+  )
 }
 ```
 
@@ -340,16 +675,16 @@ export const columns = columnHelper.columns([
   columnHelper.accessor("amount", {
     header: () => <div className="text-right">Amount</div>,
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
+      const amount = parseFloat(row.getValue("amount"))
       const formatted = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
-      }).format(amount);
+      }).format(amount)
 
-      return <div className="text-right font-medium">{formatted}</div>;
+      return <div className="text-right font-medium">{formatted}</div>
     },
   }),
-]);
+])
 ```
 
 You can use the same approach to format other cells and headers.
@@ -367,12 +702,12 @@ Let's add row actions to our table. We'll use a `<DropdownMenu />` component for
 Update our columns definition to add a new `actions` column. The `actions` cell returns a `<DropdownMenu />` component.
 
 ```tsx showLineNumbers title="app/payments/columns.tsx" {4,6-14,18-45}
-"use client";
+"use client"
 
-import { createColumnHelper } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
+import { createColumnHelper } from "@tanstack/react-table"
+import { MoreHorizontal } from "lucide-react"
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -380,24 +715,28 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 
 export const columns = columnHelper.columns([
   // ...
   columnHelper.display({
     id: "actions",
     cell: ({ row }) => {
-      const payment = row.original;
+      const payment = row.original
 
       return (
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0" />}>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" className="h-8 w-8 p-0" />}
+          >
             <span className="sr-only">Open menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(payment.id)}>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(payment.id)}
+            >
               Copy payment ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -405,11 +744,11 @@ export const columns = columnHelper.columns([
             <DropdownMenuItem>View payment details</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      );
+      )
     },
   }),
   // ...
-]);
+])
 ```
 
 You can access the row data using `row.original` in the `cell` function. Use this to handle actions for your row eg. use the `id` to make a DELETE call to your API.
@@ -529,10 +868,10 @@ export function DataTable<TData extends RowData>({
 We can now update the `email` header cell to add sorting controls.
 
 ```tsx showLineNumbers title="app/payments/columns.tsx" {4,8-18}
-"use client";
+"use client"
 
-import { createColumnHelper } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
+import { createColumnHelper } from "@tanstack/react-table"
+import { ArrowUpDown } from "lucide-react"
 
 export const columns = columnHelper.columns([
   columnHelper.accessor("email", {
@@ -545,10 +884,10 @@ export const columns = columnHelper.columns([
           Email
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
-      );
+      )
     },
   }),
-]);
+])
 ```
 
 This will automatically sort the table (asc and desc) when the user toggles on the header cell.
@@ -738,12 +1077,12 @@ Next, we're going to add row selection to our table.
 ### Update column definitions
 
 ```tsx showLineNumbers title="app/payments/columns.tsx" {6,9-30}
-"use client";
+"use client"
 
-import { createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table"
 
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export const columns = columnHelper.columns([
   columnHelper.display({
@@ -751,7 +1090,9 @@ export const columns = columnHelper.columns([
     header: ({ table }) => (
       <Checkbox
         checked={table.getIsAllPageRowsSelected()}
-        indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
+        indeterminate={
+          table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
+        }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
@@ -766,17 +1107,23 @@ export const columns = columnHelper.columns([
     enableSorting: false,
     enableHiding: false,
   }),
-]);
+])
 ```
 
 ### Update `<DataTable>`
 
 ```tsx showLineNumbers title="app/payments/data-table.tsx" {11,20,25}
-export function DataTable<TData extends RowData>({ columns, data }: DataTableProps<TData>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+export function DataTable<TData extends RowData>({
+  columns,
+  data,
+}: DataTableProps<TData>) {
+  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<ColumnVisibilityState>({})
+  const [rowSelection, setRowSelection] = React.useState({})
 
   const table = useTable({
     features,
@@ -792,7 +1139,7 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
       columnVisibility,
       rowSelection,
     },
-  });
+  })
 
   return (
     <div>
@@ -800,7 +1147,7 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
         <Table />
       </div>
     </div>
-  );
+  )
 }
 ```
 
@@ -812,8 +1159,8 @@ You can show the number of selected rows using the `table.getFilteredSelectedRow
 
 ```tsx
 <div className="flex-1 text-sm text-muted-foreground">
-  {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length}{" "}
-  row(s) selected.
+  {table.getFilteredSelectedRowModel().rows.length} of{" "}
+  {table.getFilteredRowModel().rows.length} row(s) selected.
 </div>
 ```
 
@@ -835,9 +1182,11 @@ Make any column header sortable and hideable.
 ```tsx showLineNumbers {4}
 export const columns = columnHelper.columns([
   columnHelper.accessor("email", {
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Email" />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Email" />
+    ),
   }),
-]);
+])
 ```
 
 ### Pagination
@@ -870,10 +1219,449 @@ A component to toggle column visibility.
 
 To enable RTL support in shadcn/ui, see the [RTL configuration guide](/docs/rtl).
 
-<ComponentPreview
-  styleName="base-nova"
-  name="data-table-rtl"
-  direction="rtl"
-  previewClassName="items-start h-auto px-4 md:px-8"
-  hideCode
-/>
+```tsx
+"use client"
+
+import * as React from "react"
+import {
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  createColumnHelper,
+  createFilteredRowModel,
+  createPaginatedRowModel,
+  createSortedRowModel,
+  filterFn_includesString,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_text,
+  tableFeatures,
+  useTable,
+  type ColumnFiltersState,
+  type ColumnVisibilityState,
+  type SortingState,
+} from "@tanstack/react-table"
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react"
+
+import {
+  useTranslation,
+  type Translations,
+} from "@/components/language-selector"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+
+const translations: Translations = {
+  en: {
+    dir: "ltr",
+    values: {
+      filterEmails: "Filter emails...",
+      columns: "Columns",
+      status: "Status",
+      email: "Email",
+      amount: "Amount",
+      actions: "Actions",
+      copyPaymentId: "Copy payment ID",
+      viewCustomer: "View customer",
+      viewPaymentDetails: "View payment details",
+      selectAll: "Select all",
+      selectRow: "Select row",
+      openMenu: "Open menu",
+      noResults: "No results.",
+      rowsSelected: "of",
+      rowsSelectedSuffix: "row(s) selected.",
+      previous: "Previous",
+      next: "Next",
+      success: "Success",
+      processing: "Processing",
+      failed: "Failed",
+      pending: "Pending",
+    },
+  },
+  ar: {
+    dir: "rtl",
+    values: {
+      filterEmails: "تصفية البريد الإلكتروني...",
+      columns: "الأعمدة",
+      status: "الحالة",
+      email: "البريد الإلكتروني",
+      amount: "المبلغ",
+      actions: "الإجراءات",
+      copyPaymentId: "نسخ معرف الدفع",
+      viewCustomer: "عرض العميل",
+      viewPaymentDetails: "عرض تفاصيل الدفع",
+      selectAll: "تحديد الكل",
+      selectRow: "تحديد الصف",
+      openMenu: "فتح القائمة",
+      noResults: "لا توجد نتائج.",
+      rowsSelected: "من",
+      rowsSelectedSuffix: "صف(وف) محدد.",
+      previous: "السابق",
+      next: "التالي",
+      success: "ناجح",
+      processing: "قيد المعالجة",
+      failed: "فشل",
+      pending: "قيد الانتظار",
+    },
+  },
+  he: {
+    dir: "rtl",
+    values: {
+      filterEmails: "סנן אימיילים...",
+      columns: "עמודות",
+      status: "סטטוס",
+      email: "אימייל",
+      amount: "סכום",
+      actions: "פעולות",
+      copyPaymentId: "העתק מזהה תשלום",
+      viewCustomer: "צפה בלקוח",
+      viewPaymentDetails: "צפה בפרטי תשלום",
+      selectAll: "בחר הכל",
+      selectRow: "בחר שורה",
+      openMenu: "פתח תפריט",
+      noResults: "אין תוצאות.",
+      rowsSelected: "מתוך",
+      rowsSelectedSuffix: "שורות נבחרו.",
+      previous: "הקודם",
+      next: "הבא",
+      success: "הצליח",
+      processing: "מעבד",
+      failed: "נכשל",
+      pending: "ממתין",
+    },
+  },
+}
+
+// New in v9: declare the features this table uses — anything you don't
+// register is tree-shaken out of the bundle.
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  filterFns: { includesString: filterFn_includesString },
+  sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text },
+})
+
+const columnHelper = createColumnHelper<typeof features, Payment>()
+
+type Payment = {
+  id: string
+  amount: number
+  status: "pending" | "processing" | "success" | "failed"
+  email: string
+}
+
+const data: Payment[] = [
+  {
+    id: "m5gr84i9",
+    amount: 316,
+    status: "success",
+    email: "ken99@example.com",
+  },
+  {
+    id: "3u1reuv4",
+    amount: 242,
+    status: "success",
+    email: "Abe45@example.com",
+  },
+  {
+    id: "derv1ws0",
+    amount: 837,
+    status: "processing",
+    email: "Monserrat44@example.com",
+  },
+  {
+    id: "5kma53ae",
+    amount: 874,
+    status: "success",
+    email: "Silas22@example.com",
+  },
+  {
+    id: "bhqecj4p",
+    amount: 721,
+    status: "failed",
+    email: "carmella@example.com",
+  },
+]
+
+export function DataTableRtl() {
+  const { t, dir, language } = useTranslation(translations, "ar")
+  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<ColumnVisibilityState>({})
+  const [rowSelection, setRowSelection] = React.useState({})
+
+  const columns = React.useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "select",
+          header: ({ table }) => (
+            <Checkbox
+              checked={table.getIsAllPageRowsSelected()}
+              indeterminate={
+                table.getIsSomePageRowsSelected() &&
+                !table.getIsAllPageRowsSelected()
+              }
+              onCheckedChange={(value) =>
+                table.toggleAllPageRowsSelected(!!value)
+              }
+              aria-label={t.selectAll}
+            />
+          ),
+          cell: ({ row }) => (
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label={t.selectRow}
+            />
+          ),
+          enableSorting: false,
+          enableHiding: false,
+        }),
+        columnHelper.accessor("status", {
+          header: t.status,
+          cell: ({ row }) => {
+            const status = row.getValue("status") as string
+            const statusMap: Record<string, string> = {
+              success: t.success,
+              processing: t.processing,
+              failed: t.failed,
+              pending: t.pending,
+            }
+            return <div className="capitalize">{statusMap[status]}</div>
+          },
+        }),
+        columnHelper.accessor("email", {
+          header: ({ column }) => {
+            return (
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+              >
+                {t.email}
+                <ArrowUpDown />
+              </Button>
+            )
+          },
+          cell: ({ row }) => (
+            <div className="lowercase">{row.getValue("email")}</div>
+          ),
+        }),
+        columnHelper.accessor("amount", {
+          header: () => <div className="text-start">{t.amount}</div>,
+          cell: ({ row }) => {
+            const amount = parseFloat(row.getValue("amount"))
+            const formatted = new Intl.NumberFormat(
+              dir === "rtl" ? "ar-SA" : "en-US",
+              {
+                style: "currency",
+                currency: "USD",
+              }
+            ).format(amount)
+
+            return <div className="text-start font-medium">{formatted}</div>
+          },
+        }),
+        columnHelper.display({
+          id: "actions",
+          enableHiding: false,
+          cell: ({ row }) => {
+            const payment = row.original
+
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="ghost" size="icon-xs" />}
+                >
+                  <span className="sr-only">{t.openMenu}</span>
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align={dir === "rtl" ? "start" : "end"}
+                  data-lang={dir === "rtl" ? language : undefined}
+                  className="w-40"
+                >
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>{t.actions}</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => navigator.clipboard.writeText(payment.id)}
+                    >
+                      {t.copyPaymentId}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem>{t.viewCustomer}</DropdownMenuItem>
+                    <DropdownMenuItem>{t.viewPaymentDetails}</DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          },
+        }),
+      ]),
+    [t, dir, language]
+  )
+
+  const table = useTable({
+    features,
+    data,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+    },
+  })
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center gap-2 py-4">
+        <Input
+          placeholder={t.filterEmails}
+          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("email")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" className="ms-auto" />}
+          >
+            {t.columns} <ChevronDown />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align={dir === "rtl" ? "start" : "end"}
+            data-lang={dir === "rtl" ? language : undefined}
+          >
+            <DropdownMenuGroup>
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="overflow-hidden rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder ? null : (
+                        <table.FlexRender header={header} />
+                      )}
+                    </TableHead>
+                  )
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      <table.FlexRender cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  {t.noResults}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex items-center justify-end gap-2 py-4">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} {t.rowsSelected}{" "}
+          {table.getFilteredRowModel().rows.length} {t.rowsSelectedSuffix}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            {t.previous}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            {t.next}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+```
