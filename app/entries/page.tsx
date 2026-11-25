@@ -1,11 +1,16 @@
-import type { Metadata } from "next";
-import { EntriesDataTable } from "./data-table";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Entries | Mesto",
-  description: "View and manage raw scale readings and vehicle plate entries.",
-};
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useModeStore } from "@/stores/use-mode-store";
 
 export default function EntriesPage() {
-  return <EntriesDataTable />;
+  const router = useRouter();
+  const mode = useModeStore((s) => s.modes.entries);
+
+  useEffect(() => {
+    router.replace(`/entries/${mode}`);
+  }, [mode, router]);
+
+  return null;
 }

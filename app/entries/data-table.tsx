@@ -11,12 +11,13 @@ import {
   type FacetedFilterOption,
   type DataTableFilterConfig,
 } from "@/components/data-table";
-import { Building02Icon } from "@hugeicons/core-free-icons";
+import { Building02Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { appIcons } from "@/lib/icons";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
 import type { Center } from "@/app/centers/types";
-import { columns, type EntriesTableMeta } from "./columns";
-import type { Entry } from "./types";
+import type { User } from "@/app/users/types";
+import type { EntityMode } from "@/stores/use-mode-store";
+import { getEntryColumns, type EntriesTableMeta, type EntryRow } from "./columns";
 
 interface PhotosDialogState {
   open: boolean;
@@ -27,9 +28,16 @@ interface PhotosDialogState {
   images: PhotoItem[];
 }
 
-export function EntriesDataTable() {
+export interface EntriesDataTableProps {
+  mode: EntityMode;
+}
+
+export function EntriesDataTable({ mode }: EntriesDataTableProps) {
   const [centerOptions, setCenterOptions] = useState<FacetedFilterOption[]>([
     { label: "All Centers", value: "all", icon: appIcons.centers },
+  ]);
+  const [creatorOptions, setCreatorOptions] = useState<FacetedFilterOption[]>([
+    { label: "All Creators", value: "all", icon: appIcons.users },
   ]);
 
   const [photosDialogState, setPhotosDialogState] = useState<PhotosDialogState>({
@@ -61,6 +69,27 @@ export function EntriesDataTable() {
     loadCenters();
   }, []);
 
+  useEffect(() => {
+    if (mode !== "manual") return;
+    async function loadCreators() {
+      try {
+        const res = await axios.get<{ data: User[] }>("/api/users?all=true&sort=name.asc");
+        const users = res.data.data ?? [];
+        setCreatorOptions([
+          { label: "All Creators", value: "all", icon: appIcons.users },
+          ...users.map((u) => ({
+            idPrefix: `#${u.id}`,
+            label: u.name,
+            value: String(u.id),
+          })),
+        ]);
+      } catch {
+        // Non-fatal if creators fail to load
+      }
+    }
+    loadCreators();
+  }, [mode]);
+
   const tableMeta: EntriesTableMeta = useMemo(
     () => ({
       onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
@@ -68,15 +97,19 @@ export function EntriesDataTable() {
     [],
   );
 
-  const dataTable = useDataTable<Entry>({
-    tableId: "entries",
+  const columns = useMemo(() => getEntryColumns(mode), [mode]);
+  const fetchData = useMemo(() => endpointFetcher<EntryRow>(`/api/entries/${mode}`), [mode]);
+  const tableId = mode === "automatic" ? "automatic_entries" : "manual_entries";
+
+  const dataTable = useDataTable<EntryRow>({
+    tableId,
     columns,
-    fetchData: endpointFetcher("/api/entries"),
+    fetchData,
     meta: tableMeta,
   });
 
-  const filterConfigs: DataTableFilterConfig[] = useMemo(
-    () => [
+  const filterConfigs: DataTableFilterConfig[] = useMemo(() => {
+    const configs: DataTableFilterConfig[] = [
       {
         key: "center_id",
         title: "Center",
@@ -84,16 +117,28 @@ export function EntriesDataTable() {
         categoryIcon: Building02Icon,
         variant: "stone",
       },
-    ],
-    [centerOptions],
-  );
+    ];
+    if (mode === "manual") {
+      configs.push({
+        key: "creator_id",
+        title: "Creator",
+        options: creatorOptions,
+        categoryIcon: UserIcon,
+        variant: "stone",
+      });
+    }
+    return configs;
+  }, [centerOptions, creatorOptions, mode]);
+
+  const searchPlaceholder =
+    mode === "automatic" ? "Search automatic entries..." : "Search manual entries...";
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       {/* Primary Toolbar */}
       <DataTableToolbar
         instance={dataTable}
-        searchPlaceholder="Search entries by vehicle no. or idempotency key..."
+        searchPlaceholder={searchPlaceholder}
         filterConfigs={filterConfigs}
       />
 
