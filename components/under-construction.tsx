@@ -16,15 +16,12 @@ export function UnderConstruction({ title, description, icon }: UnderConstructio
     <div className="flex flex-1 flex-col items-center justify-center min-h-96 p-6 text-center">
       <div className="relative mb-4 flex size-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
         <HugeiconsIcon icon={icon} className="size-8" />
-        <span className="absolute -bottom-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <span className="absolute -bottom-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border border-warning/30 bg-warning/15 text-warning">
           <HugeiconsIcon icon={ConstructionIcon} className="size-3.5" />
         </span>
       </div>
 
-      <Badge
-        variant="outline"
-        className="mb-2 text-amber-900 border-amber-300/80 bg-amber-600/10 dark:text-amber-200 dark:border-amber-800/50 dark:bg-amber-950/30"
-      >
+      <Badge variant="outline" className="mb-2 text-warning border-warning/25 bg-warning/10">
         Under Construction
       </Badge>
 

@@ -12,7 +12,7 @@ export function FormDirtyIndicator({ isDirty, className }: FormDirtyIndicatorPro
       <span
         className={cn(
           "size-2 shrink-0 rounded-full",
-          isDirty ? "animate-pulse bg-amber-500" : "bg-emerald-500",
+          isDirty ? "animate-pulse bg-warning" : "bg-success",
         )}
       />
       <span>{isDirty ? "You have unsaved changes." : "All changes saved."}</span>

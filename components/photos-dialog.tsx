@@ -90,8 +90,8 @@ export function PhotosDialog({
                   className={cn(
                     "text-2xs font-medium shrink-0",
                     directionLabel === "Inbound"
-                      ? "text-primary border-primary/40 bg-primary/10"
-                      : "text-orange-600 border-orange-500/40 bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/30 dark:bg-orange-950/30",
+                      ? "text-primary border-primary/25 bg-primary/10"
+                      : "text-terracotta border-terracotta/25 bg-terracotta/10",
                   )}
                 >
                   {directionLabel}

@@ -19,7 +19,7 @@ export function DataTableClearButton({ label, onClick, className }: DataTableCle
       size="sm"
       onClick={onClick}
       className={cn(
-        "h-7 gap-1 px-2 text-2xs text-muted-foreground hover:bg-stone-500/10 hover:text-foreground shrink-0 cursor-pointer",
+        "h-7 gap-1 px-2 text-2xs text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 cursor-pointer",
         className,
       )}
     >

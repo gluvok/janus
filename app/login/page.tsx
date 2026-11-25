@@ -20,7 +20,7 @@ export default function LoginPage() {
             width={48}
             height={48}
             priority
-            className="size-12 object-contain rounded-lg drop-shadow-xs"
+            className="size-12 object-contain rounded-lg drop-shadow-xs dark:bg-[#f4efe4]/90 dark:p-1"
           />
           <div className="flex flex-col">
             <span className="font-heading font-bold text-base tracking-tight text-foreground">

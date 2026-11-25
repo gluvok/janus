@@ -47,7 +47,7 @@ export function NavGroup({ label, items, onItemClick, className }: NavGroupProps
                   tooltip={item.title}
                   className={cn(
                     isActive &&
-                      "bg-primary/10 text-primary font-semibold hover:bg-primary/15 hover:text-primary dark:bg-primary/15 dark:text-primary-foreground [&>svg]:text-primary",
+                      "bg-primary/10 text-primary font-semibold hover:bg-primary/15 hover:text-primary dark:bg-primary/15 dark:text-primary [&>svg]:text-primary",
                   )}
                 >
                   <HugeiconsIcon icon={item.icon} />

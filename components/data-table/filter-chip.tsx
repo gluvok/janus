@@ -26,45 +26,40 @@ const VARIANT_STYLES: Record<
   }
 > = {
   stone: {
-    container: "border-stone-500/20 bg-stone-500/10 dark:border-stone-500/30 dark:bg-stone-900/20",
-    valueIcon: "text-stone-700 dark:text-stone-300",
-    value: "text-stone-700 dark:text-stone-300",
-    dismiss: "text-stone-500 hover:bg-stone-500/20 hover:text-stone-900 dark:hover:text-stone-100",
+    container: "border-border bg-muted",
+    valueIcon: "text-muted-foreground",
+    value: "text-muted-foreground",
+    dismiss: "text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground",
   },
   emerald: {
-    container:
-      "border-emerald-500/20 bg-emerald-500/10 dark:border-emerald-500/30 dark:bg-emerald-950/20",
-    valueIcon: "text-emerald-600 dark:text-emerald-400",
-    value: "text-emerald-600 dark:text-emerald-400",
-    dismiss:
-      "text-emerald-600/70 hover:bg-emerald-500/20 hover:text-emerald-600 dark:text-emerald-400/70 dark:hover:text-emerald-400",
+    container: "border-success/25 bg-success/10",
+    valueIcon: "text-success",
+    value: "text-success",
+    dismiss: "text-success/70 hover:bg-success/20 hover:text-success",
   },
   orange: {
-    container:
-      "border-orange-500/20 bg-orange-500/10 dark:border-orange-500/30 dark:bg-orange-950/20",
-    valueIcon: "text-orange-600 dark:text-orange-400",
-    value: "text-orange-600 dark:text-orange-400",
-    dismiss:
-      "text-orange-600/70 hover:bg-orange-500/20 hover:text-orange-600 dark:text-orange-400/70 dark:hover:text-orange-400",
+    container: "border-terracotta/25 bg-terracotta/10",
+    valueIcon: "text-terracotta",
+    value: "text-terracotta",
+    dismiss: "text-terracotta/70 hover:bg-terracotta/20 hover:text-terracotta",
   },
   amber: {
-    container: "border-amber-500/20 bg-amber-500/10 dark:border-amber-500/30 dark:bg-amber-950/20",
-    valueIcon: "text-amber-600 dark:text-amber-400",
-    value: "text-amber-600 dark:text-amber-400",
-    dismiss:
-      "text-amber-600/70 hover:bg-amber-500/20 hover:text-amber-600 dark:text-amber-400/70 dark:hover:text-amber-400",
+    container: "border-warning/25 bg-warning/10",
+    valueIcon: "text-warning",
+    value: "text-warning",
+    dismiss: "text-warning/70 hover:bg-warning/20 hover:text-warning",
   },
   primary: {
-    container: "border-primary/25 bg-primary/10 dark:border-primary/35 dark:bg-primary/15",
+    container: "border-primary/25 bg-primary/10",
     valueIcon: "text-primary",
     value: "text-primary",
     dismiss: "text-primary/70 hover:bg-primary/20 hover:text-primary",
   },
   zinc: {
-    container: "border-zinc-500/20 bg-zinc-500/10 dark:border-zinc-500/30 dark:bg-zinc-800/20",
-    valueIcon: "text-zinc-600 dark:text-zinc-400",
-    value: "text-zinc-600 dark:text-zinc-400",
-    dismiss: "text-zinc-500 hover:bg-zinc-500/20 hover:text-zinc-900 dark:hover:text-zinc-100",
+    container: "border-border bg-secondary",
+    valueIcon: "text-foreground",
+    value: "text-foreground",
+    dismiss: "text-muted-foreground hover:bg-muted hover:text-foreground",
   },
 };
 

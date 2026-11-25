@@ -106,7 +106,7 @@ export function BootingScreen({
             width={44}
             height={44}
             priority
-            className="size-11 object-contain drop-shadow-xs"
+            className="size-11 object-contain rounded-lg drop-shadow-xs dark:bg-[#f4efe4]/90 dark:p-1"
           />
           <div className="flex flex-col items-center gap-0.5">
             <span className="font-heading font-semibold text-sm tracking-tight text-foreground">

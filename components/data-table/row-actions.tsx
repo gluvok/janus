@@ -89,7 +89,7 @@ export function CopyRowAction({
                 <HugeiconsIcon
                   icon={isDownloadingPdf ? Loading03Icon : Download01Icon}
                   className={cn(
-                    "size-3.5 shrink-0 text-[#66684f] dark:text-[#8a8d6e]",
+                    "size-3.5 shrink-0 text-primary",
                     isDownloadingPdf && "animate-spin",
                   )}
                 />

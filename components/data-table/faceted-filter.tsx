@@ -105,10 +105,7 @@ export function DataTableFacetedFilter({
           )}
           <ComboboxValue>
             {selectedOptions.map((item) => (
-              <ComboboxChip
-                key={item.value}
-                className="gap-1 border-stone-300/80 dark:border-stone-700/80 text-2xs"
-              >
+              <ComboboxChip key={item.value} className="gap-1 border-border text-2xs">
                 <div className="flex items-center gap-1">
                   {item.icon ? (
                     <HugeiconsIcon

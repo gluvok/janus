@@ -17,20 +17,17 @@ const WEIGHMENT_TYPE_CONFIGS: Record<WeighmentType, WeighmentTypeConfig> = {
   in: {
     label: "In",
     icon: ArrowDownRight01Icon,
-    className:
-      "gap-1 text-2xs font-normal text-primary border-primary/30 bg-primary/10 dark:text-primary dark:border-primary/40 dark:bg-primary/15",
+    className: "gap-1 text-2xs font-normal text-primary border-primary/25 bg-primary/10",
   },
   out: {
     label: "Out",
     icon: ArrowUpRight01Icon,
-    className:
-      "gap-1 text-2xs font-normal text-orange-900 border-orange-300/80 bg-orange-600/10 dark:text-orange-200 dark:border-orange-800/50 dark:bg-orange-950/30",
+    className: "gap-1 text-2xs font-normal text-terracotta border-terracotta/25 bg-terracotta/10",
   },
   void: {
     label: "Void",
     icon: CircleMinusIcon,
-    className:
-      "gap-1 text-2xs font-normal text-stone-700 border-stone-300/80 bg-stone-500/10 dark:text-stone-300 dark:border-stone-700/80 dark:bg-stone-900/30",
+    className: "gap-1 text-2xs font-normal text-muted-foreground border-border bg-muted",
   },
 };
 

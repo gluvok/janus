@@ -24,32 +24,27 @@ interface ModuleConfig {
 const MODULE_CONFIGS: Record<string, ModuleConfig> = {
   Weighments: {
     category: "Operations",
-    accentClass:
-      "text-amber-900 bg-amber-600/10 border-amber-300/40 dark:text-amber-200 dark:bg-amber-950/30 dark:border-amber-800/40",
+    accentClass: "text-primary bg-primary/10 border-primary/25",
     actionLabel: "View weighments",
   },
   Entries: {
     category: "Scale",
-    accentClass:
-      "text-emerald-900 bg-emerald-600/10 border-emerald-300/40 dark:text-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800/40",
+    accentClass: "text-success bg-success/10 border-success/25",
     actionLabel: "View entries",
   },
   Centers: {
     category: "Facilities",
-    accentClass:
-      "text-blue-900 bg-blue-600/10 border-blue-300/40 dark:text-blue-200 dark:bg-blue-950/30 dark:border-blue-800/40",
+    accentClass: "text-info bg-info/10 border-info/25",
     actionLabel: "Manage centers",
   },
   Users: {
     category: "Access",
-    accentClass:
-      "text-violet-900 bg-violet-600/10 border-violet-300/40 dark:text-violet-200 dark:bg-violet-950/30 dark:border-violet-800/40",
+    accentClass: "text-plum bg-plum/10 border-plum/25",
     actionLabel: "Manage users",
   },
   Tickets: {
     category: "Support",
-    accentClass:
-      "text-rose-900 bg-rose-600/10 border-rose-300/40 dark:text-rose-200 dark:bg-rose-950/30 dark:border-rose-800/40",
+    accentClass: "text-terracotta bg-terracotta/10 border-terracotta/25",
     actionLabel: "View tickets",
   },
 };
@@ -82,11 +77,8 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start rounded-lg border border-stone-300/80 bg-stone-500/5 px-3 py-1.5 text-xs font-medium text-stone-800 shadow-2xs sm:self-auto dark:border-stone-700/80 dark:bg-stone-900/30 dark:text-stone-200">
-          <HugeiconsIcon
-            icon={Factory01Icon}
-            className="size-4 text-stone-600 dark:text-stone-400"
-          />
+        <div className="flex items-center gap-2 self-start rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground shadow-2xs sm:self-auto">
+          <HugeiconsIcon icon={Factory01Icon} className="size-4 text-muted-foreground" />
           <span>{factory.name}</span>
         </div>
       </div>
@@ -108,7 +100,7 @@ export default function Home() {
                   >
                     <HugeiconsIcon icon={section.icon} className="size-4.5" />
                   </div>
-                  <span className="rounded-md border border-stone-300/60 bg-stone-500/5 px-2 py-0.5 text-2xs font-medium text-muted-foreground dark:border-stone-700/60 dark:bg-stone-900/20">
+                  <span className="rounded-md border border-border bg-muted/50 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                     {config.category}
                   </span>
                 </CardHeader>

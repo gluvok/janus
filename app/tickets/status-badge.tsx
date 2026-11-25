@@ -13,20 +13,17 @@ const STATUS_CONFIGS: Record<TicketStatus, TicketStatusConfig> = {
   pending: {
     label: "Pending",
     icon: Clock01Icon,
-    className:
-      "gap-1 text-2xs font-normal text-amber-900 border-amber-300/80 bg-amber-600/10 dark:text-amber-200 dark:border-amber-800/50 dark:bg-amber-950/30",
+    className: "gap-1 text-2xs font-normal text-warning border-warning/25 bg-warning/10",
   },
   approved: {
     label: "Approved",
     icon: CheckmarkCircle02Icon,
-    className:
-      "gap-1 text-2xs font-normal text-emerald-900 border-emerald-300/80 bg-emerald-600/10 dark:text-emerald-200 dark:border-emerald-800/50 dark:bg-emerald-950/30",
+    className: "gap-1 text-2xs font-normal text-success border-success/25 bg-success/10",
   },
   rejected: {
     label: "Rejected",
     icon: CancelCircleIcon,
-    className:
-      "gap-1 text-2xs font-normal text-orange-900 border-orange-300/80 bg-orange-600/10 dark:text-orange-200 dark:border-orange-800/50 dark:bg-orange-950/30",
+    className: "gap-1 text-2xs font-normal text-terracotta border-terracotta/25 bg-terracotta/10",
   },
 };
 

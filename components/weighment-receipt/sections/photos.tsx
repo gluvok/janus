@@ -24,8 +24,8 @@ export function ReceiptPhotos({
   return (
     <div className="flex flex-col gap-1.5 pt-0.5">
       {/* Evidence Section Header */}
-      <div className="flex items-center justify-between border-b border-zinc-200/80 pb-1">
-        <span className="font-heading text-3xs font-semibold text-zinc-400">
+      <div className="flex items-center justify-between border-b border-[#e2dccb] pb-1">
+        <span className="font-heading text-3xs font-semibold text-[#5f6558]">
           Transit Evidence ({effectiveTotal})
         </span>
       </div>
@@ -39,7 +39,7 @@ export function ReceiptPhotos({
           return (
             <div
               key={`${photo.url}-${idx}`}
-              className={`group relative rounded-none overflow-hidden bg-zinc-100 flex flex-col border-0 ${
+              className={`group relative rounded-none overflow-hidden bg-[#faf7f0] flex flex-col border-0 ${
                 isSingleColumn ? "h-92" : "aspect-video"
               }`}
             >
@@ -55,7 +55,7 @@ export function ReceiptPhotos({
               <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
                 <span
                   className={`font-heading text-3xs font-semibold px-1.5 py-0.5 rounded-none ${
-                    isEntry ? "bg-[#66684f] text-white" : "bg-zinc-950 text-white"
+                    isEntry ? "bg-[#4a6741] text-white" : "bg-[#1f241d] text-[#faf7f0]"
                   }`}
                 >
                   {isEntry ? "In" : "Out"}

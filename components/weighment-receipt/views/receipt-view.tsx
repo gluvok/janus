@@ -66,7 +66,7 @@ export const CommonReceiptLayout = React.forwardRef<HTMLDivElement, CommonReceip
           return (
             <div
               key={`receipt-page-${pageIdx + 1}`}
-              className="receipt-page bg-white text-zinc-950 rounded-none border border-zinc-200/80 p-5 flex flex-col gap-2 font-sans text-xs relative box-border w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px]"
+              className="receipt-page bg-white text-[#1f241d] rounded-none border border-[#e2dccb] p-5 flex flex-col gap-2 font-sans text-xs relative box-border w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px]"
             >
               {isFirstPage ? (
                 <>
@@ -92,15 +92,15 @@ export const CommonReceiptLayout = React.forwardRef<HTMLDivElement, CommonReceip
                 </>
               )}
 
-              <div className="mt-auto pt-2 border-t border-zinc-200/80 flex items-center justify-between gap-3 text-3xs text-zinc-400">
-                <span className="font-heading font-semibold text-zinc-500">
+              <div className="mt-auto pt-2 border-t border-[#e2dccb] flex items-center justify-between gap-3 text-3xs text-[#5f6558]">
+                <span className="font-heading font-semibold text-[#5f6558]">
                   Official Scale Slip &bull; Mesto Industrial Automations
                 </span>
-                <div className="flex items-center gap-1 font-mono tabular-nums text-zinc-600">
+                <div className="flex items-center gap-1 font-mono tabular-nums text-[#5f6558]">
                   <span>Page</span>
-                  <strong className="text-zinc-900 font-bold">{pageIdx + 1}</strong>
+                  <strong className="text-[#1f241d] font-bold">{pageIdx + 1}</strong>
                   <span>of</span>
-                  <strong className="text-zinc-900 font-bold">{totalPages}</strong>
+                  <strong className="text-[#1f241d] font-bold">{totalPages}</strong>
                 </div>
               </div>
             </div>

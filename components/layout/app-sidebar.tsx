@@ -61,7 +61,7 @@ export function AppSidebar() {
                   alt="Mesto Logo"
                   width={32}
                   height={32}
-                  className="size-8 object-contain rounded-md shrink-0"
+                  className="size-8 object-contain rounded-md shrink-0 dark:bg-[#f4efe4]/90 dark:p-1"
                 />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Mesto</span>

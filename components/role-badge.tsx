@@ -13,26 +13,22 @@ const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
   admin: {
     label: "Admin",
     icon: CrownIcon,
-    className:
-      "gap-1 text-2xs font-normal text-zinc-900 border-zinc-300 bg-zinc-600/10 dark:text-zinc-100 dark:border-zinc-700 dark:bg-zinc-800/40",
+    className: "gap-1 text-2xs font-normal text-foreground border-border bg-secondary",
   },
   manager: {
     label: "Manager",
     icon: Briefcase01Icon,
-    className:
-      "gap-1 text-2xs font-normal text-amber-900 border-amber-300/80 bg-amber-600/10 dark:text-amber-200 dark:border-amber-800/50 dark:bg-amber-950/30",
+    className: "gap-1 text-2xs font-normal text-warning border-warning/25 bg-warning/10",
   },
   operator: {
     label: "Operator",
     icon: HeadsetIcon,
-    className:
-      "gap-1 text-2xs font-normal text-primary border-primary/30 bg-primary/10 dark:text-primary dark:border-primary/40 dark:bg-primary/15",
+    className: "gap-1 text-2xs font-normal text-primary border-primary/25 bg-primary/10",
   },
   base: {
     label: "Base",
     icon: UserIcon,
-    className:
-      "gap-1 text-2xs font-normal text-stone-700 border-stone-300/80 bg-stone-500/10 dark:text-stone-300 dark:border-stone-700/80 dark:bg-stone-900/30",
+    className: "gap-1 text-2xs font-normal text-muted-foreground border-border bg-muted",
   },
 };
 
