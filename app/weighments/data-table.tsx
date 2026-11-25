@@ -18,9 +18,13 @@ import {
   Building03Icon,
   CircleMinusIcon,
   Layers01Icon,
+  UserArrowLeftRightIcon,
+  UserCheck01Icon,
 } from "@hugeicons/core-free-icons";
 import { getErrorMessage } from "@/lib/utils";
+import { appIcons } from "@/lib/icons";
 import { useDataTableStore } from "@/stores/use-data-table-store";
+import type { EntityMode } from "@/stores/use-mode-store";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
 import { useWeighmentPdfDownload } from "@/hooks/use-weighment-pdf-download";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
@@ -28,6 +32,7 @@ import type { Weighment } from "./types";
 import {
   fetchFilterOptions,
   formatCenterOptions,
+  formatUserOptions,
   validateAndSanitizeFilters,
   buildWeighmentsQueryParams,
 } from "./table-helpers";
@@ -48,12 +53,25 @@ interface PhotosDialogState {
   images: PhotoItem[];
 }
 
-export function WeighmentsDataTable() {
+export interface WeighmentsDataTableProps {
+  mode: EntityMode;
+}
+
+export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
+  const tableId = mode === "automatic" ? "automatic_weighments" : "manual_weighments";
+  const endpoint = `/api/weighments/${mode}`;
+
   const [inCenterOptions, setInCenterOptions] = useState<FacetedFilterOption[]>([
     { label: "All In Centers", value: "all", icon: Building02Icon },
   ]);
   const [outCenterOptions, setOutCenterOptions] = useState<FacetedFilterOption[]>([
     { label: "All Out Centers", value: "all", icon: Building03Icon },
+  ]);
+  const [inCreatorOptions, setInCreatorOptions] = useState<FacetedFilterOption[]>([
+    { label: "All In Creators", value: "all", icon: appIcons.users },
+  ]);
+  const [outCreatorOptions, setOutCreatorOptions] = useState<FacetedFilterOption[]>([
+    { label: "All Out Creators", value: "all", icon: appIcons.users },
   ]);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [initialError, setInitialError] = useState<string | null>(null);
@@ -73,19 +91,22 @@ export function WeighmentsDataTable() {
 
   const { downloadReceipt, downloadingId } = useWeighmentPdfDownload();
 
-  const fetchWeighments = useCallback(async (queryParams: Record<string, unknown>) => {
-    const res = await axios.get<{ data: Weighment[]; totalCount: number }>("/api/weighments", {
-      params: queryParams,
-    });
-    return res.data;
-  }, []);
+  const fetchWeighments = useCallback(
+    async (queryParams: Record<string, unknown>) => {
+      const res = await axios.get<{ data: Weighment[]; totalCount: number }>(endpoint, {
+        params: queryParams,
+      });
+      return res.data;
+    },
+    [endpoint],
+  );
 
   const loadInitialData = useCallback(async () => {
     const currentLoadId = ++activeLoadIdRef.current;
     setIsInitialLoading(true);
     setInitialError(null);
     try {
-      const tableState = useDataTableStore.getState().getTableState("weighments");
+      const tableState = useDataTableStore.getState().getTableState(tableId);
       const initialQueryParams = buildWeighmentsQueryParams(
         tableState,
         tableState.pagination.pageIndex + 1,
@@ -93,43 +114,48 @@ export function WeighmentsDataTable() {
       );
 
       const [optionsResult, weighmentsResult] = await Promise.all([
-        fetchFilterOptions(),
-        axios.get<{ data: Weighment[]; totalCount: number }>("/api/weighments", {
+        fetchFilterOptions(mode),
+        axios.get<{ data: Weighment[]; totalCount: number }>(endpoint, {
           params: initialQueryParams,
         }),
       ]);
 
       if (currentLoadId !== activeLoadIdRef.current) return;
 
-      const { centers } = optionsResult;
+      const { centers, users } = optionsResult;
       const { sanitizedFilters, needsFallback } = validateAndSanitizeFilters(
         tableState.filters,
         centers,
-        (key) => useDataTableStore.getState().setTableFilter("weighments", key, "all"),
+        users,
+        mode,
+        (key, value) => useDataTableStore.getState().setTableFilter(tableId, key, value),
       );
 
       let finalWeighments = weighmentsResult.data;
       if (needsFallback) {
         const sanitizedQueryParams = buildWeighmentsQueryParams(tableState, 1, sanitizedFilters);
-        const refetchRes = await axios.get<{ data: Weighment[]; totalCount: number }>(
-          "/api/weighments",
-          { params: sanitizedQueryParams },
-        );
+        const refetchRes = await axios.get<{ data: Weighment[]; totalCount: number }>(endpoint, {
+          params: sanitizedQueryParams,
+        });
         if (currentLoadId !== activeLoadIdRef.current) return;
         finalWeighments = refetchRes.data;
       }
 
       setInCenterOptions(formatCenterOptions(centers, "In Centers"));
       setOutCenterOptions(formatCenterOptions(centers, "Out Centers"));
+      if (mode === "manual") {
+        setInCreatorOptions(formatUserOptions(users, "In Creators"));
+        setOutCreatorOptions(formatUserOptions(users, "Out Creators"));
+      }
       setInitialData(finalWeighments);
       setIsInitialLoading(false);
     } catch (err) {
       if (currentLoadId === activeLoadIdRef.current) {
-        setInitialError(getErrorMessage(err, "Failed to load weighments."));
+        setInitialError(getErrorMessage(err, `Failed to load ${mode} weighments.`));
         setIsInitialLoading(false);
       }
     }
-  }, []);
+  }, [endpoint, mode, tableId]);
 
   useEffect(() => {
     loadInitialData();
@@ -138,16 +164,16 @@ export function WeighmentsDataTable() {
   const tableMeta: WeighmentsTableMeta = useMemo(
     () => ({
       onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
-      onDownloadPdf: (w) => downloadReceipt(w),
+      onDownloadPdf: (w) => downloadReceipt(w, mode),
       downloadingId,
     }),
-    [downloadReceipt, downloadingId],
+    [downloadReceipt, downloadingId, mode],
   );
 
-  const columns = useMemo(() => getWeighmentColumns(), []);
+  const columns = useMemo(() => getWeighmentColumns(mode), [mode]);
 
   const dataTable = useDataTable<Weighment>({
-    tableId: "weighments",
+    tableId,
     columns,
     fetchData: fetchWeighments,
     meta: tableMeta,
@@ -156,7 +182,7 @@ export function WeighmentsDataTable() {
   });
 
   const filterConfigs = useMemo<DataTableFilterConfig[]>(() => {
-    return [
+    const configs: DataTableFilterConfig[] = [
       {
         key: "type",
         title: "Type",
@@ -179,12 +205,33 @@ export function WeighmentsDataTable() {
         categoryIcon: Building03Icon,
       },
     ];
-  }, [inCenterOptions, outCenterOptions]);
+
+    if (mode === "manual") {
+      configs.push(
+        {
+          key: "in_creator_id",
+          title: "In Creator",
+          options: inCreatorOptions,
+          variant: "stone",
+          categoryIcon: UserCheck01Icon,
+        },
+        {
+          key: "out_creator_id",
+          title: "Out Creator",
+          options: outCreatorOptions,
+          variant: "stone",
+          categoryIcon: UserArrowLeftRightIcon,
+        },
+      );
+    }
+
+    return configs;
+  }, [inCenterOptions, outCenterOptions, inCreatorOptions, outCreatorOptions, mode]);
 
   if (initialError) {
     return (
       <DataTableErrorState
-        title="Failed to load weighments"
+        title={`Failed to load ${mode} weighments`}
         error={initialError}
         onRetry={loadInitialData}
       />
@@ -192,12 +239,14 @@ export function WeighmentsDataTable() {
   }
 
   const effectiveLoading = dataTable.loading || isInitialLoading;
+  const searchPlaceholder =
+    mode === "automatic" ? "Search automatic weighments..." : "Search manual weighments...";
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0 min-h-0 h-full overflow-hidden p-1">
       <DataTableToolbar
         instance={dataTable}
-        searchPlaceholder="Search weighments by vehicle no. or center..."
+        searchPlaceholder={searchPlaceholder}
         loading={effectiveLoading}
         filterConfigs={filterConfigs}
       />
@@ -224,6 +273,6 @@ export function WeighmentsDataTable() {
   );
 }
 
-export function WeighmentsTableContainer() {
-  return <WeighmentsDataTable />;
+export function WeighmentsTableContainer({ mode }: WeighmentsDataTableProps) {
+  return <WeighmentsDataTable key={mode} mode={mode} />;
 }

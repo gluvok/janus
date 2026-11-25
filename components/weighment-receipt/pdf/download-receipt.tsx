@@ -3,16 +3,23 @@ import axios from "axios";
 import { toast } from "@/components/ui/toast";
 import { getErrorMessage } from "@/lib/utils";
 import { useFactoryStore } from "@/stores/use-factory-store";
+import type { EntityMode } from "@/stores/use-mode-store";
 import { generateReceiptPdf } from "./generate-pdf";
 import { WeighmentReceiptView } from "../views/receipt-view";
-import { weighmentSchema, type Weighment } from "@/app/weighments/types";
+import {
+  automaticWeighmentSchema,
+  manualWeighmentSchema,
+  type Weighment,
+} from "@/app/weighments/types";
 
 export interface DownloadWeighmentReceiptOptions {
   weighment: { id: number; vehicle_number: string };
+  mode: EntityMode;
 }
 
 export async function downloadWeighmentReceipt({
   weighment,
+  mode,
 }: DownloadWeighmentReceiptOptions): Promise<void> {
   toast.add({
     type: "info",
@@ -24,7 +31,7 @@ export async function downloadWeighmentReceipt({
     const response = await axios.get<{
       data: Weighment[];
       totalCount: number;
-    }>("/api/weighments", {
+    }>(`/api/weighments/${mode}`, {
       params: { id: weighment.id },
     });
 
@@ -35,7 +42,8 @@ export async function downloadWeighmentReceipt({
       throw new Error(`Weighment #${weighment.id} could not be found.`);
     }
 
-    const verifiedWeighment = weighmentSchema.parse(verifiedRecord);
+    const schema = mode === "automatic" ? automaticWeighmentSchema : manualWeighmentSchema;
+    const verifiedWeighment = schema.parse(verifiedRecord);
 
     const factory = useFactoryStore.getState().factory;
     if (!factory) {

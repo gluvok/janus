@@ -1,11 +1,16 @@
-import type { Metadata } from "next";
-import { WeighmentsTableContainer } from "./data-table";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Weighments | Mesto",
-  description: "View and manage completed weighment cycles and net weight measurements.",
-};
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useModeStore } from "@/stores/use-mode-store";
 
 export default function WeighmentsPage() {
-  return <WeighmentsTableContainer />;
+  const router = useRouter();
+  const mode = useModeStore((s) => s.modes.weighments);
+
+  useEffect(() => {
+    router.replace(`/weighments/${mode}`);
+  }, [router, mode]);
+
+  return null;
 }

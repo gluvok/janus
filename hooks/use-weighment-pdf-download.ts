@@ -2,15 +2,16 @@
 
 import * as React from "react";
 import { downloadWeighmentReceipt } from "@/components/weighment-receipt";
+import type { EntityMode } from "@/stores/use-mode-store";
 
 export function useWeighmentPdfDownload() {
   const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
 
   const downloadReceipt = React.useCallback(
-    async (weighment: { id: number; vehicle_number: string }) => {
+    async (weighment: { id: number; vehicle_number: string }, mode: EntityMode) => {
       setDownloadingId(weighment.id);
       try {
-        await downloadWeighmentReceipt({ weighment });
+        await downloadWeighmentReceipt({ weighment, mode });
       } catch {
         // Error already notified by toast in downloadWeighmentReceipt
       } finally {
