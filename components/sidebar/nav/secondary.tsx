@@ -38,7 +38,7 @@ export function NavSecondary({
             const linkId = `sidebar-link-${item.title.toLowerCase().replace(/\s+/g, "-")}`;
             return (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild size="sm">
+                <SidebarMenuButton asChild size="sm" tooltip={item.title}>
                   <Link id={linkId} href={item.url}>
                     {item.icon}
                     <span>{item.title}</span>

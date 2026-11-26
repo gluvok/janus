@@ -31,6 +31,8 @@ interface MockPreferencesStoreState {
 }
 
 // Mock dependencies
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
+
 vi.mock("@/lib/store", () => {
   const mockAuthStore = {
     getState: () => ({

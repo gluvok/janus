@@ -75,7 +75,7 @@
   --foreground: oklch(0.18 0.015 150);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.015 150);
-  --popover: oklch(1 0 0);
+  --popover: oklch(1 0 0 / 0.6);
   --popover-foreground: oklch(0.18 0.015 150);
   --primary: oklch(0.42 0.065 155);
   --primary-foreground: oklch(0.99 0 0);
@@ -110,7 +110,7 @@
   --foreground: oklch(0.965 0.006 140);
   --card: oklch(0.185 0.012 155);
   --card-foreground: oklch(0.965 0.006 140);
-  --popover: oklch(0.185 0.012 155);
+  --popover: oklch(0.185 0.012 155 / 0.6);
   --popover-foreground: oklch(0.965 0.006 140);
   --primary: oklch(0.76 0.055 155);
   --primary-foreground: oklch(0.14 0.012 155);
@@ -148,7 +148,54 @@
     @apply bg-background text-foreground;
   }
 
+  /* Glass: every overlay shares bg-popover (now translucent); blur what's behind it. */
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    @apply backdrop-blur-xl backdrop-saturate-150;
+  }
+
   html {
     @apply font-sans;
   }
+}
+
+/* Neumorphism: soft dual shadows on the page background as the shared surface. */
+:root {
+  --neu-shade: oklch(0.55 0.02 135 / 0.22);
+  --neu-light: oklch(1 0 0 / 0.95);
+}
+
+.dark {
+  --neu-shade: oklch(0 0 0 / 0.55);
+  --neu-light: oklch(1 0 0 / 0.05);
+}
+
+@utility neu {
+  box-shadow:
+    5px 5px 12px var(--neu-shade),
+    -5px -5px 12px var(--neu-light);
+}
+
+@utility neu-sm {
+  box-shadow:
+    3px 3px 6px var(--neu-shade),
+    -3px -3px 6px var(--neu-light);
+}
+
+@utility neu-inset {
+  box-shadow:
+    inset 2px 2px 5px var(--neu-shade),
+    inset -2px -2px 5px var(--neu-light);
+}
+
+/* Claymorphism: puffy primary actions and badges (outer drop + inner highlight/shade). */
+@utility clay {
+  box-shadow:
+    5px 7px 14px var(--neu-shade),
+    inset -3px -4px 6px oklch(0 0 0 / 0.16),
+    inset 3px 4px 6px oklch(1 0 0 / 0.45);
 }

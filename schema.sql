@@ -442,18 +442,6 @@ DROP POLICY IF EXISTS "Allow access entries" ON entries;
 DROP POLICY IF EXISTS "Allow access tickets" ON tickets;
 DROP POLICY IF EXISTS "Allow access factory_processed_weighments" ON factory_processed_weighments;
 
-CREATE POLICY "Allow access factories" ON factories FOR ALL USING (true);
-CREATE POLICY "Allow access users" ON users FOR ALL USING (true);
-CREATE POLICY "Allow access sessions" ON sessions FOR ALL USING (true);
-CREATE POLICY "Allow access customers" ON customers FOR ALL USING (true);
-CREATE POLICY "Allow access centers" ON centers FOR ALL USING (true);
-CREATE POLICY "Allow access commodities" ON commodities FOR ALL USING (true);
-CREATE POLICY "Allow access rates" ON rates FOR ALL USING (true);
-CREATE POLICY "Allow access weighments" ON weighments FOR ALL USING (true);
-CREATE POLICY "Allow access entries" ON entries FOR ALL USING (true);
-CREATE POLICY "Allow access tickets" ON tickets FOR ALL USING (true);
-CREATE POLICY "Allow access factory_processed_weighments" ON factory_processed_weighments FOR ALL USING (true);
-
 -- 5. AUTO-INCREMENT SEQUENCE RESET FUNCTIONS
 DROP FUNCTION IF EXISTS public.reset_table_sequence(text);
 CREATE OR REPLACE FUNCTION reset_table_sequence(table_name text)

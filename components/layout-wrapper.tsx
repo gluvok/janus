@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AuthGuard } from "@/components/auth/guard";
+import { NotificationBell } from "@/components/notification-bell";
 import { AUTH_ROUTES } from "@/lib/constants";
 import { useAuthStore } from "@/lib/store";
 
@@ -32,7 +33,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     <AuthGuard>
       <SidebarProvider defaultOpen={!!user}>
         <AppSidebar />
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset>
+          {children}
+          {/* Sits in the h-16 header band every page renders; no page header uses its right side. */}
+          <div className="fixed top-3 right-4 z-40">
+            <NotificationBell />
+          </div>
+        </SidebarInset>
       </SidebarProvider>
     </AuthGuard>
   );

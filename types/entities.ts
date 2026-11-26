@@ -236,3 +236,13 @@ export type EntityRecord =
   | Factory
   | User
   | Ticket;
+
+/** One row of the `notifications` table as the bell sees it (also the realtime payload). */
+export interface DashboardNotification {
+  kind: "entry" | "weighment";
+  ref_id: number;
+  vehicle_number: string;
+  weight: number; // entry weight, or net weight for a weighment
+  unit: Unit;
+  created_at: string;
+}

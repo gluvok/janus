@@ -27,14 +27,14 @@ import sharp from "sharp";
 // ---------------------------------------------------------------------------
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SECRET_KEY;
 const BUCKET = "gluvok";
 const PUBLIC_URL_INDICATOR = "/public/gluvok/";
 const JPEG_QUALITY = 85;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error(
-    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY env vars.\n" +
+    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY env vars.\n" +
       "Run with: pnpm tsx --env-file=.env.local scripts/crop-existing-images.ts",
   );
   process.exit(1);

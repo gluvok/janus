@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { TABLES_IN_CLEAR_ORDER } from "./fixtures/seed-data";
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+const supabaseKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error("Error: Supabase URL and key environment variables are required.");

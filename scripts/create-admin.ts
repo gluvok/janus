@@ -10,12 +10,10 @@ import { Role } from "@/lib/constants/enums";
 import { hashPassword } from "@/lib/auth/password";
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+const supabaseKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error(
-    "Error: SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY environment variables are required.",
-  );
+  console.error("Error: SUPABASE_URL and SUPABASE_SECRET_KEY environment variables are required.");
   process.exit(1);
 }
 

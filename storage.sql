@@ -24,30 +24,30 @@ DROP POLICY IF EXISTS "Public Read Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Read Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Allow read access for gluvok bucket" ON storage.objects;
 
--- INSERT Policy (Restricted to authenticated and service_role; prefix validated)
+-- INSERT Policy (Restricted to service_role; prefix validated)
 DROP POLICY IF EXISTS "Public Insert Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Insert Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Allow insert access for gluvok bucket" ON storage.objects;
 CREATE POLICY "Allow insert access for gluvok bucket"
-ON storage.objects FOR INSERT TO authenticated, service_role
+ON storage.objects FOR INSERT TO service_role
 WITH CHECK (
     bucket_id = 'gluvok' AND
     name ~ '^[0-9]+/[^/]+$'
 );
 
--- UPDATE Policy (Restricted to authenticated and service_role)
+-- UPDATE Policy (Restricted to service_role)
 DROP POLICY IF EXISTS "Public Update Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Update Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Allow update access for gluvok bucket" ON storage.objects;
 CREATE POLICY "Allow update access for gluvok bucket"
-ON storage.objects FOR UPDATE TO authenticated, service_role
+ON storage.objects FOR UPDATE TO service_role
 USING (bucket_id = 'gluvok')
 WITH CHECK (bucket_id = 'gluvok');
 
--- DELETE Policy (Restricted to authenticated and service_role)
+-- DELETE Policy (Restricted to service_role)
 DROP POLICY IF EXISTS "Public Delete Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Delete Access for gluvok bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Allow delete access for gluvok bucket" ON storage.objects;
 CREATE POLICY "Allow delete access for gluvok bucket"
-ON storage.objects FOR DELETE TO authenticated, service_role
+ON storage.objects FOR DELETE TO service_role
 USING (bucket_id = 'gluvok');

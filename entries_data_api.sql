@@ -20,7 +20,6 @@ ON factory_processed_entries (factory_id);
 ALTER TABLE IF EXISTS factory_processed_entries ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow access factory_processed_entries" ON factory_processed_entries;
-CREATE POLICY "Allow access factory_processed_entries" ON factory_processed_entries FOR ALL USING (true);
 
 -- 2. STORED PROCEDURES: Read-only data API function & dedicated stateful acknowledgment function
 DROP FUNCTION IF EXISTS public.get_factory_entry_data(TEXT);
