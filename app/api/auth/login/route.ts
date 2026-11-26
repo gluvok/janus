@@ -4,7 +4,12 @@ import { z } from "zod";
 import argon2 from "argon2";
 import { supabase } from "@/lib/supabase";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
-import { createSession, SESSION_COOKIE_NAME } from "@/lib/auth";
+import {
+  createSession,
+  sessionCutoffIso,
+  SESSION_COOKIE_NAME,
+  SESSION_TTL_SECONDS,
+} from "@/lib/auth";
 
 const loginSchema = z
   .object({
@@ -30,6 +35,7 @@ export async function POST(request: Request) {
       .from("users")
       .select("id, username, password_hash, name, role, factory_id, created_at, updated_at")
       .eq("username", username)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (userError) {
@@ -52,6 +58,11 @@ export async function POST(request: Request) {
     }
 
     const { token } = await createSession(user.id);
+    await supabase
+      .from("sessions")
+      .delete()
+      .eq("user_id", user.id)
+      .lt("created_at", sessionCutoffIso());
 
     const { data: factory, error: factoryError } = await supabase
       .from("factories")
@@ -97,6 +108,7 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
+      maxAge: SESSION_TTL_SECONDS,
     });
 
     return response;

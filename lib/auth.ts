@@ -18,9 +18,15 @@ export interface SessionData {
   factory: Factory;
 }
 
-const sessionCache = new LRUCache<string, SessionData>({
-  max: 5000,
-});
+export const SESSION_TTL_SECONDS = 60 * 60 * 12; // D4
+const CACHE_TTL_MS = 60_000;
+
+// ponytail: per-instance cache; a revoked session lives <=60s on other instances. Shared cache if that's too long.
+const sessionCache = new LRUCache<string, SessionData>({ max: 5000, ttl: CACHE_TTL_MS });
+
+export function sessionCutoffIso(): string {
+  return new Date(Date.now() - SESSION_TTL_SECONDS * 1000).toISOString();
+}
 
 export function invalidateSessionCache(token: string): void {
   sessionCache.delete(token);
@@ -30,14 +36,6 @@ export function invalidateAllUserSessionCache(userId: number): void {
   for (const [token, session] of sessionCache.entries()) {
     if (session.user.id === userId) {
       sessionCache.delete(token);
-    }
-  }
-}
-
-export function updateUserSessionCache(userId: number, updatedUser: User): void {
-  for (const [_token, session] of sessionCache.entries()) {
-    if (session.user.id === userId) {
-      session.user = updatedUser;
     }
   }
 }
@@ -120,6 +118,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
       )
     `)
     .eq("token_hash", tokenHash)
+    .gt("created_at", sessionCutoffIso())
     .maybeSingle();
 
   if (error || !data || !data.user) {

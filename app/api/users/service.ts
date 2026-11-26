@@ -2,7 +2,7 @@ import { z } from "zod";
 import argon2 from "argon2";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
-import { updateUserSessionCache, invalidateAllUserSessionCache } from "@/lib/auth";
+import { invalidateAllUserSessionCache } from "@/lib/auth";
 import { ServiceError } from "@/lib/api-handler";
 import {
   userRoleEnum,
@@ -111,11 +111,8 @@ export async function updateUserAccount(data: UpdateUserInput, factoryId: number
     throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
   }
 
-  if (password && password.trim()) {
-    invalidateAllUserSessionCache(updated.id);
-  } else {
-    updateUserSessionCache(updated.id, updated);
-  }
+  // DB trigger trg_invalidate_sessions deletes rows on role/username/password change; drop cached copies too.
+  invalidateAllUserSessionCache(updated.id);
 
   return updated;
 }
