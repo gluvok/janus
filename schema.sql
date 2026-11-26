@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS public.automatic_entries CASCADE;
 DROP TABLE IF EXISTS public.weighments CASCADE;
 DROP TABLE IF EXISTS public.entries CASCADE;
 DROP TABLE IF EXISTS public.sessions CASCADE;
+DROP TABLE IF EXISTS public.notifications CASCADE;
 DROP TABLE IF EXISTS public.users CASCADE;
 DROP TABLE IF EXISTS public.centers CASCADE;
 DROP TABLE IF EXISTS public.factories CASCADE;
@@ -556,30 +557,40 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('mesto', 'mesto', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
+-- Service role bypasses RLS; no policy = anon/authenticated can't list, upload, overwrite or delete.
+-- ponytail: bucket stays public so stored photo URLs work; move to signed URLs if photos become sensitive.
 DROP POLICY IF EXISTS "Allow read access for mesto bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Allow insert access for mesto bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Allow update access for mesto bucket" ON storage.objects;
 DROP POLICY IF EXISTS "Allow delete access for mesto bucket" ON storage.objects;
 
-CREATE POLICY "Allow read access for mesto bucket"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'mesto');
+-- ----------------------------------------------------------------------------
+-- 8. Access Lockdown. The server uses the service role (bypasses RLS and grants).
+-- anon/authenticated (publishable key, Realtime tokens) get nothing in public.
+-- Re-run after adding any table or function.
+-- ----------------------------------------------------------------------------
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT tablename AS name FROM pg_tables WHERE schemaname = 'public' LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', r.name);
+    EXECUTE format('REVOKE ALL ON public.%I FROM anon, authenticated', r.name);
+  END LOOP;
+  FOR r IN SELECT viewname AS name FROM pg_views WHERE schemaname = 'public' LOOP
+    EXECUTE format('REVOKE ALL ON public.%I FROM anon, authenticated', r.name);
+  END LOOP;
+  FOR r IN
+    SELECT p.oid::regprocedure AS fn FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')
+  LOOP
+    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated', r.fn);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', r.fn);
+  END LOOP;
+END $$;
 
-CREATE POLICY "Allow insert access for mesto bucket"
-ON storage.objects FOR INSERT TO anon, authenticated, service_role
-WITH CHECK (
-  bucket_id = 'mesto' AND
-  name ~ '^[0-9]+/[^/]+$'
-);
-
-CREATE POLICY "Allow update access for mesto bucket"
-ON storage.objects FOR UPDATE TO anon, authenticated, service_role
-USING (bucket_id = 'mesto')
-WITH CHECK (bucket_id = 'mesto');
-
-CREATE POLICY "Allow delete access for mesto bucket"
-ON storage.objects FOR DELETE TO anon, authenticated, service_role
-USING (bucket_id = 'mesto');
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 
 -- Notify PostgREST to reload schema
 NOTIFY pgrst, 'reload schema';
