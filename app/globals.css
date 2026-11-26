@@ -169,7 +169,9 @@
   [data-slot="dropdown-menu-sub-content"],
   [data-slot="select-content"],
   [data-slot="dialog-content"],
-  [data-slot="sheet-content"] {
+  [data-slot="sheet-content"],
+  [data-slot="toast"],
+  [data-slot="combobox-content"] {
     @apply backdrop-blur-xl backdrop-saturate-150;
   }
 
