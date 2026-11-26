@@ -58,9 +58,14 @@ for (const bad of [
   "/\\evil.com",
   "https://evil.com",
   "javascript:alert(1)",
+  "/\t/evil.com",
+  "/\n/evil.com",
+  "/\r/evil.com",
+  "/\t\\evil.com",
 ]) {
   assert.equal(safeNextPath(bad), "/");
 }
+assert.equal(safeNextPath("/a?b=c%09d"), "/a?b=c%09d"); // encoded tab is fine
 assert.equal(quotePostgrestValue("%a,b)%"), '"%a,b)%"');
 assert.equal(quotePostgrestValue('x"\\y'), '"x\\"\\\\y"');
 console.log("✓ redirect + postgrest quoting");

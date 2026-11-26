@@ -35,9 +35,10 @@ export function stripSessionHeaders(headers: Headers): Headers {
   return clean;
 }
 
-/** Same-origin relative path or "/". Blocks //host, /\host, schemes. */
+/** Same-origin relative path or "/". Blocks //host, /\host, schemes and control chars (URL parsers strip \t\n\r). */
 export function safeNextPath(next: string | null | undefined): string {
-  return next && /^\/(?![\\/])/.test(next) ? next : "/";
+  // eslint-disable-next-line no-control-regex -- control chars are exactly what we reject
+  return next && /^\/(?![\\/])[^\x00-\x1f]*$/.test(next) ? next : "/";
 }
 
 /** Quote a value for PostgREST or()/in() so , . : ( ) can't start a new filter. */
