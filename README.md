@@ -12,7 +12,13 @@ Industrial Weighing, Procurement & Multi-Tenant Center Management System.
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_PUBLISHABLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_JWT_SECRET=your-jwt-secret
 ```
+
+- `SUPABASE_PUBLISHABLE_KEY` holds the **service-role** key despite its name. It bypasses all access policies, so keep it server-only. (Renaming it to `SUPABASE_SECRET_KEY` is deferred.)
+- `SUPABASE_ANON_KEY` is the anon key. It is safe to send to the browser, which uses it for Realtime.
+- `SUPABASE_JWT_SECRET` signs short-lived Realtime tokens. Keep it server-only.
 
 ---
 
@@ -28,9 +34,11 @@ pnpm install
 
 For a new database instance, run the following SQL scripts in your Supabase SQL Editor:
 
-1. `schema.sql` — provisions tables, enums, triggers, and RLS policies.
+1. `schema.sql` — provisions tables, enums, triggers, and RLS (no open access policies; the server uses the service role).
 2. `storage.sql` — provisions the `gluvok` storage bucket and file access policies.
 3. `data_api.sql` — provisions `api_key` on `factories`, the `factory_processed_weighments` table, and the `get_factory_weighment_data` / `acknowledge_factory_weighment` stored procedures for the Factory Data API.
+4. `entries_data_api.sql` — provisions the `factory_processed_entries` table and the `get_factory_entry_data` / `acknowledge_factory_entry` stored procedures.
+5. `realtime.sql` — locks down open access, revokes RPC access from `anon`/`authenticated`, and provisions the `notifications` table, its triggers, and the Realtime listen policy. Run it last, and re-run it whenever you re-run any file above. Safe to re-run.
 
 ### Start Development Server
 

@@ -28,7 +28,6 @@ ON factory_processed_weighments (factory_id);
 ALTER TABLE IF EXISTS factory_processed_weighments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow access factory_processed_weighments" ON factory_processed_weighments;
-CREATE POLICY "Allow access factory_processed_weighments" ON factory_processed_weighments FOR ALL USING (true);
 
 -- 3. STORED PROCEDURES: Read-only data API function & dedicated stateful acknowledgment function
 DROP FUNCTION IF EXISTS public.get_factory_weighment_data(TEXT, INT);
