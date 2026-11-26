@@ -131,7 +131,7 @@ function BellPopover({ username }: { username: string }) {
         ) : (
           <ul className="max-h-80 overflow-y-auto pb-1.5">
             {items.map((n) => (
-              <Row key={`${n.kind}-${n.id}`} n={n} onPick={() => setOpen(false)} />
+              <Row key={`${n.kind}-${n.ref_id}`} n={n} onPick={() => setOpen(false)} />
             ))}
           </ul>
         )}
@@ -170,9 +170,7 @@ function Row({ n, onPick }: { n: DashboardNotification; onPick: () => void }) {
             {n.vehicle_number}
           </span>
           <span className="block truncate text-xs text-muted-foreground">
-            {n.kind === "entry"
-              ? `Entry · ${n.weight.toLocaleString()} kg`
-              : `Weighment · net ${n.net_weight.toLocaleString()} ${n.unit}`}
+            {`${n.kind === "entry" ? "Entry" : "Weighment · net"} · ${n.weight.toLocaleString()} ${n.unit}`}
           </span>
         </span>
         <time

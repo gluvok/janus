@@ -1,14 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import {
-  EntryStatus,
-  EntrySource,
-  PermissionKey,
-  ProjectSlug,
-  Role,
-  Unit,
-  WeighmentType,
-} from "@/lib/constants/enums";
+import { PermissionKey, ProjectSlug, Role, Unit } from "@/lib/constants/enums";
 import { createMockQueryBuilder, createMockSupabase, createMockUser } from "@/tests/test-utils";
 
 const { mockHasPermission } = vi.hoisted(() => ({ mockHasPermission: vi.fn() }));
@@ -24,33 +16,35 @@ type RawHandler = (req: NextRequest, user: unknown, db: unknown) => Promise<Resp
 const handler = GET as unknown as RawHandler;
 const req = () => new NextRequest("http://localhost/api/notifications");
 
-const entryRow = (o: Record<string, unknown> = {}) => ({
-  id: 1,
+const NOW = "2026-11-24T12:00:00.000Z";
+const SEEN_AT = "2026-11-24T09:00:00.000Z";
+
+const row = (o: Record<string, unknown> = {}) => ({
+  kind: "weighment",
+  ref_id: 10,
   vehicle_number: "UP32AB1234",
-  detected_vehicle_number: "UP32AB1284",
-  weight: 15000,
-  status: EntryStatus.PENDING,
-  auto_approved: false,
-  created_at: "2026-11-24T10:00:00.000Z",
-  centers: { name: "Center A", factory_id: 1 },
-  created_by_user: { role: Role.HARDWARE },
+  weight: "1000.00",
+  unit: Unit.KG,
+  created_at: "2026-11-24T11:00:00.000Z",
   ...o,
 });
 
-const weighmentRow = (o: Record<string, unknown> = {}) => ({
-  id: 10,
-  unit: Unit.KG,
-  type: WeighmentType.IN,
-  created_at: "2026-11-24T11:00:00.000Z",
-  in_entry: { weight: 15000, vehicle_number: "UP32AB1234", centers: { name: "Center A" } },
-  out_entry: { weight: 5000 },
-  ...o,
-});
+const setup = (rows: unknown[] = []) => {
+  const notifications = createMockQueryBuilder({ data: rows });
+  const users = createMockQueryBuilder({ maybeSingleData: { notifications_seen_at: SEEN_AT } });
+  return { notifications, users, db: createMockSupabase({ notifications, users }) };
+};
 
 describe("GET /api/notifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(NOW));
     mockHasPermission.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("returns 403 when the user can read neither entries nor weighments", async () => {
@@ -64,112 +58,57 @@ describe("GET /api/notifications", () => {
     );
   });
 
-  it("maps entries and weighments and sorts newest first", async () => {
-    const db = createMockSupabase({
-      entries: createMockQueryBuilder({ data: [entryRow()] }),
-      weighments: createMockQueryBuilder({ data: [weighmentRow()] }),
-    });
-    const res = await handler(req(), createMockUser(), db);
-    const { data } = await res.json();
+  it("reads the last 24h of notifications, newest 20, with numeric weight and seenAt", async () => {
+    const { notifications, users, db } = setup([row()]);
+    const res = await handler(req(), createMockUser({ sub: "5" }), db);
+    const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(data).toEqual([
-      {
-        kind: "weighment",
-        id: 10,
-        vehicle_number: "UP32AB1234",
-        center_name: "Center A",
-        created_at: "2026-11-24T11:00:00.000Z",
-        in_weight: 15000,
-        out_weight: 5000,
-        net_weight: 10000,
-        unit: Unit.KG,
-        type: WeighmentType.IN,
-      },
-      {
-        kind: "entry",
-        id: 1,
-        vehicle_number: "UP32AB1234",
-        detected_vehicle_number: "UP32AB1284",
-        center_name: "Center A",
-        created_at: "2026-11-24T10:00:00.000Z",
-        weight: 15000,
-        status: EntryStatus.PENDING,
-        auto_approved: false,
-        source: EntrySource.DEVICE,
-      },
-    ]);
-  });
-
-  it("marks entries created by non-hardware users as manual", async () => {
-    const db = createMockSupabase({
-      entries: createMockQueryBuilder({
-        data: [entryRow({ created_by_user: { role: Role.OPERATOR } })],
-      }),
+    expect(db.from).toHaveBeenCalledWith("notifications");
+    expect(notifications.gte).toHaveBeenCalledWith("created_at", "2026-11-23T12:00:00.000Z");
+    expect(notifications.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(notifications.limit).toHaveBeenCalledWith(20);
+    expect(users.eq).toHaveBeenCalledWith("id", 5);
+    expect(body).toEqual({
+      data: [
+        {
+          kind: "weighment",
+          ref_id: 10,
+          vehicle_number: "UP32AB1234",
+          weight: 1000,
+          unit: Unit.KG,
+          created_at: "2026-11-24T11:00:00.000Z",
+        },
+      ],
+      seenAt: SEEN_AT,
     });
-    const { data } = await (await handler(req(), createMockUser(), db)).json();
-    expect(data[0].source).toBe(EntrySource.MANUAL);
   });
 
-  it("caps the merged list at 20 items", async () => {
-    const rows = Array.from({ length: 20 }, (_, i) =>
-      entryRow({ id: i + 1, created_at: new Date(Date.UTC(2026, 10, 24, 0, i)).toISOString() }),
-    );
-    const wRows = Array.from({ length: 20 }, (_, i) =>
-      weighmentRow({
-        id: i + 100,
-        created_at: new Date(Date.UTC(2026, 10, 24, 1, i)).toISOString(),
-      }),
-    );
-    const db = createMockSupabase({
-      entries: createMockQueryBuilder({ data: rows }),
-      weighments: createMockQueryBuilder({ data: wRows }),
-    });
-    const { data } = await (await handler(req(), createMockUser(), db)).json();
-    expect(data).toHaveLength(20);
-    expect(data.every((n: { kind: string }) => n.kind === "weighment")).toBe(true);
+  it("scopes staff to their factory, never by customer", async () => {
+    const { notifications, db } = setup();
+    await handler(req(), createMockUser({ role: Role.OPERATOR, factory_id: 7 }), db);
+    expect(notifications.eq).toHaveBeenCalledWith("factory_id", 7);
+    expect(notifications.eq).not.toHaveBeenCalledWith("customer_user_id", expect.anything());
   });
 
-  it("scopes both queries to the user's factory and the last 24 hours", async () => {
-    const entries = createMockQueryBuilder({ data: [] });
-    const weighments = createMockQueryBuilder({ data: [] });
-    await handler(
-      req(),
-      createMockUser({ factory_id: 7 }),
-      createMockSupabase({ entries, weighments }),
-    );
-
-    expect(entries.eq).toHaveBeenCalledWith("centers.factory_id", 7);
-    expect(weighments.eq).toHaveBeenCalledWith("in_entry.centers.factory_id", 7);
-    expect(entries.gte).toHaveBeenCalledWith("created_at", expect.any(String));
-    expect(weighments.gte).toHaveBeenCalledWith("created_at", expect.any(String));
-    expect(weighments.is).toHaveBeenCalledWith("in_entry.deleted_at", null);
-    expect(entries.is).toHaveBeenCalledWith("deleted_at", null);
-    expect(entries.limit).toHaveBeenCalledWith(20);
+  it("scopes BASE users to their own customer rows, never by factory", async () => {
+    const { notifications, db } = setup();
+    await handler(req(), createMockUser({ role: Role.BASE, sub: "42", factory_id: 7 }), db);
+    expect(notifications.eq).toHaveBeenCalledWith("customer_user_id", 42);
+    expect(notifications.eq).not.toHaveBeenCalledWith("factory_id", expect.anything());
   });
 
-  it("limits BASE users to their own customers", async () => {
-    const entries = createMockQueryBuilder({ data: [] });
-    const weighments = createMockQueryBuilder({ data: [] });
-    await handler(
-      req(),
-      createMockUser({ role: Role.BASE, sub: "42" }),
-      createMockSupabase({ entries, weighments }),
-    );
-    expect(entries.eq).toHaveBeenCalledWith("customers.user_id", 42);
-    expect(weighments.eq).toHaveBeenCalledWith("in_entry.customers.user_id", 42);
-  });
-
-  it("skips the weighments query when the user cannot read weighments", async () => {
+  it("filters to entries when the user can read only entries", async () => {
     mockHasPermission.mockImplementation((_u, slug) => slug === ProjectSlug.ENTRIES);
-    const db = createMockSupabase({ entries: createMockQueryBuilder({ data: [] }) });
+    const { notifications, db } = setup();
     await handler(req(), createMockUser(), db);
-    expect(db.from).not.toHaveBeenCalledWith("weighments");
+    expect(notifications.eq).toHaveBeenCalledWith("kind", "entry");
+    expect(notifications.eq).not.toHaveBeenCalledWith("kind", "weighment");
   });
 
-  it("returns 500 when a query fails", async () => {
+  it("returns 500 when the query fails", async () => {
     const db = createMockSupabase({
-      entries: createMockQueryBuilder({ error: { message: "boom" } }),
+      notifications: createMockQueryBuilder({ error: { message: "boom" } }),
     });
     const res = await handler(req(), createMockUser(), db);
     expect(res.status).toBe(500);

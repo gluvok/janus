@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import axios from "axios";
-import { EntryStatus, EntrySource, Role } from "@/lib/constants/enums";
+import { Role, Unit } from "@/lib/constants/enums";
 import { useAuthStore } from "@/lib/store";
 import { NotificationBell } from "./notification-bell";
 
@@ -9,15 +9,11 @@ vi.mock("axios");
 
 const entry = {
   kind: "entry",
-  id: 1,
+  ref_id: 1,
   vehicle_number: "UP32AB1234",
-  detected_vehicle_number: null,
-  center_name: "Center A",
-  created_at: new Date().toISOString(),
   weight: 15000,
-  status: EntryStatus.PENDING,
-  auto_approved: false,
-  source: EntrySource.DEVICE,
+  unit: Unit.KG,
+  created_at: new Date().toISOString(),
 };
 
 const loginAs = (role: Role) =>

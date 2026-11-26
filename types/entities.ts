@@ -237,28 +237,12 @@ export type EntityRecord =
   | User
   | Ticket;
 
-interface NotificationBase {
-  id: number;
+/** One row of the `notifications` table as the bell sees it (also the realtime payload). */
+export interface DashboardNotification {
+  kind: "entry" | "weighment";
+  ref_id: number;
   vehicle_number: string;
-  center_name: string | null;
+  weight: number; // entry weight, or net weight for a weighment
+  unit: Unit;
   created_at: string;
 }
-
-/** Dashboard bell item: one new entry or one newly merged weighment. */
-export type DashboardNotification =
-  | (NotificationBase & {
-      kind: "entry";
-      detected_vehicle_number: string | null;
-      weight: number;
-      status: EntryStatus;
-      auto_approved: boolean;
-      source: EntrySource;
-    })
-  | (NotificationBase & {
-      kind: "weighment";
-      in_weight: number;
-      out_weight: number;
-      net_weight: number;
-      unit: Unit;
-      type: WeighmentType;
-    });
