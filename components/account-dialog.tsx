@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { usePathname, useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,6 +67,8 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   const [currentUser, setCurrentUser] = useState<User>(user);
   const [isFetchingProfile, setIsFetchingProfile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const {
     handleSubmit,
@@ -128,8 +131,20 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
     }
 
     try {
-      const res = await axios.patch<{ data: User }>("/api/users/me", payload);
+      const res = await axios.patch<{ data: User; reauth: boolean }>("/api/users/me", payload);
       const updatedUser = res.data.data;
+
+      if (res.data.reauth) {
+        // Server revoked every session (incl. this one) and cleared the cookie.
+        toast.add({
+          type: "success",
+          title: "Credentials updated",
+          description: "Please sign in again with your new credentials.",
+        });
+        useUserStore.getState().setUser(null);
+        router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+        return;
+      }
 
       setCurrentUser(updatedUser);
       onUserUpdated(updatedUser);

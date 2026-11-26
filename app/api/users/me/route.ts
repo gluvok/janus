@@ -3,6 +3,7 @@ import { z } from "zod";
 import { StatusCodes } from "http-status-codes";
 import { handleApiRoute, ServiceError, type ApiContext } from "@/lib/api-handler";
 import { supabase } from "@/lib/supabase";
+import { SESSION_COOKIE_NAME } from "@/lib/auth";
 import { verifyPassword } from "@/lib/password";
 import { updateUserAccount } from "@/app/api/users/service";
 import { nameSchema, usernameSchema, passwordSchema } from "@/app/users/types";
@@ -64,8 +65,13 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     context.factory.id,
   );
 
-  return NextResponse.json({
+  // trg_invalidate_sessions deletes this user's sessions (including this one) on username/password change.
+  const reauth = Boolean(password && password.trim()) || updated.username !== context.user.username;
+  const response = NextResponse.json({
     data: updated,
+    reauth,
     message: "Account profile updated successfully.",
   });
+  if (reauth) response.cookies.delete(SESSION_COOKIE_NAME);
+  return response;
 });
