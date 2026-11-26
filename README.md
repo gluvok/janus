@@ -11,13 +11,13 @@ Industrial Weighing, Procurement & Multi-Tenant Center Management System.
 
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_PUBLISHABLE_KEY=your-service-role-key
-SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SECRET_KEY=your-secret-key
+SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 SUPABASE_JWT_SECRET=your-jwt-secret
 ```
 
-- `SUPABASE_PUBLISHABLE_KEY` holds the **service-role** key despite its name. It bypasses all access policies, so keep it server-only. (Renaming it to `SUPABASE_SECRET_KEY` is deferred.)
-- `SUPABASE_ANON_KEY` is the anon key. It is safe to send to the browser, which uses it for Realtime.
+- `SUPABASE_SECRET_KEY` is the secret key (`sb_secret_…`, or the legacy service-role key). It bypasses all access policies, so keep it server-only.
+- `SUPABASE_PUBLISHABLE_KEY` is the publishable key (`sb_publishable_…`, or the legacy anon key). It is safe to send to the browser, which uses it for Realtime.
 - `SUPABASE_JWT_SECRET` signs short-lived Realtime tokens. Keep it server-only.
 
 ---

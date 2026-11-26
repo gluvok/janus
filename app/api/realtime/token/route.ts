@@ -23,11 +23,11 @@ export const GET = withAuth(async (_req, user) => {
   if (!isBase && !Number.isInteger(user.factory_id)) return forbiddenError();
 
   const secret = process.env.SUPABASE_JWT_SECRET;
-  const anonKey = process.env.SUPABASE_ANON_KEY; // never SUPABASE_PUBLISHABLE_KEY: that one is the service role
+  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY; // never SUPABASE_SECRET_KEY: that one is the service role
   const url = process.env.SUPABASE_URL;
   if (!secret || !anonKey || !url) {
     console.error(
-      "Realtime token: SUPABASE_JWT_SECRET, SUPABASE_ANON_KEY and SUPABASE_URL are required",
+      "Realtime token: SUPABASE_JWT_SECRET, SUPABASE_PUBLISHABLE_KEY and SUPABASE_URL are required",
     );
     return apiError(AuthErrorMessage.INTERNAL_SERVER_ERROR, StatusCodes.INTERNAL_SERVER_ERROR);
   }

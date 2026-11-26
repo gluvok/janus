@@ -24,7 +24,7 @@ describe("GET /api/realtime/token", () => {
     vi.clearAllMocks();
     mockHasPermission.mockReturnValue(true);
     vi.stubEnv("SUPABASE_JWT_SECRET", SECRET);
-    vi.stubEnv("SUPABASE_ANON_KEY", "anon-key");
+    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "anon-key");
     vi.stubEnv("SUPABASE_URL", "http://127.0.0.1:54321");
   });
 
@@ -82,7 +82,7 @@ describe("GET /api/realtime/token", () => {
   });
 
   it("never returns the server's service key", async () => {
-    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "service-role-key");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "service-role-key");
     const text = await (await handler(req(), createMockUser())).text();
     expect(text).not.toContain("service-role-key");
   });

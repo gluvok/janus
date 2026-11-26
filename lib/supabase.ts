@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.SUPABASE_URL || "https://placeholder.supabase.co";
 
-const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || "placeholder-key";
+const supabaseKey = process.env.SUPABASE_SECRET_KEY || "placeholder-key";
 
 /**
  * supabase client instance
