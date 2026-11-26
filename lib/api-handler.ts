@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { type z } from "zod";
 import { AuthError, getAuthSession } from "@/lib/auth";
+import { isRoleAllowed } from "@/lib/security";
 import type { User, UserRole } from "@/app/users/types";
 import type { Factory } from "@/app/settings/types";
 
@@ -41,7 +42,7 @@ export function handleApiRoute(
   return async (request: Request) => {
     try {
       const session = getAuthSession(request);
-      if (options.roles && !options.roles.includes(session.user.role)) {
+      if (!isRoleAllowed(options.roles, session.user.role)) {
         throw new AuthError("Forbidden", StatusCodes.FORBIDDEN);
       }
       return await handler(request, { user: session.user, factory: session.factory });

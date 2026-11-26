@@ -21,3 +21,8 @@ export const SESSION_HEADER_KEYS = [
 export const ADMIN: readonly UserRole[] = ["admin"];
 export const ADMIN_MANAGER: readonly UserRole[] = ["admin", "manager"];
 export const NOTIFY_ROLES: readonly UserRole[] = ["admin", "manager", "operator"];
+
+/** true when no role list is given or the role is in it. */
+export function isRoleAllowed(roles: readonly UserRole[] | undefined, role: UserRole): boolean {
+  return !roles || roles.includes(role);
+}
