@@ -26,6 +26,11 @@ export interface DownloadEntryReceiptOptions {
   mode: EntityMode;
 }
 
+export interface DownloadWeighmentsBatchReceiptOptions {
+  weighments: ReceiptRecordIdentity[];
+  mode: EntityMode;
+}
+
 async function executeReceiptPdfDownload<T extends ReceiptRecordIdentity>({
   endpoint,
   entityLabel,
@@ -43,7 +48,7 @@ async function executeReceiptPdfDownload<T extends ReceiptRecordIdentity>({
 }): Promise<void> {
   toast.add({
     type: "info",
-    title: "Generating Receipt PDF",
+    title: "Preparing Receipt for Print",
     description: `Preparing ${entityLabel.toLowerCase()} slip for ${record.vehicle_number}...`,
   });
 
@@ -79,14 +84,17 @@ async function executeReceiptPdfDownload<T extends ReceiptRecordIdentity>({
 
     toast.add({
       type: "success",
-      title: "Receipt Downloaded",
-      description: `Saved as ${fileName}`,
+      title: "Print Dialog Opened",
+      description: `Print preview ready for ${verified.vehicle_number}.`,
     });
   } catch (err) {
     toast.add({
       type: "error",
-      title: "Download Failed",
-      description: getErrorMessage(err, `Failed to generate ${entityLabel.toLowerCase()} PDF.`),
+      title: "Print Failed",
+      description: getErrorMessage(
+        err,
+        `Failed to prepare ${entityLabel.toLowerCase()} receipt for printing.`,
+      ),
     });
     throw err;
   }
@@ -124,4 +132,78 @@ export async function downloadEntryReceipt({
       <EntryReceiptView entry={verified} mode={mode} factory={factory} />
     ),
   });
+}
+
+export async function downloadWeighmentsBatchReceipt({
+  weighments,
+  mode,
+}: DownloadWeighmentsBatchReceiptOptions): Promise<void> {
+  if (weighments.length === 0) {
+    return;
+  }
+
+  toast.add({
+    type: "info",
+    title: "Preparing Receipts for Print",
+    description: `Preparing ${weighments.length} weighment slip${weighments.length > 1 ? "s" : ""}...`,
+  });
+
+  try {
+    const ids = weighments.map((w) => w.id);
+    const response = await axios.get<{
+      data: unknown[];
+      totalCount: number;
+    }>(`/api/weighments/${mode}`, {
+      params: { id: ids.join(","), limit: ids.length },
+    });
+
+    const rawItems = Array.isArray(response.data?.data) ? response.data.data : [];
+    const byId = new Map<number, unknown>();
+    for (const item of rawItems) {
+      if (
+        typeof item === "object" &&
+        item !== null &&
+        "id" in item &&
+        typeof item.id === "number"
+      ) {
+        byId.set(item.id, item);
+      }
+    }
+
+    const schema = mode === "automatic" ? automaticWeighmentSchema : manualWeighmentSchema;
+    const verifiedItems: WeighmentReceiptData[] = weighments.map((w) => {
+      const rawRecord = byId.get(w.id);
+      if (!rawRecord) {
+        throw new Error(`Weighment #${w.id} could not be found.`);
+      }
+      return schema.parse(rawRecord);
+    });
+
+    const factory = useFactoryStore.getState().factory;
+    if (!factory) {
+      throw new Error("Factory configuration not found. Please log in again.");
+    }
+
+    await generateReceiptPdf(
+      <>
+        {verifiedItems.map((w) => (
+          <WeighmentReceiptView key={w.id} weighment={w} factory={factory} mode={mode} />
+        ))}
+      </>,
+      `weighments-batch-${verifiedItems.length}.pdf`,
+    );
+
+    toast.add({
+      type: "success",
+      title: "Print Dialog Opened",
+      description: `Print preview ready for ${verifiedItems.length} weighment${verifiedItems.length > 1 ? "s" : ""}.`,
+    });
+  } catch (err) {
+    toast.add({
+      type: "error",
+      title: "Print Failed",
+      description: getErrorMessage(err, "Failed to prepare weighment receipts for printing."),
+    });
+    throw err;
+  }
 }

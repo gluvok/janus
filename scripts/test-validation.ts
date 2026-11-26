@@ -5,7 +5,7 @@
  * 1. Indian vehicle registration plate normalization and regex validation
  * 2. Generated column calculations and trigger derivations (gross, tare, net, type)
  * 3. Schema check constraints (positive weights, receipt images per row)
- * 4. Database enum definitions (role_enum, weighment_type, ticket_status)
+ * 4. Database enum definitions (role_enum, weighment_type)
  * 5. Entry idempotency key UUIDv7 format validation
  */
 
@@ -209,15 +209,6 @@ console.log(
   "  ✓ chk_automatic_weighments_gross_tare & chk_manual_weighments_gross_tare invariants verified.",
 );
 
-function validateTicketConcern(concern: string): boolean {
-  return typeof concern === "string" && concern.trim().length > 0;
-}
-
-assert.ok(validateTicketConcern("Plate OCR mismatch"));
-assert.ok(!validateTicketConcern(""));
-assert.ok(!validateTicketConcern("   "));
-console.log("  ✓ chk_automatic_tickets_concern & chk_manual_tickets_concern invariants verified.");
-
 function validateRequiredCreatorId(creatorId: unknown): boolean {
   return typeof creatorId === "number" && Number.isInteger(creatorId) && creatorId > 0;
 }
@@ -225,9 +216,7 @@ function validateRequiredCreatorId(creatorId: unknown): boolean {
 assert.ok(validateRequiredCreatorId(1));
 assert.ok(!validateRequiredCreatorId(null));
 assert.ok(!validateRequiredCreatorId(0));
-console.log(
-  "  ✓ manual_entries, automatic_tickets & manual_tickets non-null creator_id invariant verified.",
-);
+console.log("  ✓ manual_entries non-null creator_id invariant verified.");
 
 // ------------------------------------------------------------------------------
 // 4. DATABASE ENUM SET INVARIANTS
@@ -249,12 +238,6 @@ assert.ok(WEIGHMENT_TYPE_ENUMS.has("in"));
 assert.ok(WEIGHMENT_TYPE_ENUMS.has("out"));
 assert.ok(WEIGHMENT_TYPE_ENUMS.has("void"));
 assert.ok(!WEIGHMENT_TYPE_ENUMS.has("pending")); // entries are paired; individual entries hold pending states
-
-const TICKET_STATUS_ENUMS = new Set(["pending", "approved", "rejected"]);
-assert.equal(TICKET_STATUS_ENUMS.size, 3);
-assert.ok(TICKET_STATUS_ENUMS.has("pending"));
-assert.ok(TICKET_STATUS_ENUMS.has("approved"));
-assert.ok(TICKET_STATUS_ENUMS.has("rejected"));
 
 console.log("  ✓ All database enum sets match schema.sql exactly.");
 

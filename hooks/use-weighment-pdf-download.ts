@@ -5,10 +5,12 @@ import {
   downloadWeighmentReceipt,
   downloadEntryReceipt as downloadEntryReceiptPdf,
 } from "@/components/weighment-receipt";
+import { downloadWeighmentsBatchReceipt } from "@/components/weighment-receipt/pdf/download-receipt";
 import type { EntityMode } from "@/stores/use-mode-store";
 
 export function useWeighmentPdfDownload() {
   const [downloadingId, setDownloadingId] = React.useState<number | null>(null);
+  const [isBatchPrinting, setIsBatchPrinting] = React.useState(false);
 
   const runDownload = React.useCallback(async (id: number, task: () => Promise<void>) => {
     setDownloadingId(id);
@@ -33,10 +35,27 @@ export function useWeighmentPdfDownload() {
     [runDownload],
   );
 
+  const downloadBatchReceipts = React.useCallback(
+    async (weighments: Array<{ id: number; vehicle_number: string }>, mode: EntityMode) => {
+      if (weighments.length === 0) return;
+      setIsBatchPrinting(true);
+      try {
+        await downloadWeighmentsBatchReceipt({ weighments, mode });
+      } catch {
+        // Error already notified by toast in download helper
+      } finally {
+        setIsBatchPrinting(false);
+      }
+    },
+    [],
+  );
+
   return {
     downloadReceipt,
     downloadEntryReceipt,
+    downloadBatchReceipts,
     downloadingId,
     isDownloading: downloadingId !== null,
+    isBatchPrinting,
   };
 }

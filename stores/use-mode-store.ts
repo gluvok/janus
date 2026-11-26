@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 export type EntityMode = "automatic" | "manual";
-export type ModeEntity = "entries" | "weighments" | "tickets";
+export type ModeEntity = "entries" | "weighments";
 
 interface ModeStoreState {
   modes: Record<ModeEntity, EntityMode>;
@@ -15,7 +15,6 @@ export const useModeStore = create<ModeStoreState>()(
       modes: {
         entries: "automatic",
         weighments: "automatic",
-        tickets: "automatic",
       },
       setMode: (entity, mode) =>
         set((state) => ({

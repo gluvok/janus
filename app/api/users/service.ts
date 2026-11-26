@@ -134,7 +134,7 @@ export async function deleteUserAccounts(targetIds: number[], factoryId: number)
   if (deleteErr) {
     if (deleteErr.code === "23503") {
       throw new ServiceError(
-        "Cannot delete user account(s) because linked operational records (weighments or tickets) exist.",
+        "Cannot delete user account(s) because linked operational records (weighments or entries) exist.",
         StatusCodes.CONFLICT,
       );
     }

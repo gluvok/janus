@@ -14,7 +14,6 @@ A centralized operational platform and automation management system for weighbri
 - **Sessions**: Database-backed user authentication sessions with 400-day persistent rolling HTTP-only cookies (`mesto_session`).
 - **Automatic Weighments**: Hardware/ANPR camera-captured vehicle weighments. Features PostgreSQL stored generated columns (`gross`, `tare`, `net`, `type`), inbound/outbound weights, timestamps, and separate inbound/outbound photo arrays (`in_images`, `out_images`) unified via stored generated column `images = in_images || out_images`.
 - **Manual Weighments**: Operator-recorded weighments with full creator accountability (`creator_id`), inbound/outbound weights, and photo arrays (`in_images`, `out_images`).
-- **Tickets**: Support and discrepancy tickets linked directly to `automatic_weighments` via `automatic_weighment_id`.
 - **Support & Services**: Common reusable `UnderConstruction` placeholder pages at `/support` and `/services`.
 
 ### Stored Generated Columns (`automatic_weighments` & `manual_weighments`)
@@ -49,7 +48,6 @@ Search queries across data tables dynamically evaluate type-aware multi-column m
 
 - **Centers**: `name` (text ILIKE) and `id` (integer exact match).
 - **Weighments**: `vehicle_number` (text ILIKE), `id` (integer exact match), weights: `net`, `gross`, `tare`, `in_weight`, `out_weight` (numeric match), and `in_center`/`out_center` facility names (subquery match).
-- **Tickets**: `concern`, `reply` (text ILIKE), `id`, `automatic_weighment_id` (integer match), and linked weighment vehicle registration plate (subquery match).
 - **Users**: `name`, `username` (text ILIKE), and `id` (integer match).
 
 ---
@@ -58,7 +56,7 @@ Search queries across data tables dynamically evaluate type-aware multi-column m
 
 - **Session Architecture**: Next.js route protection via `proxy.ts` verifying the `mesto_session` cookie against an in-memory LRU cache backed by PostgreSQL `sessions` table (joining `users` and `factories`). Injects validated user and factory headers (`x-user-id`, `x-factory-id`, `x-user-role`, `x-user-name`, `x-user-username`, `x-user-created-at`, `x-user-updated-at`, `x-factory-name`, `x-factory-receipt-images`, `x-factory-created-at`, `x-factory-updated-at`) into downstream requests with < 0.1ms latency on warm requests.
 - **Auto-Guarded API Routes**: All protected route handlers wrapped with `handleApiRoute` automatically verify session headers and inject authenticated `{ user, factory }` context.
-- **Automatic Factory Scoping**: All paginated queries (`executePaginatedEntityQuery` and `buildPaginatedEntityResult`) automatically enforce tenant isolation by `factory_id` across `centers`, `users`, `factories`, `weighments`, and `tickets` beforehand.
+- **Automatic Factory Scoping**: All paginated queries (`executePaginatedEntityQuery` and `buildPaginatedEntityResult`) automatically enforce tenant isolation by `factory_id` across `centers`, `users`, `factories`, and `weighments` beforehand.
 - **Session Duration**: Standard 7-day persistent server-set HTTP-only cookie with zero speculative rolling write updates.
 - **Credentials**: Standard username and password (argon2 hashed). No external emails or sign-up workflows.
 - **Dynamic Factory Tenancy**: All operations, center filtering, and user creation are dynamically scoped to the authenticated user's `factory_id`.
@@ -81,13 +79,10 @@ Search queries across data tables dynamically evaluate type-aware multi-column m
 | `PATCH`  | `/api/centers`              | Update center details.                                                                                |
 | `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).              |
 | `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                                        |
-| `GET`    | `/api/tickets`              | List tickets for current factory. Supports status filter, search, sorting & pagination.               |
-| `PATCH`  | `/api/tickets`              | Update ticket resolution status and reply.                                                            |
-| `DELETE` | `/api/tickets`              | Permanently delete a ticket (strictly permitted only when `status === 'pending'`).                    |
 | `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                                |
 | `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                                 |
 | `PATCH`  | `/api/users`                | Update staff user accounts.                                                                           |
-| `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/tickets).              |
+| `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/entries).              |
 
 ---
 

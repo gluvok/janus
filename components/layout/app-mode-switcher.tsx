@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { type ComponentProps, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CpuIcon, UserEdit01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { type EntityMode, useModeStore } from "@/stores/use-mode-store";
 import { parseModeRoute } from "./app-breadcrumb";
 
-const MODE_OPTIONS: Array<{ value: EntityMode; label: string }> = [
-  { value: "automatic", label: "Automatic" },
-  { value: "manual", label: "Manual" },
+const MODE_OPTIONS: Array<{
+  value: EntityMode;
+  label: string;
+  icon: ComponentProps<typeof HugeiconsIcon>["icon"];
+}> = [
+  { value: "automatic", label: "Automatic", icon: CpuIcon },
+  { value: "manual", label: "Manual", icon: UserEdit01Icon },
 ];
 
 export function AppModeSwitcher() {
@@ -42,31 +46,35 @@ export function AppModeSwitcher() {
   };
 
   return (
-    <RadioGroup
-      value={currentMode}
-      onValueChange={handleModeChange}
+    <div
+      role="radiogroup"
       aria-label={`${modeRoute.title} mode`}
-      className="flex w-auto items-center gap-1 rounded-lg border border-border/70 bg-muted/40 p-0.5"
+      className="inline-flex w-auto items-center gap-0.5 rounded-lg border border-border/70 bg-muted/40 p-0.5"
     >
       {MODE_OPTIONS.map((option) => {
-        const itemId = `${modeRoute.entity}-mode-${option.value}`;
         const isSelected = currentMode === option.value;
         return (
-          <Label
+          <button
             key={option.value}
-            htmlFor={itemId}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            onClick={() => handleModeChange(option.value)}
             className={cn(
-              "cursor-pointer gap-1.5 rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors",
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all",
               isSelected
                 ? "bg-background text-foreground shadow-2xs"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <RadioGroupItem value={option.value} id={itemId} />
+            <HugeiconsIcon
+              icon={option.icon}
+              className={cn("size-3.5 shrink-0", isSelected && "text-primary")}
+            />
             <span>{option.label}</span>
-          </Label>
+          </button>
         );
       })}
-    </RadioGroup>
+    </div>
   );
 }

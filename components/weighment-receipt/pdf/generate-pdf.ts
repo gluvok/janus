@@ -74,7 +74,54 @@ export async function generateReceiptPdf(
       pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
     }
 
-    pdf.save(fileName);
+    pdf.autoPrint();
+    const blob = pdf.output("blob");
+    const blobUrl = URL.createObjectURL(blob);
+
+    const openFallbackWindow = () => {
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+    };
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.title = fileName;
+
+    const cleanup = () => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+      URL.revokeObjectURL(blobUrl);
+    };
+
+    iframe.onload = () => {
+      try {
+        const win = iframe.contentWindow;
+        if (!win) {
+          openFallbackWindow();
+          return;
+        }
+        win.focus();
+        win.print();
+      } catch {
+        openFallbackWindow();
+      } finally {
+        setTimeout(cleanup, 60_000);
+      }
+    };
+
+    iframe.onerror = () => {
+      openFallbackWindow();
+      setTimeout(cleanup, 60_000);
+    };
+
+    iframe.src = blobUrl;
+    document.body.appendChild(iframe);
   } finally {
     root.unmount();
     if (document.body.contains(offscreenContainer)) {

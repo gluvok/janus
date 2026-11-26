@@ -4,8 +4,6 @@
  */
 
 export const TABLES_IN_CLEAR_ORDER = [
-  "manual_tickets",
-  "automatic_tickets",
   "manual_weighments",
   "automatic_weighments",
   "manual_entries",

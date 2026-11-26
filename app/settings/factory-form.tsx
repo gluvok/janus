@@ -129,7 +129,7 @@ export function FactoryForm({
           })}
         </RadioGroup>
         {receiptImagesError && <FieldError errors={[{ message: receiptImagesError }]} />}
-        <FieldDescription>Photos per ticket row.</FieldDescription>
+        <FieldDescription>Photos per receipt row.</FieldDescription>
       </Field>
 
       {/* Metadata Stat Strip (Created On & Last Modified) */}

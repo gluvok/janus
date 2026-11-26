@@ -191,27 +191,6 @@ export const manualWeighmentsStrategy = createFilteredTableStrategy({
 });
 
 /* -------------------------------------------------------------------------- */
-/* Tickets Table Strategies: Automatic & Manual                               */
-/* -------------------------------------------------------------------------- */
-
-export const automaticTicketsStrategy = createFilteredTableStrategy({
-  entry_id: false,
-  center_id: false,
-  creator_id: false,
-  creator_role: false,
-});
-
-export const manualTicketsStrategy = createFilteredTableStrategy({
-  entry_id: false,
-  center_id: false,
-  creator_id: false,
-  creator_role: false,
-  entry_creator_id: false,
-  entry_creator_username: false,
-  entry_creator_role: false,
-});
-
-/* -------------------------------------------------------------------------- */
 /* Declarative Table Registry                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -222,8 +201,6 @@ export const TABLE_STRATEGIES = {
   manual_entries: manualEntriesStrategy,
   automatic_weighments: automaticWeighmentsStrategy,
   manual_weighments: manualWeighmentsStrategy,
-  automatic_tickets: automaticTicketsStrategy,
-  manual_tickets: manualTicketsStrategy,
 } as const;
 
 export type TableId = keyof typeof TABLE_STRATEGIES;

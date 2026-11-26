@@ -59,8 +59,6 @@ const TABLE_FACTORY_COLUMNS: Record<string, string> = {
   manual_entries_view: "factory_id",
   automatic_weighments_view: "factory_id",
   manual_weighments_view: "factory_id",
-  automatic_tickets_view: "factory_id",
-  manual_tickets_view: "factory_id",
 };
 
 export const commaSeparatedIdsSchema = z

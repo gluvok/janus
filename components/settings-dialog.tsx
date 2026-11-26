@@ -127,7 +127,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <DialogIconBadge icon={Factory01Icon} />
             <DialogTitle>Factory Settings</DialogTitle>
           </div>
-          <DialogDescription>Facility identity and ticket layout.</DialogDescription>
+          <DialogDescription>Facility identity and receipt layout.</DialogDescription>
         </DialogHeader>
 
         <FormErrorBanner error={serverError} />

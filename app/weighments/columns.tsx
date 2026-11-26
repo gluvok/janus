@@ -13,6 +13,8 @@ import {
   createCopyActionsColumn,
   type DataTableFeatures,
 } from "@/components/data-table";
+import { CopyRowAction } from "@/components/data-table/row-actions";
+import { appIcons } from "@/lib/icons";
 import { formatDateTime, cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -21,7 +23,6 @@ import {
   Building03Icon,
   ClockArrowDownIcon,
   ClockArrowUpIcon,
-  ContainerTruck01Icon,
   Image01Icon,
   Layers01Icon,
   PackageOpenIcon,
@@ -53,6 +54,8 @@ export interface WeighmentsTableMeta {
   }) => void;
   onDownloadPdf?: (weighment: Weighment) => void;
   downloadingId?: number | null;
+  onCorrectPlate?: (weighment: Weighment) => void;
+  onDelete?: (weighment: Weighment) => void;
 }
 
 type ColumnIcon = Parameters<typeof HugeiconsIcon>[0]["icon"];
@@ -218,7 +221,7 @@ const BASE_PRE_COLUMNS: ColumnDef<DataTableFeatures, Weighment, any>[] = [
     meta: { title: "Type", icon: Layers01Icon },
   }),
   createWeightColumn("net", "Net", ScaleIcon, true),
-  createWeightColumn("gross", "Gross", ContainerTruck01Icon),
+  createWeightColumn("gross", "Gross", appIcons.gross),
   createWeightColumn("tare", "Tare", PackageOpenIcon),
   createCenterColumn("in_center_name", "in_center_id", "In Center", Building02Icon),
   createCenterColumn("out_center_name", "out_center_id", "Out Center", Building03Icon),
@@ -322,16 +325,43 @@ const MANUAL_HIDDEN_COLUMNS: ColumnDef<DataTableFeatures, Weighment, any>[] = [
 const BASE_POST_COLUMNS: ColumnDef<DataTableFeatures, Weighment, any>[] = [
   createCreatedAtColumn(helper),
   createUpdatedAtColumn(helper),
-  createCopyActionsColumn<Weighment>(helper, ({ row, table }) => {
-    const meta = table.options.meta as WeighmentsTableMeta | undefined;
-    return {
-      copyText: row.original.vehicle_number,
-      copyLabel: "Copy Vehicle No.",
-      onDownloadPdf: () => meta?.onDownloadPdf?.(row.original),
-      isDownloadingPdf: meta?.downloadingId === row.original.id,
-    };
-  }),
 ];
+
+function createAutomaticActionsColumn(): ColumnDef<DataTableFeatures, Weighment, any> {
+  return helper.display({
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as WeighmentsTableMeta | undefined;
+      return (
+        <div className="flex items-center justify-end">
+          <CopyRowAction
+            copyText={row.original.vehicle_number}
+            copyLabel="Copy Vehicle No."
+            onDownloadPdf={() => meta?.onDownloadPdf?.(row.original)}
+            isDownloadingPdf={meta?.downloadingId === row.original.id}
+            onEdit={() => meta?.onCorrectPlate?.(row.original)}
+            editLabel="Correct Plate"
+            onDelete={() => meta?.onDelete?.(row.original)}
+            deleteLabel="Delete"
+          />
+        </div>
+      );
+    },
+    enableSorting: false,
+    enableHiding: false,
+  });
+}
+
+const MANUAL_ACTIONS_COLUMN = createCopyActionsColumn<Weighment>(helper, ({ row, table }) => {
+  const meta = table.options.meta as WeighmentsTableMeta | undefined;
+  return {
+    copyText: row.original.vehicle_number,
+    copyLabel: "Copy Vehicle No.",
+    onDownloadPdf: () => meta?.onDownloadPdf?.(row.original),
+    isDownloadingPdf: meta?.downloadingId === row.original.id,
+  };
+});
 
 export function getWeighmentColumns(
   mode: EntityMode,
@@ -343,5 +373,6 @@ export function getWeighmentColumns(
     ...BASE_HIDDEN_COLUMNS,
     ...(mode === "manual" ? MANUAL_HIDDEN_COLUMNS : []),
     ...BASE_POST_COLUMNS,
+    mode === "automatic" ? createAutomaticActionsColumn() : MANUAL_ACTIONS_COLUMN,
   ];
 }

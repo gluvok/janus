@@ -22,12 +22,6 @@ export const operationsNavItems: NavItem[] = [
     icon: appIcons.entries,
     description: "Raw scale readings, vehicle plates, and transit camera captures.",
   },
-  {
-    title: "Tickets",
-    url: "/tickets",
-    icon: appIcons.tickets,
-    description: "Support tickets and issue tracking.",
-  },
 ];
 
 export const managementNavItems: NavItem[] = [
@@ -79,8 +73,6 @@ const routeTitleMap: Record<string, string> = allNavItems.reduce(
     "/weighments/manual": "Manual Weighments",
     "/entries/automatic": "Automatic Entries",
     "/entries/manual": "Manual Entries",
-    "/tickets/automatic": "Automatic Tickets",
-    "/tickets/manual": "Manual Tickets",
   } as Record<string, string>,
 );
 

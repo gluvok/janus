@@ -18,17 +18,25 @@ import {
   Building03Icon,
   CircleMinusIcon,
   Layers01Icon,
+  Loading03Icon,
+  PrinterIcon,
   UserArrowLeftRightIcon,
   UserCheck01Icon,
 } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/utils";
 import { appIcons } from "@/lib/icons";
 import { useDataTableStore } from "@/stores/use-data-table-store";
 import type { EntityMode } from "@/stores/use-mode-store";
+import { useUserStore } from "@/stores/use-user-store";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { toast } from "@/components/ui/toast";
 import { useWeighmentPdfDownload } from "@/hooks/use-weighment-pdf-download";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
 import type { Weighment } from "./types";
+import { ContactAdminDialog, CorrectPlateDialog } from "./weighment-action-dialogs";
 import {
   fetchFilterOptions,
   formatCenterOptions,
@@ -89,7 +97,18 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
     images: [],
   });
 
-  const { downloadReceipt, downloadingId } = useWeighmentPdfDownload();
+  const { downloadReceipt, downloadingId, downloadBatchReceipts, isBatchPrinting } =
+    useWeighmentPdfDownload();
+  const currentUser = useUserStore((s) => s.user);
+  const isAdmin = currentUser?.role === "admin";
+
+  const [correctPlateWeighment, setCorrectPlateWeighment] = useState<Weighment | null>(null);
+  const [deleteWeighment, setDeleteWeighment] = useState<Weighment | null>(null);
+  const [contactAdminDialog, setContactAdminDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+  }>({ open: false, title: "", description: "" });
 
   const fetchWeighments = useCallback(
     async (queryParams: Record<string, unknown>) => {
@@ -161,13 +180,51 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
     loadInitialData();
   }, [loadInitialData]);
 
+  const handleCorrectPlate = useCallback((weighment: Weighment) => {
+    const isFirstUpdate =
+      new Date(weighment.created_at).getTime() === new Date(weighment.updated_at).getTime();
+
+    if (isFirstUpdate) {
+      setCorrectPlateWeighment(weighment);
+    } else {
+      setContactAdminDialog({
+        open: true,
+        title: "Contact Admin",
+        description:
+          "This weighment's plate was already updated once. Please contact an administrator for any further updates.",
+      });
+    }
+  }, []);
+
+  const handleDelete = useCallback(
+    (weighment: Weighment) => {
+      if (isAdmin) {
+        setDeleteWeighment(weighment);
+      } else {
+        setContactAdminDialog({
+          open: true,
+          title: "Contact Admin",
+          description:
+            "Only administrators can delete weighments. Please contact an administrator.",
+        });
+      }
+    },
+    [isAdmin],
+  );
+
   const tableMeta: WeighmentsTableMeta = useMemo(
     () => ({
       onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
       onDownloadPdf: (w) => downloadReceipt(w, mode),
       downloadingId,
+      ...(mode === "automatic"
+        ? {
+            onCorrectPlate: handleCorrectPlate,
+            onDelete: handleDelete,
+          }
+        : {}),
     }),
-    [downloadReceipt, downloadingId, mode],
+    [downloadReceipt, downloadingId, handleCorrectPlate, handleDelete, mode],
   );
 
   const columns = useMemo(() => getWeighmentColumns(mode), [mode]);
@@ -251,6 +308,37 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
         filterConfigs={filterConfigs}
       />
 
+      {dataTable.selectedCount > 0 && (
+        <div className="flex items-center justify-between rounded-md border border-border/80 bg-muted/40 px-3 py-1.5 text-xs">
+          <span className="font-medium text-muted-foreground">
+            {dataTable.selectedCount} weighment{dataTable.selectedCount > 1 ? "s" : ""} selected
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => dataTable.setRowSelection({})}
+              className="h-6 px-2 text-2xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={isBatchPrinting}
+              onClick={() => downloadBatchReceipts(dataTable.selectedRows, mode)}
+              className="h-6 gap-1.5 text-2xs"
+            >
+              <HugeiconsIcon
+                icon={isBatchPrinting ? Loading03Icon : PrinterIcon}
+                className={isBatchPrinting ? "size-3.5 animate-spin" : "size-3.5"}
+              />
+              <span>Print PDF</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       <DataTableContent
         table={dataTable.table}
         loading={effectiveLoading}
@@ -269,6 +357,48 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
         outCenter={photosDialogState.outCenter}
         images={photosDialogState.images}
       />
+
+      {mode === "automatic" && (
+        <>
+          <CorrectPlateDialog
+            open={!!correctPlateWeighment}
+            onOpenChange={(open) => {
+              if (!open) setCorrectPlateWeighment(null);
+            }}
+            weighment={correctPlateWeighment}
+            onSuccess={dataTable.refresh}
+          />
+
+          <ConfirmDeleteDialog
+            open={!!deleteWeighment}
+            onOpenChange={(open) => {
+              if (!open) setDeleteWeighment(null);
+            }}
+            title={`Delete Weighment #${deleteWeighment?.id ?? ""}`}
+            description={`This will delete weighment #${deleteWeighment?.id ?? ""} (${deleteWeighment?.vehicle_number ?? ""}) and both linked entries (#${deleteWeighment?.in_entry_id ?? ""} and #${deleteWeighment?.out_entry_id ?? ""}).`}
+            deleteLabel="Delete Weighment"
+            onConfirm={async () => {
+              if (!deleteWeighment) return;
+              await axios.delete("/api/weighments/automatic", {
+                params: { id: deleteWeighment.id },
+              });
+              toast.add({
+                type: "success",
+                title: "Weighment deleted",
+                description: `Weighment #${deleteWeighment.id} and its linked entries were deleted.`,
+              });
+              dataTable.refresh();
+            }}
+          />
+
+          <ContactAdminDialog
+            open={contactAdminDialog.open}
+            onOpenChange={(open) => setContactAdminDialog((prev) => ({ ...prev, open }))}
+            title={contactAdminDialog.title}
+            description={contactAdminDialog.description}
+          />
+        </>
+      )}
     </div>
   );
 }

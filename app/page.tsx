@@ -42,11 +42,6 @@ const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     accentClass: "text-plum bg-plum/10 border-plum/25",
     actionLabel: "Manage users",
   },
-  Tickets: {
-    category: "Support",
-    accentClass: "text-terracotta bg-terracotta/10 border-terracotta/25",
-    actionLabel: "View tickets",
-  },
 };
 
 const DEFAULT_MODULE_CONFIG: ModuleConfig = {
@@ -84,7 +79,7 @@ export default function Home() {
       </div>
 
       {/* Core Operational Module Cards (Responsive Grid Layout) */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {dashboardNavItems.map((section: NavItem) => {
           const config = MODULE_CONFIGS[section.title] ?? DEFAULT_MODULE_CONFIG;
 

@@ -10,7 +10,6 @@ import { seedUsers } from "./users.ts";
 import { seedCenters } from "./centers.ts";
 import { seedEntries } from "./entries.ts";
 import { seedWeighments } from "./weighments.ts";
-import { seedTickets } from "./tickets.ts";
 import type { SeedContext } from "./types.ts";
 
 async function main() {
@@ -53,9 +52,6 @@ async function main() {
 
   // 5. Weighments Pairs (Trigger-driven gross/tare/type computation)
   await seedWeighments({ automatic, manual });
-
-  // 6. Support Tickets (Automatic & Manual)
-  await seedTickets({ ctx, automatic, manual });
 
   console.log("\n=================================================");
   console.log("🎉 Test database seeding complete with zero errors!");

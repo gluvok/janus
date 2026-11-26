@@ -16,10 +16,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Copy01Icon,
   Delete02Icon,
-  Download01Icon,
   Edit01Icon,
   Loading03Icon,
   MoreHorizontalIcon,
+  PrinterIcon,
 } from "@hugeicons/core-free-icons";
 
 function useCopyAction(text: string, label: string) {
@@ -59,6 +59,10 @@ export interface CopyRowActionProps {
   copyLabel: string;
   onDownloadPdf?: () => void;
   isDownloadingPdf?: boolean;
+  onEdit?: () => void;
+  editLabel?: string;
+  onDelete?: () => void;
+  deleteLabel?: string;
 }
 
 export function CopyRowAction({
@@ -66,6 +70,10 @@ export function CopyRowAction({
   copyLabel,
   onDownloadPdf,
   isDownloadingPdf = false,
+  onEdit,
+  editLabel,
+  onDelete,
+  deleteLabel,
 }: CopyRowActionProps) {
   const handleCopy = useCopyAction(copyText, copyLabel);
 
@@ -87,13 +95,28 @@ export function CopyRowAction({
                 className="gap-2 text-xs cursor-pointer focus:bg-accent focus:text-accent-foreground"
               >
                 <HugeiconsIcon
-                  icon={isDownloadingPdf ? Loading03Icon : Download01Icon}
+                  icon={isDownloadingPdf ? Loading03Icon : PrinterIcon}
                   className={cn(
                     "size-3.5 shrink-0 text-primary",
                     isDownloadingPdf && "animate-spin",
                   )}
                 />
-                <span>Download PDF</span>
+                <span>Print PDF</span>
+              </DropdownMenuItem>
+            )}
+            {onEdit && (
+              <DropdownMenuItem onClick={onEdit} className="gap-2 text-xs cursor-pointer">
+                <HugeiconsIcon icon={Edit01Icon} className="size-3.5 text-muted-foreground" />
+                <span>{editLabel ?? "Edit"}</span>
+              </DropdownMenuItem>
+            )}
+            {onDelete && (
+              <DropdownMenuItem
+                onClick={onDelete}
+                className="gap-2 text-xs text-destructive focus:text-destructive cursor-pointer"
+              >
+                <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+                <span>{deleteLabel ?? "Delete"}</span>
               </DropdownMenuItem>
             )}
           </DropdownMenuGroup>
@@ -145,7 +168,7 @@ export function EditableRowActions({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Full Row Actions (Tickets & Users)                                         */
+/* Full Row Actions (Users)                                                   */
 /* -------------------------------------------------------------------------- */
 
 export interface FullRowActionsProps {

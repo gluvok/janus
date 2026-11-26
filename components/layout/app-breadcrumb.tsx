@@ -7,7 +7,6 @@ import type { EntityMode, ModeEntity } from "@/stores/use-mode-store";
 const MODE_ENTITY_TITLES: Record<ModeEntity, string> = {
   entries: "Entries",
   weighments: "Weighments",
-  tickets: "Tickets",
 };
 
 export function parseModeRoute(pathname: string | null | undefined): {
@@ -18,7 +17,7 @@ export function parseModeRoute(pathname: string | null | undefined): {
   if (!pathname) return null;
   const segments = pathname.split("/").filter(Boolean);
   const first = segments[0];
-  if (first !== "entries" && first !== "weighments" && first !== "tickets") {
+  if (first !== "entries" && first !== "weighments") {
     return null;
   }
   const second = segments[1];

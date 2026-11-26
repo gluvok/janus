@@ -5,8 +5,6 @@
 -- 0. Safe Idempotent Cleanup (Reverse Dependency Order)
 -- Safe to execute on both fresh (empty) and existing databases.
 -- ----------------------------------------------------------------------------
-DROP VIEW IF EXISTS public.manual_tickets_view CASCADE;
-DROP VIEW IF EXISTS public.automatic_tickets_view CASCADE;
 DROP VIEW IF EXISTS public.manual_weighments_view CASCADE;
 DROP VIEW IF EXISTS public.automatic_weighments_view CASCADE;
 DROP VIEW IF EXISTS public.manual_entries_view CASCADE;
@@ -14,13 +12,10 @@ DROP VIEW IF EXISTS public.automatic_entries_view CASCADE;
 DROP VIEW IF EXISTS public.weighments_view CASCADE;
 DROP VIEW IF EXISTS public.entries_view CASCADE;
 
-DROP TABLE IF EXISTS public.manual_tickets CASCADE;
-DROP TABLE IF EXISTS public.automatic_tickets CASCADE;
 DROP TABLE IF EXISTS public.manual_weighments CASCADE;
 DROP TABLE IF EXISTS public.automatic_weighments CASCADE;
 DROP TABLE IF EXISTS public.manual_entries CASCADE;
 DROP TABLE IF EXISTS public.automatic_entries CASCADE;
-DROP TABLE IF EXISTS public.tickets CASCADE;
 DROP TABLE IF EXISTS public.weighments CASCADE;
 DROP TABLE IF EXISTS public.entries CASCADE;
 DROP TABLE IF EXISTS public.sessions CASCADE;
@@ -28,13 +23,14 @@ DROP TABLE IF EXISTS public.users CASCADE;
 DROP TABLE IF EXISTS public.centers CASCADE;
 DROP TABLE IF EXISTS public.factories CASCADE;
 
+DROP FUNCTION IF EXISTS public.correct_automatic_weighment_plate(int, int, text) CASCADE;
+DROP FUNCTION IF EXISTS public.soft_delete_automatic_weighment(int, int) CASCADE;
 DROP FUNCTION IF EXISTS public.trigger_set_timestamp() CASCADE;
 DROP FUNCTION IF EXISTS public.trigger_invalidate_sessions() CASCADE;
 DROP FUNCTION IF EXISTS public.trigger_weighments_auto_populate() CASCADE;
 DROP FUNCTION IF EXISTS public.reset_all_sequences() CASCADE;
 DROP FUNCTION IF EXISTS public.reset_table_sequence(text) CASCADE;
 
-DROP TYPE IF EXISTS public.ticket_status CASCADE;
 DROP TYPE IF EXISTS public.weighment_type CASCADE;
 DROP TYPE IF EXISTS public.role_enum CASCADE;
 
@@ -49,7 +45,6 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- ----------------------------------------------------------------------------
 CREATE TYPE role_enum      AS ENUM ('admin', 'manager', 'operator', 'base');
 CREATE TYPE weighment_type AS ENUM ('in', 'out', 'void');
-CREATE TYPE ticket_status  AS ENUM ('pending', 'approved', 'rejected');
 
 -- ----------------------------------------------------------------------------
 -- 3. Core Tables: Factories, Centers, Users, Sessions
@@ -117,7 +112,7 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_user_id ON sessions (user_id);
 
 -- ----------------------------------------------------------------------------
--- 4. Weighment Tables: Automatic & Manual Entries, Weighments, Tickets
+-- 4. Weighment Tables: Automatic & Manual Entries, Weighments
 -- ----------------------------------------------------------------------------
 
 -- Automatic Entries table (raw automated scale readings at centers)
@@ -207,40 +202,6 @@ CREATE INDEX idx_manual_weighments_tare  ON manual_weighments (tare);
 CREATE INDEX idx_manual_weighments_net   ON manual_weighments (net);
 CREATE INDEX idx_manual_weighments_type  ON manual_weighments (type);
 
--- Automatic Tickets table (issues/concerns raised on automatic entries)
-CREATE TABLE automatic_tickets (
-  id SERIAL PRIMARY KEY,
-  concern TEXT NOT NULL,
-  reply TEXT,
-  status ticket_status NOT NULL DEFAULT 'pending',
-  entry_id INT NOT NULL REFERENCES automatic_entries(id) ON DELETE RESTRICT,
-  creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT chk_automatic_tickets_concern CHECK (length(trim(concern)) > 0)
-);
-CREATE INDEX idx_automatic_tickets_entry_id ON automatic_tickets (entry_id);
-CREATE INDEX idx_automatic_tickets_creator_id ON automatic_tickets (creator_id);
-CREATE INDEX idx_automatic_tickets_status ON automatic_tickets (status);
-CREATE INDEX idx_automatic_tickets_created_at ON automatic_tickets (created_at DESC);
-
--- Manual Tickets table (issues/concerns raised on manual entries)
-CREATE TABLE manual_tickets (
-  id SERIAL PRIMARY KEY,
-  concern TEXT NOT NULL,
-  reply TEXT,
-  status ticket_status NOT NULL DEFAULT 'pending',
-  entry_id INT NOT NULL REFERENCES manual_entries(id) ON DELETE RESTRICT,
-  creator_id INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT chk_manual_tickets_concern CHECK (length(trim(concern)) > 0)
-);
-CREATE INDEX idx_manual_tickets_entry_id ON manual_tickets (entry_id);
-CREATE INDEX idx_manual_tickets_creator_id ON manual_tickets (creator_id);
-CREATE INDEX idx_manual_tickets_status ON manual_tickets (status);
-CREATE INDEX idx_manual_tickets_created_at ON manual_tickets (created_at DESC);
-
 -- ----------------------------------------------------------------------------
 -- 5. Views
 -- ----------------------------------------------------------------------------
@@ -259,7 +220,8 @@ SELECT
   e.updated_at,
   e.deleted_at
 FROM public.automatic_entries e
-JOIN public.centers c ON c.id = e.center_id;
+JOIN public.centers c ON c.id = e.center_id
+WHERE e.deleted_at IS NULL;
 
 -- Security invoker view exposing manual entries with center and creator details
 CREATE OR REPLACE VIEW manual_entries_view WITH (security_invoker = true) AS
@@ -280,7 +242,8 @@ SELECT
   e.deleted_at
 FROM public.manual_entries e
 JOIN public.centers c ON c.id = e.center_id
-JOIN public.users u ON u.id = e.creator_id;
+JOIN public.users u ON u.id = e.creator_id
+WHERE e.deleted_at IS NULL;
 
 -- Security invoker view joining paired automatic weighments with in/out entries & centers
 CREATE OR REPLACE VIEW automatic_weighments_view WITH (security_invoker = true) AS
@@ -310,7 +273,8 @@ FROM public.automatic_weighments w
 JOIN public.automatic_entries ie ON ie.id = w.in_entry_id
 JOIN public.centers ic ON ic.id = ie.center_id
 JOIN public.automatic_entries oe ON oe.id = w.out_entry_id
-JOIN public.centers oc ON oc.id = oe.center_id;
+JOIN public.centers oc ON oc.id = oe.center_id
+WHERE w.deleted_at IS NULL AND ie.deleted_at IS NULL AND oe.deleted_at IS NULL;
 
 -- Security invoker view joining paired manual weighments with in/out entries, centers & creators
 CREATE OR REPLACE VIEW manual_weighments_view WITH (security_invoker = true) AS
@@ -350,58 +314,8 @@ JOIN public.centers ic ON ic.id = ie.center_id
 JOIN public.users iu ON iu.id = ie.creator_id
 JOIN public.manual_entries oe ON oe.id = w.out_entry_id
 JOIN public.centers oc ON oc.id = oe.center_id
-JOIN public.users ou ON ou.id = oe.creator_id;
-
--- Security invoker view exposing automatic tickets with entry, factory, and creator details
-CREATE OR REPLACE VIEW automatic_tickets_view WITH (security_invoker = true) AS
-SELECT
-  t.id,
-  c.factory_id,
-  e.center_id,
-  c.name AS center_name,
-  t.concern,
-  t.reply,
-  t.status,
-  t.entry_id,
-  e.vehicle_number,
-  t.creator_id,
-  u.name AS creator_name,
-  u.username AS creator_username,
-  u.role AS creator_role,
-  t.created_at,
-  t.updated_at
-FROM public.automatic_tickets t
-JOIN public.automatic_entries e ON e.id = t.entry_id
-JOIN public.centers c ON c.id = e.center_id
-JOIN public.users u ON u.id = t.creator_id;
-
--- Security invoker view exposing manual tickets with entry, factory, and creator details
-CREATE OR REPLACE VIEW manual_tickets_view WITH (security_invoker = true) AS
-SELECT
-  t.id,
-  c.factory_id,
-  e.center_id,
-  c.name AS center_name,
-  t.concern,
-  t.reply,
-  t.status,
-  t.entry_id,
-  e.vehicle_number,
-  e.creator_id AS entry_creator_id,
-  eu.name AS entry_creator_name,
-  eu.username AS entry_creator_username,
-  eu.role AS entry_creator_role,
-  t.creator_id,
-  u.name AS creator_name,
-  u.username AS creator_username,
-  u.role AS creator_role,
-  t.created_at,
-  t.updated_at
-FROM public.manual_tickets t
-JOIN public.manual_entries e ON e.id = t.entry_id
-JOIN public.centers c ON c.id = e.center_id
-JOIN public.users eu ON eu.id = e.creator_id
-JOIN public.users u ON u.id = t.creator_id;
+JOIN public.users ou ON ou.id = oe.creator_id
+WHERE w.deleted_at IS NULL AND ie.deleted_at IS NULL AND oe.deleted_at IS NULL;
 
 -- ----------------------------------------------------------------------------
 -- 6. Triggers & Stored Procedures
@@ -439,12 +353,6 @@ CREATE TRIGGER trg_automatic_weighments_timestamp
 
 CREATE TRIGGER trg_manual_weighments_timestamp
   BEFORE UPDATE ON manual_weighments FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-
-CREATE TRIGGER trg_automatic_tickets_timestamp
-  BEFORE UPDATE ON automatic_tickets FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
-
-CREATE TRIGGER trg_manual_tickets_timestamp
-  BEFORE UPDATE ON manual_tickets FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 -- Invalidate user sessions when password, username, role, or deletion status changes
 CREATE OR REPLACE FUNCTION trigger_invalidate_sessions()
@@ -555,10 +463,90 @@ BEGIN
   PERFORM reset_table_sequence('manual_entries');
   PERFORM reset_table_sequence('automatic_weighments');
   PERFORM reset_table_sequence('manual_weighments');
-  PERFORM reset_table_sequence('automatic_tickets');
-  PERFORM reset_table_sequence('manual_tickets');
 END;
 $$ LANGUAGE plpgsql;
+
+-- Correct vehicle plate on an automatic weighment and its paired entries (one-time)
+CREATE OR REPLACE FUNCTION correct_automatic_weighment_plate(
+  p_weighment_id int,
+  p_factory_id int,
+  p_vehicle_number text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_weighment RECORD;
+BEGIN
+  SELECT w.id, w.in_entry_id, w.out_entry_id, w.created_at, w.updated_at
+  INTO v_weighment
+  FROM public.automatic_weighments w
+  JOIN public.automatic_entries ie ON ie.id = w.in_entry_id
+  JOIN public.centers ic ON ic.id = ie.center_id
+  WHERE w.id = p_weighment_id
+    AND w.deleted_at IS NULL
+    AND ic.factory_id = p_factory_id
+  FOR UPDATE OF w;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Weighment not found';
+  END IF;
+
+  IF v_weighment.created_at <> v_weighment.updated_at THEN
+    RAISE EXCEPTION 'Weighment has already been updated once';
+  END IF;
+
+  UPDATE public.automatic_entries
+  SET vehicle_number = p_vehicle_number
+  WHERE id IN (v_weighment.in_entry_id, v_weighment.out_entry_id)
+    AND deleted_at IS NULL;
+
+  UPDATE public.automatic_weighments
+  SET updated_at = now()
+  WHERE id = p_weighment_id;
+END;
+$$;
+
+-- Soft-delete an automatic weighment and its paired entries
+CREATE OR REPLACE FUNCTION soft_delete_automatic_weighment(
+  p_weighment_id int,
+  p_factory_id int
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_weighment RECORD;
+BEGIN
+  SELECT w.id, w.in_entry_id, w.out_entry_id
+  INTO v_weighment
+  FROM public.automatic_weighments w
+  JOIN public.automatic_entries ie ON ie.id = w.in_entry_id
+  JOIN public.centers ic ON ic.id = ie.center_id
+  WHERE w.id = p_weighment_id
+    AND w.deleted_at IS NULL
+    AND ic.factory_id = p_factory_id
+  FOR UPDATE OF w;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Weighment not found';
+  END IF;
+
+  UPDATE public.automatic_weighments
+  SET deleted_at = now()
+  WHERE id = p_weighment_id
+    AND deleted_at IS NULL;
+
+  UPDATE public.automatic_entries
+  SET deleted_at = now()
+  WHERE id IN (v_weighment.in_entry_id, v_weighment.out_entry_id)
+    AND deleted_at IS NULL;
+END;
+$$;
 
 -- ----------------------------------------------------------------------------
 -- 7. Storage Bucket & Policies Setup
