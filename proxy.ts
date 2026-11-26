@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { SESSION_COOKIE_NAME, getSessionUser } from "@/lib/auth";
+import { stripSessionHeaders } from "@/lib/security";
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  // Never trust identity headers from the client; only the session below may set them.
+  const requestHeaders = stripSessionHeaders(request.headers);
 
   const isPublicAsset =
     pathname.startsWith("/_next") ||
@@ -13,11 +16,9 @@ export async function proxy(request: NextRequest) {
     pathname === "/icon.png";
 
   const isPublicAuthApi = pathname === "/api/auth/login";
-  const isPublicAutomaticIngest =
-    pathname === "/api/weighments/automatic" && request.method === "POST";
 
-  if (isPublicAsset || isPublicAuthApi || isPublicAutomaticIngest) {
-    return NextResponse.next();
+  if (isPublicAsset || isPublicAuthApi) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   const isLoginPage = pathname === "/login";
@@ -30,7 +31,6 @@ export async function proxy(request: NextRequest) {
   // Unauthenticated or invalid/expired session
   if (!session) {
     if (isLoginPage) {
-      const requestHeaders = new Headers(request.headers);
       requestHeaders.set("x-pathname", pathname);
       const res = NextResponse.next({
         request: {
@@ -89,7 +89,6 @@ export async function proxy(request: NextRequest) {
     "x-pathname": pathname,
   };
 
-  const requestHeaders = new Headers(request.headers);
   for (const [key, value] of Object.entries(sessionHeaders)) {
     requestHeaders.set(key, value);
   }

@@ -26,3 +26,11 @@ export const NOTIFY_ROLES: readonly UserRole[] = ["admin", "manager", "operator"
 export function isRoleAllowed(roles: readonly UserRole[] | undefined, role: UserRole): boolean {
   return !roles || roles.includes(role);
 }
+
+/** Copy of `headers` without any identity header a client could forge. */
+export function stripSessionHeaders(headers: Headers): Headers {
+  const clean = new Headers(headers);
+  for (const key of SESSION_HEADER_KEYS) clean.delete(key);
+  clean.delete("x-pathname");
+  return clean;
+}
