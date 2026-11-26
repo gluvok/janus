@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { updateFactorySchema } from "@/app/settings/types";
-import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
+import { handleApiRoute, ServiceError, type ApiContext } from "@/lib/api-handler";
 import { updateFactorySessionCache } from "@/lib/auth";
 import { ADMIN } from "@/lib/security";
 
@@ -28,10 +28,8 @@ export const PATCH = handleApiRoute(
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
-      );
+      console.error("Factory update failed:", error);
+      throw new ServiceError("Failed to update factory.", StatusCodes.INTERNAL_SERVER_ERROR);
     }
 
     if (!data) {

@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
+import { quotePostgrestValue } from "@/lib/security";
 import {
   parsePagination,
   parseSorting,
@@ -171,7 +172,7 @@ export function buildBaseEntityQuery({
     // Text columns with ILIKE
     const allTextCols = [...textColumns, ...searchColumns];
     for (const col of allTextCols) {
-      conditions.push(`${col}.ilike.%${search}%`);
+      conditions.push(`${col}.ilike.${quotePostgrestValue(`%${search}%`)}`);
     }
 
     // Integer columns with EQ
@@ -205,16 +206,7 @@ export function buildBaseEntityQuery({
       conditions.push(...extraOrConditions);
     }
 
-    if (conditions.length === 1) {
-      const parts = conditions[0].split(".");
-      if (parts.length === 3 && parts[1] === "ilike") {
-        query = query.ilike(parts[0], parts[2]);
-      } else if (parts.length === 3 && parts[1] === "eq") {
-        query = query.eq(parts[0], parts[2]);
-      } else {
-        query = query.or(conditions[0]);
-      }
-    } else if (conditions.length > 1) {
+    if (conditions.length > 0) {
       query = query.or(conditions.join(","));
     }
   }
@@ -352,8 +344,11 @@ export async function executePaginatedEntityQuery<TCol extends string, TData = u
     });
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+    console.error("Entity query error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
+    );
   }
 }
 
@@ -375,7 +370,10 @@ export async function executeAllEntityQuery<TCol extends string, TData = unknown
     });
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+    console.error("Entity query error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
+    );
   }
 }

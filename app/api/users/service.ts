@@ -1,5 +1,5 @@
 import { z } from "zod";
-import argon2 from "argon2";
+import { hashPassword } from "@/lib/password";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { invalidateAllUserSessionCache } from "@/lib/auth";
@@ -50,7 +50,7 @@ export const USER_SELECT_PROJECTION =
 export async function createUserAccount(data: CreateUserInput, factoryId: number) {
   const { username, name, role, password } = data;
   const cleanUsername = username.trim().toLowerCase();
-  const passwordHash = await argon2.hash(password.trim());
+  const passwordHash = await hashPassword(password.trim());
 
   const { data: created, error: insertError } = await supabase
     .from("users")
@@ -68,7 +68,8 @@ export async function createUserAccount(data: CreateUserInput, factoryId: number
     if (insertError.code === "23505") {
       throw new ServiceError(`Username "${cleanUsername}" is already taken.`, StatusCodes.CONFLICT);
     }
-    throw new ServiceError(insertError.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    console.error("User insert failed:", insertError);
+    throw new ServiceError("Failed to create user.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   return created;
@@ -89,7 +90,7 @@ export async function updateUserAccount(data: UpdateUserInput, factoryId: number
   };
 
   if (password && password.trim()) {
-    updates.password_hash = await argon2.hash(password.trim());
+    updates.password_hash = await hashPassword(password.trim());
   }
 
   const { data: updated, error: updateError } = await supabase
@@ -104,7 +105,8 @@ export async function updateUserAccount(data: UpdateUserInput, factoryId: number
     if (updateError.code === "23505") {
       throw new ServiceError(`Username "${cleanUsername}" is already taken.`, StatusCodes.CONFLICT);
     }
-    throw new ServiceError(updateError.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    console.error("User update failed:", updateError);
+    throw new ServiceError("Failed to update user.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   if (!updated) {
@@ -135,7 +137,8 @@ export async function deleteUserAccounts(targetIds: number[], factoryId: number)
         StatusCodes.CONFLICT,
       );
     }
-    throw new ServiceError(deleteErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    console.error("User delete failed:", deleteErr);
+    throw new ServiceError("Failed to delete user.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   if (!data || data.length === 0) {

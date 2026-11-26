@@ -3,7 +3,7 @@
  * @description Provisions tenant users covering all 4 role_enum variants.
  */
 
-import argon2 from "argon2";
+import { hashPassword } from "../../lib/password.ts";
 import { supabase } from "../supabase.ts";
 import type { UserConfig } from "./types.ts";
 
@@ -17,10 +17,10 @@ export async function seedUsers({
   console.log("\n👥 [2/5] Seeding Users with all role_enum variants...");
 
   const [adminHash, managerHash, operatorHash, baseHash] = await Promise.all([
-    argon2.hash("admin123"),
-    argon2.hash("manager123"),
-    argon2.hash("operator123"),
-    argon2.hash("base123"),
+    hashPassword("admin123"),
+    hashPassword("manager123"),
+    hashPassword("operator123"),
+    hashPassword("base123"),
   ]);
 
   const userConfigs: UserConfig[] = [

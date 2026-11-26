@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
 import { executePaginatedEntityQuery, executeAllEntityQuery } from "@/lib/api-query";
 import { updateCenterSchema, type Center } from "@/app/centers/types";
-import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
+import { handleApiRoute, ServiceError, type ApiContext } from "@/lib/api-handler";
 import { ADMIN_MANAGER } from "@/lib/security";
 
 const ALLOWED_SORT_COLUMNS = ["id", "name", "created_at", "updated_at"] as const;
@@ -55,10 +55,8 @@ export const PATCH = handleApiRoute(
           { status: StatusCodes.CONFLICT },
         );
       }
-      return NextResponse.json(
-        { error: error.message },
-        { status: StatusCodes.INTERNAL_SERVER_ERROR },
-      );
+      console.error("Center save failed:", error);
+      throw new ServiceError("Failed to save center.", StatusCodes.INTERNAL_SERVER_ERROR);
     }
 
     if (!data) {

@@ -71,10 +71,8 @@ export async function createSession(userId: number): Promise<{ token: string }> 
   });
 
   if (error) {
-    throw new AuthError(
-      `Failed to create session: ${error.message}`,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-    );
+    console.error("Failed to create session:", error);
+    throw new AuthError("Failed to create session.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   return { token };

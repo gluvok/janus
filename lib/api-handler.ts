@@ -50,11 +50,14 @@ export function handleApiRoute(
       if (err instanceof AuthError) {
         return NextResponse.json({ error: err.message }, { status: err.statusCode });
       }
-      if (err instanceof ServiceError) {
+      if (err instanceof ServiceError && err.statusCode < StatusCodes.INTERNAL_SERVER_ERROR) {
         return NextResponse.json({ error: err.message }, { status: err.statusCode });
       }
-      const message = err instanceof Error ? err.message : "Internal Server Error";
-      return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+      console.error("API error:", err);
+      return NextResponse.json(
+        { error: "Internal Server Error" },
+        { status: StatusCodes.INTERNAL_SERVER_ERROR },
+      );
     }
   };
 }

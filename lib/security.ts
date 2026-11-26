@@ -34,3 +34,13 @@ export function stripSessionHeaders(headers: Headers): Headers {
   clean.delete("x-pathname");
   return clean;
 }
+
+/** Same-origin relative path or "/". Blocks //host, /\host, schemes. */
+export function safeNextPath(next: string | null | undefined): string {
+  return next && /^\/(?![\\/])/.test(next) ? next : "/";
+}
+
+/** Quote a value for PostgREST or()/in() so , . : ( ) can't start a new filter. */
+export function quotePostgrestValue(value: string): string {
+  return `"${value.replace(/["\\]/g, "\\$&")}"`;
+}

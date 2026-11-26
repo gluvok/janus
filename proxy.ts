@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { SESSION_COOKIE_NAME, getSessionUser } from "@/lib/auth";
-import { stripSessionHeaders } from "@/lib/security";
+import { safeNextPath, stripSessionHeaders } from "@/lib/security";
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -68,8 +68,7 @@ export async function proxy(request: NextRequest) {
 
   // Authenticated user attempting to visit login page
   if (isLoginPage) {
-    const nextParam = request.nextUrl.searchParams.get("next");
-    const nextUrl = nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+    const nextUrl = safeNextPath(request.nextUrl.searchParams.get("next"));
     return NextResponse.redirect(new URL(nextUrl, request.url));
   }
 

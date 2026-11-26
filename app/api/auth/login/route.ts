@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import argon2 from "argon2";
+import { LRUCache } from "lru-cache";
+import { DUMMY_HASH, verifyPassword } from "@/lib/password";
 import { supabase } from "@/lib/supabase";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
 import {
@@ -10,6 +11,11 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
 } from "@/lib/auth";
+
+const MAX_FAILED_LOGINS = 5;
+// ponytail: per-instance counter; move to a DB/Redis counter if instances scale out.
+const failedLogins = new LRUCache<string, number>({ max: 10_000, ttl: 15 * 60_000 });
+const INVALID = "Invalid username or password.";
 
 const loginSchema = z
   .object({
@@ -31,6 +37,13 @@ export async function POST(request: Request) {
 
     const { username, password } = validation.data;
 
+    if ((failedLogins.get(username) ?? 0) >= MAX_FAILED_LOGINS) {
+      return NextResponse.json(
+        { error: "Too many attempts. Try again in 15 minutes." },
+        { status: StatusCodes.TOO_MANY_REQUESTS },
+      );
+    }
+
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, username, password_hash, name, role, factory_id, created_at, updated_at")
@@ -39,23 +52,21 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (userError) {
+      console.error("Login user lookup failed:", userError);
       return NextResponse.json(
-        { error: userError.message },
+        { error: "Internal Server Error" },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found." }, { status: StatusCodes.UNAUTHORIZED });
+    const isValidPassword = user
+      ? await verifyPassword(password, user.password_hash)
+      : (await verifyPassword(password, DUMMY_HASH), false);
+    if (!user || !isValidPassword) {
+      failedLogins.set(username, (failedLogins.get(username) ?? 0) + 1);
+      return NextResponse.json({ error: INVALID }, { status: StatusCodes.UNAUTHORIZED });
     }
-
-    const isValidPassword = await argon2.verify(user.password_hash, password);
-    if (!isValidPassword) {
-      return NextResponse.json(
-        { error: "Incorrect password." },
-        { status: StatusCodes.UNAUTHORIZED },
-      );
-    }
+    failedLogins.delete(username);
 
     const { token } = await createSession(user.id);
     await supabase
@@ -70,8 +81,9 @@ export async function POST(request: Request) {
       .eq("id", user.factory_id)
       .single();
     if (factoryError) {
+      console.error("Login factory lookup failed:", factoryError);
       return NextResponse.json(
-        { error: factoryError.message },
+        { error: "Internal Server Error" },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
     }
@@ -113,7 +125,10 @@ export async function POST(request: Request) {
 
     return response;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+    console.error("Login error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
+    );
   }
 }

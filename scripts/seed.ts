@@ -8,7 +8,7 @@
  */
 
 import crypto from "node:crypto";
-import argon2 from "argon2";
+import { hashPassword } from "../lib/password.ts";
 import { z } from "zod";
 import { SUPABASE_URL, supabase } from "./supabase.ts";
 
@@ -187,7 +187,7 @@ async function main() {
 
   // 3. CREATE ADMIN USER
   console.log(`\n👤 Provisioning admin user '${adminUsername}'...`);
-  const adminHash = await argon2.hash(args.admin_password);
+  const adminHash = await hashPassword(args.admin_password);
   const { data: createdAdmin, error: adminError } = await supabase
     .from("users")
     .insert({

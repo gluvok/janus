@@ -46,12 +46,13 @@ export const PATCH = handleApiRoute(
 
     if (error) {
       if (error.message.includes("Weighment not found")) {
-        throw new ServiceError(error.message, StatusCodes.NOT_FOUND);
+        throw new ServiceError("Weighment not found.", StatusCodes.NOT_FOUND);
       }
       if (error.message.includes("already been updated")) {
-        throw new ServiceError(error.message, StatusCodes.CONFLICT);
+        throw new ServiceError("Weighment has already been updated.", StatusCodes.CONFLICT);
       }
-      throw new ServiceError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+      console.error("correct_automatic_weighment_plate failed:", error);
+      throw new ServiceError("Failed to update vehicle number.", StatusCodes.INTERNAL_SERVER_ERROR);
     }
 
     return NextResponse.json({
@@ -83,9 +84,10 @@ export const DELETE = handleApiRoute(
 
     if (error) {
       if (error.message.includes("Weighment not found")) {
-        throw new ServiceError(error.message, StatusCodes.NOT_FOUND);
+        throw new ServiceError("Weighment not found.", StatusCodes.NOT_FOUND);
       }
-      throw new ServiceError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+      console.error("soft_delete_automatic_weighment failed:", error);
+      throw new ServiceError("Failed to delete weighment.", StatusCodes.INTERNAL_SERVER_ERROR);
     }
 
     return NextResponse.json({
