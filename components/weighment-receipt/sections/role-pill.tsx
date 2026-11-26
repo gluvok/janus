@@ -16,7 +16,7 @@ const RECEIPT_ROLE_CONFIG: Record<UserRole, { label: string; className: string }
   },
   base: {
     label: "Base",
-    className: "bg-[#f2ede2] text-[#5f6558] border-[#e2dccb]",
+    className: "bg-[#efede5] text-[#5f6558] border-[#dfddd2]",
   },
 };
 

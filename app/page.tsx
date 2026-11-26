@@ -77,7 +77,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start rounded-lg border border-border/75 bg-card/85 px-3.5 py-2 text-xs font-medium text-foreground shadow-2xs sm:self-auto">
+        <div className="flex items-center gap-2 self-start rounded-lg border border-border/75 bg-card px-3.5 py-2 text-xs font-medium text-foreground shadow-2xs sm:self-auto">
           <HugeiconsIcon icon={Factory01Icon} className="size-4 text-muted-foreground" />
           <span>{factory.name}</span>
         </div>
@@ -90,7 +90,7 @@ export default function Home() {
 
           return (
             <Link key={section.title} href={section.url} className="group outline-none flex">
-              <Card className="flex flex-col justify-between gap-0 py-0 w-full border border-border/75 bg-card/85 transition-all duration-200 hover:border-primary/40 hover:bg-card hover:shadow-xs cursor-pointer rounded-xl overflow-hidden">
+              <Card className="flex flex-col justify-between gap-0 py-0 w-full border border-border/75 bg-card transition-all duration-200 hover:border-primary/35 hover:shadow-xs cursor-pointer rounded-xl overflow-hidden">
                 <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between gap-2">
                   <div
                     className={cn(

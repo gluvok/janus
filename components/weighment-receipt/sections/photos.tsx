@@ -31,7 +31,7 @@ export function ReceiptPhotos({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between border-b border-[#e2dccb] pb-1.5">
+      <div className="flex items-center justify-between border-b border-[#dfddd2] pb-1.5">
         <span className="font-heading text-3xs font-semibold text-[#5f6558]">
           {heading} ({effectiveTotal})
         </span>
@@ -46,7 +46,7 @@ export function ReceiptPhotos({
             <div
               key={`${photo.url}-${idx}`}
               className={cn(
-                "group relative rounded-lg overflow-hidden bg-[#fdfbf6] flex flex-col border border-[#e2dccb]",
+                "group relative rounded-lg overflow-hidden bg-[#fcfbf8] flex flex-col border border-[#dfddd2]",
                 isSingleColumn ? "h-72" : "aspect-video",
               )}
             >
@@ -64,8 +64,8 @@ export function ReceiptPhotos({
                     className={cn(
                       "font-heading text-3xs font-semibold px-2 py-0.5 rounded-md",
                       resolvedDirection === "in"
-                        ? "bg-[#4a6741] text-[#faf7f0]"
-                        : "bg-[#9c4a2d] text-[#faf7f0]",
+                        ? "bg-[#4a6741] text-[#f7f6f2]"
+                        : "bg-[#9c4a2d] text-[#f7f6f2]",
                     )}
                   >
                     {resolvedDirection === "in" ? "In" : "Out"}

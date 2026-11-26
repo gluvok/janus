@@ -32,8 +32,8 @@ interface CommonWeightsData {
 
 export function WeighmentReceiptWeights({ weighment }: { weighment: CommonWeightsData }) {
   return (
-    <div className="rounded-lg border border-[#e2dccb] bg-[#fdfbf6] p-4 flex flex-col gap-1.5">
-      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-[#e2dccb] items-start">
+    <div className="rounded-lg border border-[#dfddd2] bg-[#fcfbf8] p-4 flex flex-col gap-1.5">
+      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-[#dfddd2] items-start">
         <WeightMetricCard
           label="Gross Weight"
           value={weighment.gross}
@@ -60,7 +60,7 @@ export function WeighmentReceiptWeights({ weighment }: { weighment: CommonWeight
 
 export function EntryReceiptWeight({ weight }: { weight: number }) {
   return (
-    <div className="rounded-lg border border-[#e2dccb] bg-[#fdfbf6] p-4 flex items-center justify-between gap-4">
+    <div className="rounded-lg border border-[#dfddd2] bg-[#fcfbf8] p-4 flex items-center justify-between gap-4">
       <div className="flex flex-col gap-1 min-w-0">
         <span className="font-heading text-3xs text-[#4a6741] font-bold">
           Recorded Scale Weight

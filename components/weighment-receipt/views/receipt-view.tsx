@@ -63,7 +63,7 @@ export const CommonReceiptLayout = React.forwardRef<HTMLDivElement, CommonReceip
           return (
             <div
               key={`receipt-page-${pageIdx + 1}`}
-              className="receipt-page bg-[#faf7f0] text-[#1f241d] border border-[#e2dccb] p-7 flex flex-col gap-4 font-sans text-xs relative box-border w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px]"
+              className="receipt-page bg-[#f7f6f2] text-[#1f241d] border border-[#dfddd2] p-7 flex flex-col gap-4 font-sans text-xs relative box-border w-[794px] h-[1123px] min-h-[1123px] max-h-[1123px]"
             >
               {isFirstPage ? (
                 <>
@@ -90,7 +90,7 @@ export const CommonReceiptLayout = React.forwardRef<HTMLDivElement, CommonReceip
                 </>
               )}
 
-              <div className="mt-auto pt-3 border-t border-[#e2dccb] flex items-center justify-between gap-3 text-3xs text-[#5f6558]">
+              <div className="mt-auto pt-3 border-t border-[#dfddd2] flex items-center justify-between gap-3 text-3xs text-[#5f6558]">
                 <span className="font-heading font-semibold text-[#5f6558]">{footerLabel}</span>
                 <div className="flex items-center gap-1 font-mono tabular-nums text-[#5f6558]">
                   <span>Page</span>

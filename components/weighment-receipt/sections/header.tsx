@@ -15,7 +15,7 @@ const DIRECTION_CONFIG: Record<WeighmentType, { label: string; className: string
   },
   void: {
     label: "Void",
-    className: "bg-[#f2ede2] text-[#5f6558] border-[#e2dccb]",
+    className: "bg-[#efede5] text-[#5f6558] border-[#dfddd2]",
   },
 };
 
@@ -105,7 +105,7 @@ interface BaseReceiptHeaderProps {
 
 function BaseReceiptHeader({ factory, titleLabel, createdAt, badges }: BaseReceiptHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#e2dccb] pb-3.5">
+    <div className="flex items-start justify-between gap-4 border-b border-[#dfddd2] pb-3.5">
       <ReceiptBranding factoryName={factory.name} />
 
       <div className="flex flex-col items-end text-right shrink-0 gap-1.5">
@@ -187,11 +187,11 @@ export function WeighmentReceiptContinuationHeader({
   subtitle = "Transit Photos (Cont.)",
 }: CommonContinuationHeaderProps) {
   return (
-    <div className="flex items-center justify-between border-b border-[#e2dccb] pb-3">
+    <div className="flex items-center justify-between border-b border-[#dfddd2] pb-3">
       <div className="flex items-center gap-2 min-w-0">
         <ReceiptBranding factoryName={factory.name} compact />
         <span className="text-3xs font-heading font-medium text-[#5f6558] shrink-0 flex items-center gap-1.5">
-          <span className="text-[#c9c2b0]">&bull;</span>
+          <span className="text-[#c8c5b8]">&bull;</span>
           <span>{subtitle}</span>
         </span>
       </div>
@@ -199,7 +199,7 @@ export function WeighmentReceiptContinuationHeader({
         <span className="font-mono text-3xs font-semibold text-[#1f241d] tabular-nums">
           {idPrefix} #{id}
         </span>
-        <span className="font-mono text-3xs font-semibold text-[#1f241d] bg-[#fdfbf6] border border-[#e2dccb] px-2 py-0.5 rounded-md">
+        <span className="font-mono text-3xs font-semibold text-[#1f241d] bg-[#fcfbf8] border border-[#dfddd2] px-2 py-0.5 rounded-md">
           {vehicleNumber}
         </span>
       </div>

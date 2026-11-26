@@ -16,7 +16,7 @@ function CreatorAttribution({ creator }: { creator?: CreatorMeta }) {
   }
 
   return (
-    <div className="mt-1.5 pt-1.5 border-t border-[#e2dccb]/80 flex flex-col gap-0.5 min-w-0">
+    <div className="mt-1.5 pt-1.5 border-t border-[#dfddd2]/80 flex flex-col gap-0.5 min-w-0">
       <div className="flex items-center justify-between gap-1.5 min-w-0">
         <div className="flex items-baseline gap-1 min-w-0">
           {creator.id !== undefined && (
@@ -97,8 +97,8 @@ export function ReceiptTransitDetails({ weighment }: { weighment: WeighmentRecei
     : undefined;
 
   return (
-    <div className="rounded-lg border border-[#e2dccb] bg-[#fdfbf6] p-4">
-      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-[#e2dccb] items-start">
+    <div className="rounded-lg border border-[#dfddd2] bg-[#fcfbf8] p-4">
+      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-[#dfddd2] items-start">
         <div className="col-span-12 sm:col-span-4 sm:pr-4 flex flex-col gap-1 min-w-0">
           <span className="font-heading text-3xs text-[#5f6558] font-semibold">Vehicle No.</span>
           <span className="font-mono text-base font-bold text-[#1f241d] tracking-wider truncate">
@@ -144,8 +144,8 @@ export function EntryReceiptDetails({ entry }: { entry: EntryReceiptData }) {
     : undefined;
 
   return (
-    <div className="rounded-lg border border-[#e2dccb] bg-[#fdfbf6] p-4">
-      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-[#e2dccb] items-start">
+    <div className="rounded-lg border border-[#dfddd2] bg-[#fcfbf8] p-4">
+      <div className="grid grid-cols-12 gap-3 sm:gap-0 sm:divide-x divide-[#dfddd2] items-start">
         <div className="col-span-12 sm:col-span-4 sm:pr-4 flex flex-col gap-1 min-w-0">
           <span className="font-heading text-3xs text-[#5f6558] font-semibold">Vehicle No.</span>
           <span className="font-mono text-base font-bold text-[#1f241d] tracking-wider truncate">
