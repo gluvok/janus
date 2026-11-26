@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   DialogActionFooter,
   DialogIconBadge,
@@ -24,17 +26,23 @@ import { RoleBadge } from "@/components/role-badge";
 import { toast } from "@/components/ui/toast";
 import { cn, formatDateTime, getErrorMessage } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Calendar01Icon, Clock01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Calendar01Icon, Clock01Icon, Key01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { nameSchema, usernameSchema, passwordSchema, type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 import { useUserStore } from "@/stores/use-user-store";
 import { useFactoryStore } from "@/stores/use-factory-store";
 
-const accountFormSchema = z.object({
-  name: nameSchema,
-  username: usernameSchema,
-  password: passwordSchema.optional().or(z.literal("")),
-});
+const accountFormSchema = z
+  .object({
+    name: nameSchema,
+    username: usernameSchema,
+    password: passwordSchema.optional().or(z.literal("")),
+    current_password: z.string().optional(),
+  })
+  .refine((v) => !v.password?.trim() || Boolean(v.current_password), {
+    path: ["current_password"],
+    error: "Current password is required to set a new one",
+  });
 
 type AccountFormInput = z.infer<typeof accountFormSchema>;
 
@@ -50,6 +58,7 @@ function getInitialAccountValues(user: User): AccountFormInput {
     name: user.name,
     username: user.username,
     password: "",
+    current_password: "",
   };
 }
 
@@ -74,6 +83,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   const name = watch("name");
   const username = watch("username");
   const password = watch("password");
+  const currentPassword = watch("current_password");
 
   useEffect(() => {
     if (open) {
@@ -102,13 +112,19 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
   const onSubmit = async (values: AccountFormInput) => {
     setFormError(null);
 
-    const payload: { name: string; username: string; password?: string } = {
+    const payload: {
+      name: string;
+      username: string;
+      password?: string;
+      current_password?: string;
+    } = {
       name: values.name.trim(),
       username: values.username.trim().toLowerCase(),
     };
 
     if (values.password && values.password.trim().length > 0) {
       payload.password = values.password.trim();
+      payload.current_password = values.current_password;
     }
 
     try {
@@ -219,6 +235,36 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
                 placeholder="Leave blank to keep current"
                 description="Account password."
               />
+
+              {password && (
+                <Field data-invalid={Boolean(errors.current_password)}>
+                  <FieldLabel htmlFor="current-password">
+                    <HugeiconsIcon icon={Key01Icon} className="size-3.5 text-muted-foreground" />
+                    <span>Current Password</span>
+                    <span className="text-destructive font-semibold" aria-hidden="true">
+                      *
+                    </span>
+                  </FieldLabel>
+                  <PasswordInput
+                    id="current-password"
+                    value={currentPassword || ""}
+                    onChange={(e) =>
+                      setValue("current_password", e.target.value, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      })
+                    }
+                    placeholder="Enter your current password"
+                    aria-invalid={Boolean(errors.current_password)}
+                    className="h-8 text-xs"
+                    autoComplete="current-password"
+                  />
+                  {errors.current_password && (
+                    <FieldError errors={[{ message: errors.current_password.message }]} />
+                  )}
+                  <FieldDescription>Required to change your password.</FieldDescription>
+                </Field>
+              )}
 
               <DialogActionFooter
                 isDirty={isDirty}
