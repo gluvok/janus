@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import {
   SESSION_HEADER_KEYS,
   ADMIN,
@@ -10,6 +11,7 @@ import {
   quotePostgrestValue,
 } from "../lib/security.ts";
 import { hashPassword, verifyPassword, DUMMY_HASH } from "../lib/password.ts";
+import { signHs256 } from "../lib/realtime-token.ts";
 import { supabase } from "../lib/supabase.ts"; // importing must not read env or build a client
 
 assert.equal(SESSION_HEADER_KEYS.length, 11);
@@ -80,3 +82,9 @@ const params = (h: string) => h.split("$").slice(1, 4).join("$"); // argon2id$v=
 assert.equal(params(DUMMY_HASH), params(fresh));
 assert.equal(await verifyPassword("wrong", DUMMY_HASH), false);
 console.log("✓ password boundary");
+
+const jwt = signHs256({ sub: "1", exp: 9 }, "s3cret");
+const [h, p, sig] = jwt.split(".");
+assert.equal(sig, createHmac("sha256", "s3cret").update(`${h}.${p}`).digest("base64url"));
+assert.deepEqual(JSON.parse(Buffer.from(p, "base64url").toString()), { sub: "1", exp: 9 });
+console.log("✓ realtime token signing");

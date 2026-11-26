@@ -92,6 +92,19 @@ Run `schema.sql`, then `realtime.sql`; re-run `realtime.sql` after every `schema
 
 ---
 
+## Environment
+
+Set these in `.env.local` (dev) and in Vercel (prod). There's deliberately no `.env.example`.
+
+| Name                       | Used by                         | Notes                                                          |
+| -------------------------- | ------------------------------- | -------------------------------------------------------------- |
+| `SUPABASE_URL`             | server, realtime token          | Project URL                                                    |
+| `SUPABASE_SECRET_KEY`      | server only (`lib/supabase.ts`) | Secret / service-role key. Never sent to the browser           |
+| `SUPABASE_PUBLISHABLE_KEY` | `/api/realtime/token` → browser | Anon key; safe to expose, gets no grants after `schema.sql` §8 |
+| `SUPABASE_JWT_SECRET`      | `/api/realtime/token`           | Signs 10-minute Realtime JWTs                                  |
+
+---
+
 ## Development & Verification
 
 ```bash
