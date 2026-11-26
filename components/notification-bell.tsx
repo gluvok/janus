@@ -10,6 +10,7 @@ import Link from "next/link";
 import axios from "axios";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Bell } from "lucide-react";
+import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ApiRoutes } from "@/lib/constants/routes";
 import { ProjectSlug } from "@/lib/constants/enums";
@@ -18,53 +19,104 @@ import { useAuthStore, hasPageAccess } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { DashboardNotification } from "@/types";
 
-const POLL_MS = 30_000;
-const seenKey = (username: string) => `notifications-seen:${username}`;
+const LIMIT = 20; // matches GET /api/notifications
+const RETRY_MS = 30_000;
+const REFRESH_LEAD_MS = 60_000;
+/** Invalid or empty ISO (e.g. no seenAt yet) is 0, so everything counts as newer. */
 const toMs = (iso: string) => new Date(iso).getTime() || 0;
 
-function readSeen(username: string): string {
-  try {
-    return localStorage.getItem(seenKey(username)) ?? "";
-  } catch {
-    return "";
-  }
-}
+type RealtimeTokenResponse = {
+  token: string;
+  url: string;
+  anonKey: string;
+  topic: string;
+  expiresAt: number;
+};
 
-function useNotifications(open: boolean) {
+function useNotifications() {
   const [items, setItems] = React.useState<DashboardNotification[]>([]);
+  const [seenAt, setSeenAt] = React.useState<string | null>(null);
   const [error, setError] = React.useState(false);
+  const mounted = React.useRef(false);
 
-  const load = React.useCallback(async () => {
+  const loadList = React.useCallback(async () => {
     try {
-      const res = await axios.get<{ data: DashboardNotification[] }>(ApiRoutes.NOTIFICATIONS);
+      const res = await axios.get<{ data: DashboardNotification[]; seenAt: string | null }>(
+        ApiRoutes.NOTIFICATIONS,
+      );
+      if (!mounted.current) return;
       setItems(res.data.data);
+      setSeenAt(res.data.seenAt);
       setError(false);
     } catch (err) {
       console.error("Failed to load notifications:", err);
-      setError(true);
+      if (mounted.current) setError(true);
     }
   }, []);
 
   React.useEffect(() => {
-    void load();
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, POLL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    document.addEventListener("visibilitychange", onVisible);
+    mounted.current = true;
+    let stopped = false;
+    let token = "";
+    let client: SupabaseClient | null = null;
+    let channel: RealtimeChannel | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function connect() {
+      try {
+        const { data } = await axios.get<RealtimeTokenResponse>(ApiRoutes.REALTIME_TOKEN);
+        if (stopped) return;
+        token = data.token;
+        // supabase-js always gives realtime an accessToken callback and re-reads it on connect,
+        // join and every heartbeat; without this it would swap our token for the anon key.
+        client ??= createClient(data.url, data.anonKey, { accessToken: async () => token });
+        await client.realtime.setAuth(data.token);
+        if (stopped) return;
+        channel ??= client
+          .channel(data.topic, { config: { private: true } })
+          .on("broadcast", { event: "notification" }, ({ payload }) => {
+            const raw = payload as DashboardNotification;
+            const n = { ...raw, weight: Number(raw.weight) };
+            setItems((prev) =>
+              [n, ...prev.filter((p) => !(p.kind === n.kind && p.ref_id === n.ref_id))].slice(
+                0,
+                LIMIT,
+              ),
+            );
+          })
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") void loadList(); // first join and every reconnect: catch up
+          });
+        timer = setTimeout(
+          connect,
+          Math.max(data.expiresAt - Date.now() - REFRESH_LEAD_MS, RETRY_MS),
+        );
+      } catch (err) {
+        console.error("Realtime connect failed:", err);
+        if (!stopped) timer = setTimeout(connect, RETRY_MS); // ponytail: fixed backoff
+      }
+    }
+
+    void loadList();
+    void connect();
     return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
+      mounted.current = false;
+      stopped = true;
+      clearTimeout(timer);
+      if (client && channel) void client.removeChannel(channel);
     };
-  }, [load]);
+  }, [loadList]);
 
-  React.useEffect(() => {
-    if (open) void load();
-  }, [open, load]);
+  const markSeen = React.useCallback(async () => {
+    try {
+      const res = await axios.post<{ seenAt: string }>(ApiRoutes.NOTIFICATIONS_SEEN);
+      if (mounted.current) setSeenAt(res.data.seenAt);
+    } catch (err) {
+      console.error("Failed to mark notifications seen:", err);
+    }
+  }, []);
 
-  return { items, error };
+  return { items, seenAt, error, loadList, markSeen };
 }
 
 /** Mounted once in MainLayout; renders nothing for users who can't read entries or weighments. */
@@ -78,30 +130,25 @@ export function NotificationBell() {
       hasPageAccess(user.role, ProjectSlug.WEIGHMENTS));
 
   if (!canSee) return null;
-  return <BellPopover key={user.username} username={user.username} />;
+  return <BellPopover key={user.username} />;
 }
 
-function BellPopover({ username }: { username: string }) {
+function BellPopover() {
   const [open, setOpen] = React.useState(false);
-  const [seenAt, setSeenAt] = React.useState(() => readSeen(username));
-  const { items, error } = useNotifications(open);
+  const { items, seenAt, error, loadList, markSeen } = useNotifications();
 
-  const seenMs = toMs(seenAt);
+  const seenMs = toMs(seenAt ?? "");
   const unread = items.filter((n) => toMs(n.created_at) > seenMs).length;
 
-  React.useEffect(() => {
-    if (!open || items.length === 0) return;
-    const newest = items[0].created_at;
-    setSeenAt(newest);
-    try {
-      localStorage.setItem(seenKey(username), newest);
-    } catch {
-      /* storage blocked: unread just resets next load */
-    }
-  }, [open, items, username]);
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o && unread > 0) void markSeen();
+        if (o && error) void loadList(); // keeps the "Retrying…" copy honest without polling
+      }}
+    >
       <PopoverTrigger
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
         className={cn(
