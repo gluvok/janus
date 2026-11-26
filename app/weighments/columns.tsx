@@ -340,9 +340,9 @@ function createAutomaticActionsColumn(): ColumnDef<DataTableFeatures, Weighment,
             copyLabel="Copy Vehicle No."
             onDownloadPdf={() => meta?.onDownloadPdf?.(row.original)}
             isDownloadingPdf={meta?.downloadingId === row.original.id}
-            onEdit={() => meta?.onCorrectPlate?.(row.original)}
+            onEdit={meta?.onCorrectPlate ? () => meta.onCorrectPlate!(row.original) : undefined}
             editLabel="Correct Plate"
-            onDelete={() => meta?.onDelete?.(row.original)}
+            onDelete={meta?.onDelete ? () => meta.onDelete!(row.original) : undefined}
             deleteLabel="Delete"
           />
         </div>

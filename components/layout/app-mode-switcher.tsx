@@ -49,7 +49,7 @@ export function AppModeSwitcher() {
     <div
       role="radiogroup"
       aria-label={`${modeRoute.title} mode`}
-      className="inline-flex w-auto items-center gap-0.5 rounded-lg border border-border/70 bg-muted/40 p-0.5"
+      className="inline-flex w-auto items-center gap-0.5 rounded-lg border border-border bg-muted/60 p-0.5"
     >
       {MODE_OPTIONS.map((option) => {
         const isSelected = currentMode === option.value;
@@ -63,14 +63,11 @@ export function AppModeSwitcher() {
             className={cn(
               "inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all",
               isSelected
-                ? "bg-background text-foreground shadow-2xs"
+                ? "bg-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <HugeiconsIcon
-              icon={option.icon}
-              className={cn("size-3.5 shrink-0", isSelected && "text-primary")}
-            />
+            <HugeiconsIcon icon={option.icon} className="size-3.5 shrink-0" />
             <span>{option.label}</span>
           </button>
         );

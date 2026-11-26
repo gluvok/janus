@@ -28,6 +28,10 @@ export const GET = handleApiRoute(async (request: Request) => {
 });
 
 export const PATCH = handleApiRoute(async (request: Request, context: ApiContext) => {
+  if (context.user.role !== "admin") {
+    throw new ServiceError("Forbidden", StatusCodes.FORBIDDEN);
+  }
+
   const body: unknown = await request.json().catch(() => ({}));
   const validation = patchAutomaticWeighmentSchema.safeParse(body);
 
@@ -45,9 +49,6 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
   if (error) {
     if (error.message.includes("Weighment not found")) {
       throw new ServiceError(error.message, StatusCodes.NOT_FOUND);
-    }
-    if (error.message.includes("already been updated")) {
-      throw new ServiceError(error.message, StatusCodes.CONFLICT);
     }
     throw new ServiceError(error.message, StatusCodes.INTERNAL_SERVER_ERROR);
   }

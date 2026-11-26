@@ -18,13 +18,7 @@ import { toast } from "@/components/ui/toast";
 import { getErrorMessage } from "@/lib/utils";
 import { vehicleNumberSchema } from "@/lib/validation/helpers";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Alert02Icon,
-  AlertCircleIcon,
-  CheckmarkCircle02Icon,
-  Edit01Icon,
-  InformationCircleIcon,
-} from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, CheckmarkCircle02Icon, Edit01Icon } from "@hugeicons/core-free-icons";
 import type { Weighment } from "./types";
 
 const correctPlateSchema = vehicleNumberSchema.refine((v) => v.length >= 8 && v.length <= 11, {
@@ -110,17 +104,6 @@ export function CorrectPlateDialog({
               linked automatic entries.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="flex items-start gap-2.5 rounded-md border border-warning/30 bg-warning/10 p-2.5 text-xs text-warning-foreground">
-            <HugeiconsIcon icon={Alert02Icon} className="mt-0.5 size-3.5 shrink-0 text-warning" />
-            <div className="flex flex-col gap-0.5">
-              <span className="font-medium text-foreground">One-Time Operation Only</span>
-              <span className="text-2xs/relaxed text-muted-foreground">
-                A weighment plate can only be corrected once. Any further changes will require
-                contacting an administrator.
-              </span>
-            </div>
-          </div>
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-foreground">Linked Entries</span>
@@ -208,45 +191,6 @@ export function CorrectPlateDialog({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export interface ContactAdminDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-}
-
-export function ContactAdminDialog({
-  open,
-  onOpenChange,
-  title,
-  description,
-}: ContactAdminDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader className="gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
-            <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
-          </div>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="text-xs">{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            className="h-8 text-xs"
-          >
-            Close
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

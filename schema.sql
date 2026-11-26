@@ -466,7 +466,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Correct vehicle plate on an automatic weighment and its paired entries (one-time)
+-- Correct vehicle plate on an automatic weighment and its paired entries
 CREATE OR REPLACE FUNCTION correct_automatic_weighment_plate(
   p_weighment_id int,
   p_factory_id int,
@@ -480,7 +480,7 @@ AS $$
 DECLARE
   v_weighment RECORD;
 BEGIN
-  SELECT w.id, w.in_entry_id, w.out_entry_id, w.created_at, w.updated_at
+  SELECT w.id, w.in_entry_id, w.out_entry_id
   INTO v_weighment
   FROM public.automatic_weighments w
   JOIN public.automatic_entries ie ON ie.id = w.in_entry_id
@@ -492,10 +492,6 @@ BEGIN
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Weighment not found';
-  END IF;
-
-  IF v_weighment.created_at <> v_weighment.updated_at THEN
-    RAISE EXCEPTION 'Weighment has already been updated once';
   END IF;
 
   UPDATE public.automatic_entries

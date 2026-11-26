@@ -34,9 +34,10 @@ import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { toast } from "@/components/ui/toast";
 import { useWeighmentPdfDownload } from "@/hooks/use-weighment-pdf-download";
+import type { UserRole } from "@/app/users/types";
 import { getWeighmentColumns, type WeighmentsTableMeta } from "./columns";
 import type { Weighment } from "./types";
-import { ContactAdminDialog, CorrectPlateDialog } from "./weighment-action-dialogs";
+import { CorrectPlateDialog } from "./weighment-action-dialogs";
 import {
   fetchFilterOptions,
   formatCenterOptions,
@@ -51,6 +52,39 @@ const WEIGHMENT_TYPE_OPTIONS: FacetedFilterOption[] = [
   { label: "Out", value: "out", icon: ArrowUpRight01Icon },
   { label: "Void", value: "void", icon: CircleMinusIcon },
 ];
+
+type WeighmentPermissions = {
+  correctPlate: boolean;
+  deleteWeighment: boolean;
+};
+
+const NO_WEIGHMENT_PERMISSIONS: WeighmentPermissions = {
+  correctPlate: false,
+  deleteWeighment: false,
+};
+
+const WEIGHMENT_ACTION_MATRIX: Record<EntityMode, Record<UserRole, WeighmentPermissions>> = {
+  automatic: {
+    admin: { correctPlate: true, deleteWeighment: true },
+    manager: NO_WEIGHMENT_PERMISSIONS,
+    operator: NO_WEIGHMENT_PERMISSIONS,
+    base: NO_WEIGHMENT_PERMISSIONS,
+  },
+  manual: {
+    admin: NO_WEIGHMENT_PERMISSIONS,
+    manager: NO_WEIGHMENT_PERMISSIONS,
+    operator: NO_WEIGHMENT_PERMISSIONS,
+    base: NO_WEIGHMENT_PERMISSIONS,
+  },
+};
+
+function getWeighmentPermissions(
+  mode: EntityMode,
+  role: UserRole | null | undefined,
+): WeighmentPermissions {
+  if (!role) return NO_WEIGHMENT_PERMISSIONS;
+  return WEIGHMENT_ACTION_MATRIX[mode][role] ?? NO_WEIGHMENT_PERMISSIONS;
+}
 
 interface PhotosDialogState {
   open: boolean;
@@ -100,15 +134,10 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
   const { downloadReceipt, downloadingId, downloadBatchReceipts, isBatchPrinting } =
     useWeighmentPdfDownload();
   const currentUser = useUserStore((s) => s.user);
-  const isAdmin = currentUser?.role === "admin";
+  const permissions = getWeighmentPermissions(mode, currentUser?.role);
 
   const [correctPlateWeighment, setCorrectPlateWeighment] = useState<Weighment | null>(null);
   const [deleteWeighment, setDeleteWeighment] = useState<Weighment | null>(null);
-  const [contactAdminDialog, setContactAdminDialog] = useState<{
-    open: boolean;
-    title: string;
-    description: string;
-  }>({ open: false, title: "", description: "" });
 
   const fetchWeighments = useCallback(
     async (queryParams: Record<string, unknown>) => {
@@ -180,51 +209,15 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
     loadInitialData();
   }, [loadInitialData]);
 
-  const handleCorrectPlate = useCallback((weighment: Weighment) => {
-    const isFirstUpdate =
-      new Date(weighment.created_at).getTime() === new Date(weighment.updated_at).getTime();
-
-    if (isFirstUpdate) {
-      setCorrectPlateWeighment(weighment);
-    } else {
-      setContactAdminDialog({
-        open: true,
-        title: "Contact Admin",
-        description:
-          "This weighment's plate was already updated once. Please contact an administrator for any further updates.",
-      });
-    }
-  }, []);
-
-  const handleDelete = useCallback(
-    (weighment: Weighment) => {
-      if (isAdmin) {
-        setDeleteWeighment(weighment);
-      } else {
-        setContactAdminDialog({
-          open: true,
-          title: "Contact Admin",
-          description:
-            "Only administrators can delete weighments. Please contact an administrator.",
-        });
-      }
-    },
-    [isAdmin],
-  );
-
   const tableMeta: WeighmentsTableMeta = useMemo(
     () => ({
       onViewPhotos: (payload) => setPhotosDialogState({ open: true, ...payload }),
       onDownloadPdf: (w) => downloadReceipt(w, mode),
       downloadingId,
-      ...(mode === "automatic"
-        ? {
-            onCorrectPlate: handleCorrectPlate,
-            onDelete: handleDelete,
-          }
-        : {}),
+      onCorrectPlate: permissions.correctPlate ? setCorrectPlateWeighment : undefined,
+      onDelete: permissions.deleteWeighment ? setDeleteWeighment : undefined,
     }),
-    [downloadReceipt, downloadingId, handleCorrectPlate, handleDelete, mode],
+    [downloadReceipt, downloadingId, mode, permissions.correctPlate, permissions.deleteWeighment],
   );
 
   const columns = useMemo(() => getWeighmentColumns(mode), [mode]);
@@ -358,46 +351,39 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
         images={photosDialogState.images}
       />
 
-      {mode === "automatic" && (
-        <>
-          <CorrectPlateDialog
-            open={!!correctPlateWeighment}
-            onOpenChange={(open) => {
-              if (!open) setCorrectPlateWeighment(null);
-            }}
-            weighment={correctPlateWeighment}
-            onSuccess={dataTable.refresh}
-          />
+      {permissions.correctPlate && (
+        <CorrectPlateDialog
+          open={!!correctPlateWeighment}
+          onOpenChange={(open) => {
+            if (!open) setCorrectPlateWeighment(null);
+          }}
+          weighment={correctPlateWeighment}
+          onSuccess={dataTable.refresh}
+        />
+      )}
 
-          <ConfirmDeleteDialog
-            open={!!deleteWeighment}
-            onOpenChange={(open) => {
-              if (!open) setDeleteWeighment(null);
-            }}
-            title={`Delete Weighment #${deleteWeighment?.id ?? ""}`}
-            description={`This will delete weighment #${deleteWeighment?.id ?? ""} (${deleteWeighment?.vehicle_number ?? ""}) and both linked entries (#${deleteWeighment?.in_entry_id ?? ""} and #${deleteWeighment?.out_entry_id ?? ""}).`}
-            deleteLabel="Delete Weighment"
-            onConfirm={async () => {
-              if (!deleteWeighment) return;
-              await axios.delete("/api/weighments/automatic", {
-                params: { id: deleteWeighment.id },
-              });
-              toast.add({
-                type: "success",
-                title: "Weighment deleted",
-                description: `Weighment #${deleteWeighment.id} and its linked entries were deleted.`,
-              });
-              dataTable.refresh();
-            }}
-          />
-
-          <ContactAdminDialog
-            open={contactAdminDialog.open}
-            onOpenChange={(open) => setContactAdminDialog((prev) => ({ ...prev, open }))}
-            title={contactAdminDialog.title}
-            description={contactAdminDialog.description}
-          />
-        </>
+      {permissions.deleteWeighment && (
+        <ConfirmDeleteDialog
+          open={!!deleteWeighment}
+          onOpenChange={(open) => {
+            if (!open) setDeleteWeighment(null);
+          }}
+          title={`Delete Weighment #${deleteWeighment?.id ?? ""}`}
+          description={`This will delete weighment #${deleteWeighment?.id ?? ""} (${deleteWeighment?.vehicle_number ?? ""}) and both linked entries (#${deleteWeighment?.in_entry_id ?? ""} and #${deleteWeighment?.out_entry_id ?? ""}).`}
+          deleteLabel="Delete Weighment"
+          onConfirm={async () => {
+            if (!deleteWeighment) return;
+            await axios.delete("/api/weighments/automatic", {
+              params: { id: deleteWeighment.id },
+            });
+            toast.add({
+              type: "success",
+              title: "Weighment deleted",
+              description: `Weighment #${deleteWeighment.id} and its linked entries were deleted.`,
+            });
+            dataTable.refresh();
+          }}
+        />
       )}
     </div>
   );

@@ -10,16 +10,19 @@ import { getServerSession } from "@/lib/auth";
 const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-heading",
+  preload: true,
 });
 
 const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
+  preload: true,
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  preload: true,
 });
 
 export const metadata: Metadata = {
