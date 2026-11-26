@@ -86,6 +86,12 @@ Search queries across data tables dynamically evaluate type-aware multi-column m
 
 ---
 
+## Database setup
+
+Run `schema.sql`, then `realtime.sql`; re-run `realtime.sql` after every `schema.sql` run (schema.sql drops the notifications table).
+
+---
+
 ## Development & Verification
 
 ```bash
