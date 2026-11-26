@@ -10,7 +10,7 @@
     "lint": "oxlint --fix",
     "fmt": "oxfmt",
     "type-check": "tsc --noEmit",
-    "test": "node --experimental-strip-types scripts/test-validation.ts",
+    "test": "node --experimental-strip-types scripts/test-validation.ts && node --experimental-strip-types scripts/test-security.ts",
     "seed": "node scripts/seed.ts",
     "test-seed": "node scripts/test-seed/index.ts"
   },

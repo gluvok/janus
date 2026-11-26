@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { StatusCodes } from "http-status-codes";
 import { LRUCache } from "lru-cache";
 import { supabase } from "@/lib/supabase";
+import { SESSION_HEADER_KEYS } from "@/lib/security";
 import { type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 
@@ -152,19 +153,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
   return sessionData;
 }
 
-export const SESSION_HEADER_KEYS = [
-  "x-user-id",
-  "x-factory-id",
-  "x-user-role",
-  "x-user-name",
-  "x-user-username",
-  "x-user-created-at",
-  "x-user-updated-at",
-  "x-factory-name",
-  "x-factory-receipt-images",
-  "x-factory-created-at",
-  "x-factory-updated-at",
-] as const;
+export { SESSION_HEADER_KEYS };
 
 export type SessionHeaderKey = (typeof SESSION_HEADER_KEYS)[number];
 

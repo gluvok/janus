@@ -22,6 +22,7 @@ import {
   updateUserAccount,
   deleteUserAccounts,
 } from "./service";
+import { ADMIN } from "@/lib/security";
 
 const ROLE_ENTITY_LABELS: Record<UserRole, string> = {
   admin: "Staff user",
@@ -60,51 +61,60 @@ export const GET = handleApiRoute(async (request: Request) => {
   return executePaginatedEntityQuery<(typeof ALLOWED_SORT_COLUMNS)[number], User>(options);
 });
 
-export const POST = handleApiRoute(async (request: Request, context: ApiContext) => {
-  const validation = createUserSchema.safeParse(await request.json());
+export const POST = handleApiRoute(
+  async (request: Request, context: ApiContext) => {
+    const validation = createUserSchema.safeParse(await request.json());
 
-  if (!validation.success) {
-    return validationErrorResponse(validation.error);
-  }
+    if (!validation.success) {
+      return validationErrorResponse(validation.error);
+    }
 
-  const created = await createUserAccount(validation.data, context.factory.id);
-  const label = ROLE_ENTITY_LABELS[validation.data.role];
+    const created = await createUserAccount(validation.data, context.factory.id);
+    const label = ROLE_ENTITY_LABELS[validation.data.role];
 
-  return NextResponse.json(
-    {
-      data: created,
-      message: `${label} created successfully.`,
-    },
-    { status: StatusCodes.CREATED },
-  );
-});
+    return NextResponse.json(
+      {
+        data: created,
+        message: `${label} created successfully.`,
+      },
+      { status: StatusCodes.CREATED },
+    );
+  },
+  { roles: ADMIN },
+);
 
-export const PATCH = handleApiRoute(async (request: Request, context: ApiContext) => {
-  const validation = updateUserSchema.safeParse(await request.json());
+export const PATCH = handleApiRoute(
+  async (request: Request, context: ApiContext) => {
+    const validation = updateUserSchema.safeParse(await request.json());
 
-  if (!validation.success) {
-    return validationErrorResponse(validation.error);
-  }
+    if (!validation.success) {
+      return validationErrorResponse(validation.error);
+    }
 
-  const updated = await updateUserAccount(validation.data, context.factory.id);
+    const updated = await updateUserAccount(validation.data, context.factory.id);
 
-  return NextResponse.json({
-    data: updated,
-    message: "Account updated successfully.",
-  });
-});
+    return NextResponse.json({
+      data: updated,
+      message: "Account updated successfully.",
+    });
+  },
+  { roles: ADMIN },
+);
 
-export const DELETE = handleApiRoute(async (request: Request, context: ApiContext) => {
-  const validation = deleteUserSchema.safeParse(await request.json());
+export const DELETE = handleApiRoute(
+  async (request: Request, context: ApiContext) => {
+    const validation = deleteUserSchema.safeParse(await request.json());
 
-  if (!validation.success) {
-    return validationErrorResponse(validation.error);
-  }
+    if (!validation.success) {
+      return validationErrorResponse(validation.error);
+    }
 
-  const { deletedCount } = await deleteUserAccounts(validation.data.ids, context.factory.id);
+    const { deletedCount } = await deleteUserAccounts(validation.data.ids, context.factory.id);
 
-  return NextResponse.json({
-    success: true,
-    message: `Successfully deleted ${deletedCount} account${deletedCount > 1 ? "s" : ""}.`,
-  });
-});
+    return NextResponse.json({
+      success: true,
+      message: `Successfully deleted ${deletedCount} account${deletedCount > 1 ? "s" : ""}.`,
+    });
+  },
+  { roles: ADMIN },
+);

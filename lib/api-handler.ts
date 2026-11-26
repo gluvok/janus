@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { type z } from "zod";
 import { AuthError, getAuthSession } from "@/lib/auth";
-import type { User } from "@/app/users/types";
+import type { User, UserRole } from "@/app/users/types";
 import type { Factory } from "@/app/settings/types";
 
 export interface ApiContext {
@@ -32,13 +32,18 @@ export function validationErrorResponse(error: z.ZodError): NextResponse {
  * Catches AuthError, ServiceError, and generic exceptions,
  * automatically extracts authenticated ApiContext from proxy headers,
  * and returns clean, uniform NextResponse envelopes across all endpoints.
+ * When `options.roles` is set, sessions whose role is not listed get 403.
  */
 export function handleApiRoute(
   handler: (request: Request, context: ApiContext) => Promise<NextResponse>,
+  options: { roles?: readonly UserRole[] } = {},
 ): (request: Request) => Promise<NextResponse> {
   return async (request: Request) => {
     try {
       const session = getAuthSession(request);
+      if (options.roles && !options.roles.includes(session.user.role)) {
+        throw new AuthError("Forbidden", StatusCodes.FORBIDDEN);
+      }
       return await handler(request, { user: session.user, factory: session.factory });
     } catch (err: unknown) {
       if (err instanceof AuthError) {
