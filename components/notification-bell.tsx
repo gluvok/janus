@@ -86,6 +86,11 @@ function useNotifications() {
           })
           .subscribe((status) => {
             if (status === "SUBSCRIBED") void loadList(); // first join and every reconnect: catch up
+            // Rejoin refused (e.g. token expired while the laptop slept): fetch a fresh token soon.
+            if (status === "CHANNEL_ERROR" && !stopped) {
+              clearTimeout(timer);
+              timer = setTimeout(connect, RETRY_MS);
+            }
           });
         timer = setTimeout(
           connect,
@@ -93,7 +98,9 @@ function useNotifications() {
         );
       } catch (err) {
         console.error("Realtime connect failed:", err);
-        if (!stopped) timer = setTimeout(connect, RETRY_MS); // ponytail: fixed backoff
+        // 4xx (session gone, forbidden) won't fix itself; only retry network/5xx. ponytail: fixed backoff
+        const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+        if (!stopped && !(status && status < 500)) timer = setTimeout(connect, RETRY_MS);
       }
     }
 

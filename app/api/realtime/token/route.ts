@@ -9,7 +9,8 @@ import { PermissionKey, ProjectSlug, Role } from "@/lib/constants/enums";
 import { AuthErrorMessage } from "@/lib/constants/messages";
 import { signHs256 } from "@/lib/auth/realtime-token";
 
-const TTL_SECONDS = 3600;
+// Short on purpose: Realtime keeps a joined token until it expires, even after logout or a role/factory change.
+const TTL_SECONDS = 600;
 
 export const GET = withAuth(async (_req, user) => {
   const canRead =

@@ -38,7 +38,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_seen_at TIMESTAMPTZ;
 
 -- 3. PUSH: broadcast a notification row to its private topics.
 CREATE OR REPLACE FUNCTION push_notification(n notifications) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE payload jsonb := to_jsonb(n) - 'id' - 'factory_id' - 'customer_user_id';
 BEGIN
   PERFORM realtime.send(payload, 'notification', 'factory:' || n.factory_id, true);
@@ -49,7 +49,7 @@ END $$;
 
 -- 4. CAPTURE: new entry → notification + push.
 CREATE OR REPLACE FUNCTION entries_notify() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE n notifications;
 BEGIN
   INSERT INTO notifications (kind, ref_id, factory_id, customer_user_id, vehicle_number, weight, created_at)
@@ -68,7 +68,7 @@ FOR EACH ROW EXECUTE FUNCTION entries_notify();
 
 -- 5. CAPTURE: new weighment → notification (plate from in-entry, net = |in − out|) + push.
 CREATE OR REPLACE FUNCTION weighments_notify() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE n notifications;
 BEGIN
   INSERT INTO notifications (kind, ref_id, factory_id, customer_user_id, vehicle_number, weight, unit, created_at)
@@ -92,7 +92,7 @@ FOR EACH ROW EXECUTE FUNCTION weighments_notify();
 -- 6. CLEANUP: soft or hard delete removes the notification
 --    (and, for an entry, any weighment built from it).
 CREATE OR REPLACE FUNCTION notifications_cleanup() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF TG_TABLE_NAME = 'entries' THEN
     DELETE FROM notifications
@@ -124,6 +124,39 @@ DROP TRIGGER IF EXISTS trg_weighments_hard_delete ON weighments;
 CREATE TRIGGER trg_weighments_hard_delete AFTER DELETE ON weighments
 FOR EACH ROW EXECUTE FUNCTION notifications_cleanup();
 
+-- 6b. SYNC: entries are editable after insert (customer reassigned, plate corrected, weight fixed),
+--     so keep the snapshot rows in step; otherwise a reassigned entry stays visible to the old customer.
+--     ponytail: re-scopes the list only; a push already delivered can't be recalled.
+CREATE OR REPLACE FUNCTION notifications_sync_entry() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  UPDATE notifications nt
+  SET factory_id = c.factory_id, customer_user_id = cu.user_id,
+      vehicle_number = NEW.vehicle_number, weight = NEW.weight
+  FROM centers c LEFT JOIN customers cu ON cu.id = NEW.customer_id
+  WHERE nt.kind = 'entry' AND nt.ref_id = NEW.id AND c.id = NEW.center_id;
+
+  UPDATE notifications nt
+  SET factory_id = c.factory_id, customer_user_id = cu.user_id,
+      vehicle_number = i.vehicle_number, weight = ABS(i.weight - o.weight)
+  FROM weighments w
+  JOIN entries i ON i.id = w.in_entry_id
+  JOIN entries o ON o.id = w.out_entry_id
+  JOIN centers c ON c.id = i.center_id
+  LEFT JOIN customers cu ON cu.id = i.customer_id
+  WHERE nt.kind = 'weighment' AND nt.ref_id = w.id
+    AND (w.in_entry_id = NEW.id OR w.out_entry_id = NEW.id);
+  RETURN NULL;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_entries_sync ON entries;
+CREATE TRIGGER trg_entries_sync AFTER UPDATE OF customer_id, vehicle_number, weight, center_id ON entries
+FOR EACH ROW WHEN (
+  OLD.customer_id IS DISTINCT FROM NEW.customer_id OR OLD.vehicle_number IS DISTINCT FROM NEW.vehicle_number
+  OR OLD.weight IS DISTINCT FROM NEW.weight OR OLD.center_id IS DISTINCT FROM NEW.center_id
+)
+EXECUTE FUNCTION notifications_sync_entry();
+
 -- 7. ACCESS: a browser may only listen on its own topic.
 DROP POLICY IF EXISTS "notifications_listen" ON realtime.messages;
 CREATE POLICY "notifications_listen" ON realtime.messages
@@ -131,7 +164,7 @@ FOR SELECT TO authenticated
 USING (
   realtime.messages.extension = 'broadcast' AND (
     (realtime.topic() = 'factory:' || (auth.jwt() ->> 'factory_id')
-       AND (auth.jwt() ->> 'app_role') IS DISTINCT FROM 'base')
+       AND (auth.jwt() ->> 'app_role') IN ('admin', 'manager', 'operator'))
     OR realtime.topic() = 'user:' || (auth.jwt() ->> 'sub')
   )
 );

@@ -48,7 +48,7 @@ describe("GET /api/realtime/token", () => {
       app_role: Role.OPERATOR,
       factory_id: 7,
     });
-    expect(claims.exp - claims.iat).toBe(3600);
+    expect(claims.exp - claims.iat).toBe(600);
     expect(body).toMatchObject({
       url: "http://127.0.0.1:54321",
       anonKey: "anon-key",

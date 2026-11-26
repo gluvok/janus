@@ -164,6 +164,36 @@ describe("NotificationBell", () => {
     expect(tokenCalls).toBe(1);
   });
 
+  const tokenCalls = () =>
+    vi.mocked(axios.get).mock.calls.filter(([url]) => url === ApiRoutes.REALTIME_TOKEN).length;
+
+  it("does not retry the token on a 4xx", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+    vi.mocked(axios.get).mockImplementation(async (url: string) => {
+      if (url === ApiRoutes.REALTIME_TOKEN) throw { response: { status: 403 } };
+      return { data: { data: list, seenAt: null } };
+    });
+    render(<NotificationBell />);
+    await waitFor(() => expect(tokenCalls()).toBe(1));
+
+    await act(() => vi.advanceTimersByTimeAsync(120_000));
+    expect(tokenCalls()).toBe(1);
+  });
+
+  it("fetches a fresh token when the channel join is refused", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await renderSubscribed();
+
+    await act(async () => handlers.onStatus?.("CHANNEL_ERROR"));
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+
+    expect(tokenCalls()).toBe(2);
+    expect(fakeClient.realtime.setAuth).toHaveBeenCalledTimes(2);
+    expect(createClient).toHaveBeenCalledTimes(1); // same client, new token
+  });
+
   it("creates a single client and channel under StrictMode double-invoke", async () => {
     render(
       <StrictMode>
