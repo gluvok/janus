@@ -10,6 +10,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Don't let `next dev` write its Next.js agent block into AGENTS.md; the guidelines there are ours.
+  agentRules: false,
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
