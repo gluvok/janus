@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
-import { subHours } from "date-fns";
 import { handleApiRoute, ServiceError } from "@/lib/api-handler";
 import { NOTIFY_ROLES } from "@/lib/security";
 import { supabase } from "@/lib/supabase";
 
-const WINDOW_HOURS = 24;
 const LIMIT = 20;
 
 export const GET = handleApiRoute(
@@ -15,7 +13,6 @@ export const GET = handleApiRoute(
         .from("notifications")
         .select("kind, source, ref_id, vehicle_number, weight, created_at")
         .eq("factory_id", factory.id)
-        .gte("created_at", subHours(new Date(), WINDOW_HOURS).toISOString())
         .order("created_at", { ascending: false })
         .limit(LIMIT),
       supabase.from("users").select("notifications_seen_at").eq("id", user.id).maybeSingle(),

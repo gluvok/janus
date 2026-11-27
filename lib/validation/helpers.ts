@@ -43,8 +43,6 @@ export const STATE_CODES = [
   "WB",
 ] as const;
 
-export type StateCode = (typeof STATE_CODES)[number];
-
 export const INDIAN_PLATE_REGEX = /^([A-Z]{2})(\d{1,2})([A-Z]{0,3})(\d{1,4})$/i;
 
 export function normalizeVehicleNumber(val: string): string {

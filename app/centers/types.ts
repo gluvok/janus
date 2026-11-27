@@ -23,12 +23,5 @@ export const updateCenterSchema = z
   })
   .strict();
 
-export const centerFormSchema = z
-  .object({
-    name: centerNameSchema,
-  })
-  .strict();
-
 export type Center = z.infer<typeof centerSchema>;
 export type UpdateCenterInput = z.infer<typeof updateCenterSchema>;
-export type CenterFormInput = z.infer<typeof centerFormSchema>;

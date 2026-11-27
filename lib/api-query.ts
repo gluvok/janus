@@ -1,9 +1,3 @@
-/**
- * @file lib/api-query.ts
- * @description Centralized Supabase query runners and route handler envelope executors.
- * Re-exports query parameter schemas, parsers, and pagination formatters from lib/api-query-params.
- */
-
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
@@ -19,12 +13,6 @@ import {
   type PaginatedResult,
 } from "./api-query-params";
 
-// Re-export all parameter parsing utilities and types for backwards compatibility
-export * from "./api-query-params";
-
-/**
- * Applies sequential sorting rules to a Supabase query builder.
- */
 export function applySorting<
   TQuery extends {
     order(col: string, opts: { ascending: boolean }): TQuery;
@@ -37,9 +25,6 @@ export function applySorting<
   return updated;
 }
 
-/**
- * Applies sequential sorting rules and range pagination slice to a Supabase query builder.
- */
 export function applySortingAndPagination<
   TQuery extends {
     order(col: string, opts: { ascending: boolean }): TQuery;
@@ -50,6 +35,18 @@ export function applySortingAndPagination<
     pagination.offset,
     pagination.offset + pagination.pageSize - 1,
   );
+}
+
+/** The PostgREST builder methods this layer calls; supabase-js query builders satisfy it structurally. */
+export interface FilterBuilder<TQuery> {
+  eq(column: string, value: string | number): TQuery;
+  in(column: string, values: readonly (string | number)[]): TQuery;
+  is(column: string, value: null): TQuery;
+  or(filters: string): TQuery;
+  gte(column: string, value: string): TQuery;
+  lte(column: string, value: string): TQuery;
+  order(column: string, options: { ascending: boolean }): TQuery;
+  range(from: number, to: number): TQuery;
 }
 
 const TABLE_FACTORY_COLUMNS: Record<string, string> = {
@@ -72,11 +69,11 @@ export const commaSeparatedIdsSchema = z
   )
   .pipe(z.array(z.number().int().positive()));
 
-export function applyCommaSeparatedIdFilter(
-  query: any,
+export function applyCommaSeparatedIdFilter<TQuery extends FilterBuilder<TQuery>>(
+  query: TQuery,
   paramValue: string | null | undefined,
   column: string,
-): any {
+): TQuery {
   const trimmed = paramValue?.trim();
   if (!trimmed || trimmed === "all") return query;
   const parsed = commaSeparatedIdsSchema.safeParse(trimmed);
@@ -86,12 +83,15 @@ export function applyCommaSeparatedIdFilter(
   return query;
 }
 
-export function applyCommaSeparatedEnumFilter<T extends string>(
-  query: any,
+export function applyCommaSeparatedEnumFilter<
+  TQuery extends FilterBuilder<TQuery>,
+  T extends string,
+>(
+  query: TQuery,
   paramValue: string | null | undefined,
   column: string,
   schema: z.ZodType<T>,
-): any {
+): TQuery {
   const trimmed = paramValue?.trim();
   if (!trimmed || trimmed === "all") return query;
   const values = trimmed
@@ -119,13 +119,14 @@ export interface BaseEntityQueryConfig {
   table: string;
   select?: string;
   searchColumns?: readonly string[];
-  textColumns?: readonly string[];
   integerColumns?: readonly string[];
   numericColumns?: readonly string[];
   enumColumns?: readonly EnumColumnConfig[];
   integerFilterColumns?: readonly string[];
-  extraOrConditions?: readonly string[];
-  applyCustomFilters?: (query: any, searchParams: URLSearchParams) => any;
+  applyCustomFilters?: <TQuery extends FilterBuilder<TQuery>>(
+    query: TQuery,
+    searchParams: URLSearchParams,
+  ) => TQuery;
 }
 
 export interface PaginatedEntityQueryOptions<TCol extends string> extends BaseEntityQueryConfig {
@@ -141,12 +142,10 @@ export function buildBaseEntityQuery({
   table,
   select = "*",
   searchColumns = [],
-  textColumns = [],
   integerColumns = [],
   numericColumns = [],
   enumColumns = [],
   integerFilterColumns = [],
-  extraOrConditions = [],
   applyCustomFilters,
   factoryId,
   searchParams,
@@ -156,7 +155,7 @@ export function buildBaseEntityQuery({
   searchParams: URLSearchParams;
   countExact: boolean;
 }) {
-  let query: any = countExact
+  let query = countExact
     ? supabase.from(table).select(select, { count: "exact" })
     : supabase.from(table).select(select);
 
@@ -169,20 +168,16 @@ export function buildBaseEntityQuery({
   if (search) {
     const conditions: string[] = [];
 
-    // Text columns with ILIKE
-    const allTextCols = [...textColumns, ...searchColumns];
-    for (const col of allTextCols) {
+    for (const col of searchColumns) {
       conditions.push(`${col}.ilike.${quotePostgrestValue(`%${search}%`)}`);
     }
 
-    // Integer columns with EQ
     if (integerColumns.length > 0 && /^\d+$/.test(search)) {
       for (const col of integerColumns) {
         conditions.push(`${col}.eq.${search}`);
       }
     }
 
-    // Numeric columns with EQ
     if (numericColumns.length > 0 && !Number.isNaN(Number(search))) {
       const num = Number(search);
       for (const col of numericColumns) {
@@ -190,7 +185,7 @@ export function buildBaseEntityQuery({
       }
     }
 
-    // Enum columns with IN (case-insensitive substring match against enum values)
+    // enums can't ILIKE: match the term against the enum values instead
     if (enumColumns.length > 0) {
       const lowerSearch = search.toLowerCase();
       for (const { column, values } of enumColumns) {
@@ -199,11 +194,6 @@ export function buildBaseEntityQuery({
           conditions.push(`${column}.in.(${matches.join(",")})`);
         }
       }
-    }
-
-    // Extra OR conditions (e.g. relations subquery matches)
-    if (extraOrConditions.length > 0) {
-      conditions.push(...extraOrConditions);
     }
 
     if (conditions.length > 0) {
@@ -224,9 +214,6 @@ export function buildBaseEntityQuery({
   return query;
 }
 
-/**
- * Builds and executes a standard paginated Supabase entity query, returning raw PaginatedResult<TData>.
- */
 export async function buildPaginatedEntityResult<TCol extends string, TData = unknown>({
   searchParams,
   table,
@@ -234,12 +221,10 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   allowedSortColumns,
   defaultSort,
   searchColumns = [],
-  textColumns = [],
   integerColumns = [],
   numericColumns = [],
   enumColumns = [],
   integerFilterColumns = [],
-  extraOrConditions = [],
   applyCustomFilters,
   factoryId,
 }: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
@@ -253,12 +238,10 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
     table,
     select,
     searchColumns,
-    textColumns,
     integerColumns,
     numericColumns,
     enumColumns,
     integerFilterColumns,
-    extraOrConditions,
     applyCustomFilters,
     factoryId,
     searchParams,
@@ -275,9 +258,6 @@ export async function buildPaginatedEntityResult<TCol extends string, TData = un
   return formatPaginatedResponse<TData>(data as TData[] | null, count, pagination);
 }
 
-/**
- * Builds and executes an unpaginated Supabase entity query, returning all matching records.
- */
 export async function buildAllEntityResult<TCol extends string, TData = unknown>({
   searchParams,
   table,
@@ -285,12 +265,10 @@ export async function buildAllEntityResult<TCol extends string, TData = unknown>
   allowedSortColumns,
   defaultSort,
   searchColumns = [],
-  textColumns = [],
   integerColumns = [],
   numericColumns = [],
   enumColumns = [],
   integerFilterColumns = [],
-  extraOrConditions = [],
   applyCustomFilters,
   factoryId,
 }: Omit<PaginatedEntityQueryOptions<TCol>, "request"> & {
@@ -303,12 +281,10 @@ export async function buildAllEntityResult<TCol extends string, TData = unknown>
     table,
     select,
     searchColumns,
-    textColumns,
     integerColumns,
     numericColumns,
     enumColumns,
     integerFilterColumns,
-    extraOrConditions,
     applyCustomFilters,
     factoryId,
     searchParams,
@@ -326,10 +302,7 @@ export async function buildAllEntityResult<TCol extends string, TData = unknown>
   return { data: (data ?? []) as TData[] };
 }
 
-/**
- * Executes a standardized paginated entity query for Next.js route handlers, returning a NextResponse envelope.
- * Automatically injects factoryId from request headers for tenant isolation.
- */
+/** Scopes the query to the `x-factory-id` request header (tenant isolation). */
 export async function executePaginatedEntityQuery<TCol extends string, TData = unknown>(
   options: PaginatedEntityQueryOptions<TCol>,
 ): Promise<NextResponse> {
@@ -352,10 +325,7 @@ export async function executePaginatedEntityQuery<TCol extends string, TData = u
   }
 }
 
-/**
- * Executes an unpaginated entity query for Next.js route handlers, returning a { data: TData[] } envelope.
- * Automatically injects factoryId from request headers for tenant isolation.
- */
+/** Scopes the query to the `x-factory-id` request header (tenant isolation). */
 export async function executeAllEntityQuery<TCol extends string, TData = unknown>(
   options: PaginatedEntityQueryOptions<TCol>,
 ): Promise<NextResponse> {

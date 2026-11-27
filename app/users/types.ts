@@ -5,7 +5,6 @@ export type UserRole = (typeof USER_ROLES)[number];
 
 export const userRoleEnum = z.enum(USER_ROLES);
 
-// Reusable single-source field validation schemas
 export const usernameSchema = z
   .string()
   .trim()
@@ -40,10 +39,6 @@ export const userSchema = z
 
 export type User = z.infer<typeof userSchema>;
 
-/* -------------------------------------------------------------------------- */
-/* Creation Schemas                                                           */
-/* -------------------------------------------------------------------------- */
-
 export const createUserSchema = z
   .object({
     name: nameSchema,
@@ -53,10 +48,6 @@ export const createUserSchema = z
   })
   .strict();
 export type CreateUserInput = z.infer<typeof createUserSchema>;
-
-/* -------------------------------------------------------------------------- */
-/* Update Schemas                                                             */
-/* -------------------------------------------------------------------------- */
 
 export const updateUserSchema = z
   .object({
@@ -69,45 +60,8 @@ export const updateUserSchema = z
   .strict();
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
-/* -------------------------------------------------------------------------- */
-/* Form Schemas                                                               */
-/* -------------------------------------------------------------------------- */
-
-const baseUserFormFields = {
-  id: z.int().positive().optional(),
-  name: nameSchema,
-  role: userRoleEnum,
-  username: usernameSchema,
-};
-
-export const createUserFormSchema = z
-  .object({
-    ...baseUserFormFields,
-    password: passwordSchema,
-  })
-  .strict();
-
-export const editUserFormSchema = z
-  .object({
-    ...baseUserFormFields,
-    password: passwordSchema.optional().or(z.literal("")),
-  })
-  .strict();
-
-export const USER_FORM_SCHEMAS = {
-  create: createUserFormSchema,
-  edit: editUserFormSchema,
-} as const;
-
-export type UserFormInput = z.infer<typeof editUserFormSchema>;
-
-/* -------------------------------------------------------------------------- */
-/* Deletion Schemas                                                           */
-/* -------------------------------------------------------------------------- */
-
 export const deleteUserSchema = z
   .object({
     ids: z.array(z.int().positive()).min(1, { error: "At least one user ID is required" }),
   })
   .strict();
-export type DeleteUserInput = z.infer<typeof deleteUserSchema>;

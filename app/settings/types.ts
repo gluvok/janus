@@ -38,7 +38,6 @@ export const factoryFormSchema = z
   .strict();
 
 export type Factory = z.infer<typeof factorySchema>;
-export type UpdateFactoryInput = z.infer<typeof updateFactorySchema>;
 export type FactoryFormInput = z.infer<typeof factoryFormSchema>;
 
 export interface FactoryApiResponse {

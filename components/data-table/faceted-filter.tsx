@@ -44,12 +44,10 @@ export function DataTableFacetedFilter({
   const [isFocused, setIsFocused] = React.useState(false);
   const anchor = useComboboxAnchor();
 
-  // Filter out sentinel "all" option from selectable list
   const selectableOptions = React.useMemo(() => {
     return options.filter((opt) => opt.value !== "all");
   }, [options]);
 
-  // Selected options derived from comma-separated value prop
   const selectedOptions = React.useMemo(() => {
     if (!value || value === "all") return [];
     const idSet = new Set(value.split(",").filter(Boolean));

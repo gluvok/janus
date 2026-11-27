@@ -18,7 +18,7 @@ export async function seedCenters({
   secondaryCenterIds: number[];
   centerNameMap: Map<number, string>;
 }> {
-  console.log("\n⚖️ [3/5] Seeding Centers strictly partitioned by factory...");
+  console.log("\n[3/5] Seeding Centers strictly partitioned by factory...");
 
   const centerConfigs: CenterConfig[] = [
     { name: "North Weighbridge", factory_id: primaryFactoryId },

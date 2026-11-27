@@ -5,10 +5,6 @@ import { toast } from "@/components/ui/toast";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { type User } from "./types";
 
-/* -------------------------------------------------------------------------- */
-/* Single User Deletion Dialog                                               */
-/* -------------------------------------------------------------------------- */
-
 export interface SingleUserDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,10 +47,6 @@ export function SingleUserDeleteDialog({
     </ConfirmDeleteDialog>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Batch Users Deletion Dialog                                               */
-/* -------------------------------------------------------------------------- */
 
 export interface BatchUsersDeleteDialogProps {
   open: boolean;

@@ -29,5 +29,3 @@ export const appIcons = {
   search: Search01Icon,
   notifications: Notification01Icon,
 } as const;
-
-export type AppIconKey = keyof typeof appIcons;

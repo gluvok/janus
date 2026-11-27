@@ -209,10 +209,80 @@
     inset -2px -2px 5px var(--neu-light);
 }
 
-/* Claymorphism: puffy primary actions and badges (outer drop + inner highlight/shade). */
-@utility clay {
-  box-shadow:
-    5px 7px 14px var(--neu-shade),
-    inset -3px -4px 6px oklch(0 0 0 / 0.16),
-    inset 3px 4px 6px oklch(1 0 0 / 0.45);
+/*
+ * Neumorphism for shadcn primitives, keyed on the data-slot / class tokens their cva emits
+ * (components/ui stays identical to origin/migration).
+ *
+ * Shadows live in @layer components: nothing in cva sets box-shadow except the focus/invalid
+ * ring utilities, which outrank this layer, so rings and call-site shadow-* still win.
+ */
+@layer components {
+  [data-slot="card"] {
+    @apply neu;
+  }
+
+  [data-slot="input"] {
+    @apply neu-inset;
+  }
+
+  [data-slot="select-trigger"] {
+    @apply neu-sm;
+  }
+
+  /* default / secondary / destructive / outline; ghost and link get nothing. */
+  [data-slot="button"]:is(
+    [class~="bg-primary"],
+    [class~="bg-secondary"],
+    [class~="bg-destructive/10"],
+    [class~="border-border"]
+  ) {
+    @apply neu-sm;
+  }
+
+  [data-slot="button"]:is(
+      [class~="bg-primary"],
+      [class~="bg-secondary"],
+      [class~="bg-destructive/10"],
+      [class~="border-border"]
+    ):active,
+  [data-slot="button"]:is([class~="bg-secondary"], [class~="border-border"])[aria-expanded="true"] {
+    @apply neu-inset;
+  }
+}
+
+/*
+ * Surface (bg / border / radius) is unlayered on purpose: cva's own utilities (bg-card, bg-input/20,
+ * border-input, rounded-md, ...) outrank any @layer components rule. Every rule is gated on the exact
+ * token cva emits, so a call-site className that replaces the token (twMerge drops it) turns the rule
+ * off. Resting borders only: focus-visible / aria-invalid keep their ring-coloured borders.
+ */
+[data-slot="card"][class~="bg-card"] {
+  @apply bg-background;
+}
+
+[data-slot="card"][class~="border-border/80"] {
+  @apply border-transparent;
+}
+
+:is([data-slot="input"], [data-slot="select-trigger"])[class~="bg-input/20"] {
+  @apply bg-background;
+}
+
+:is([data-slot="input"], [data-slot="select-trigger"])[class~="border-input"]:not(
+    :focus-visible,
+    [aria-invalid="true"]
+  ) {
+  @apply border-transparent;
+}
+
+[data-slot="button"][class~="border-border"] {
+  @apply bg-background;
+}
+
+[data-slot="button"][class~="border-border"]:not(:focus-visible, [aria-invalid="true"]) {
+  @apply border-transparent;
+}
+
+[data-slot="button"][class~="rounded-md"]:is([class~="bg-primary"], [class~="bg-destructive/10"]) {
+  @apply rounded-xl;
 }

@@ -18,8 +18,8 @@ async function main() {
     args.includes("--clean") || args.includes("--reset") || process.env.RESET === "true";
 
   console.log("=================================================");
-  console.log("🚀 Starting Mesto Modular Test Database Seeder");
-  console.log(`📡 Supabase Endpoint: ${SUPABASE_URL}`);
+  console.log("Starting Mesto Modular Test Database Seeder");
+  console.log(`Supabase Endpoint: ${SUPABASE_URL}`);
   console.log("=================================================");
 
   if (shouldClean) {
@@ -54,11 +54,11 @@ async function main() {
   await seedWeighments({ automatic, manual });
 
   console.log("\n=================================================");
-  console.log("🎉 Test database seeding complete with zero errors!");
+  console.log("Test database seeding complete with zero errors!");
   console.log("=================================================");
 }
 
 main().catch((err) => {
-  console.error("❌ Test seeding failed:", err);
+  console.error("Test seeding failed:", err);
   process.exit(1);
 });

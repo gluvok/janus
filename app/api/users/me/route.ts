@@ -41,7 +41,7 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
 
   const { name, username, password } = validation.data;
 
-  if (password && password.trim()) {
+  if (password) {
     const { data: row } = await supabase
       .from("users")
       .select("password_hash")
@@ -60,13 +60,13 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
       name,
       username,
       role: context.user.role,
-      ...(password && password.trim() ? { password: password.trim() } : {}),
+      ...(password ? { password } : {}),
     },
     context.factory.id,
   );
 
   // trg_invalidate_sessions deletes this user's sessions (including this one) on username/password change.
-  const reauth = Boolean(password && password.trim()) || updated.username !== context.user.username;
+  const reauth = Boolean(password) || updated.username !== context.user.username;
   const response = NextResponse.json({
     data: updated,
     reauth,

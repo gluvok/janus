@@ -9,7 +9,12 @@ import type { Factory } from "@/app/settings/types";
 export interface ApiContext {
   user: User;
   factory: Factory;
+  /** Resolved dynamic route segments (e.g. `{ id: "5" }` for `/[id]`); empty for static routes. */
+  params: Record<string, string>;
 }
+
+/** Second argument Next.js passes to route handlers; `params` is a Promise since Next 15. */
+type NextRouteContext = { params: Promise<Record<string, string>> };
 
 export class ServiceError extends Error {
   constructor(
@@ -29,23 +34,22 @@ export function validationErrorResponse(error: z.ZodError): NextResponse {
 }
 
 /**
- * Standardized higher-order wrapper for API route handlers.
- * Catches AuthError, ServiceError, and generic exceptions,
- * automatically extracts authenticated ApiContext from proxy headers,
- * and returns clean, uniform NextResponse envelopes across all endpoints.
- * When `options.roles` is set, sessions whose role is not listed get 403.
+ * Wraps an API route handler: reads the session from proxy headers, returns 403 when
+ * `options.roles` is set and the session's role is not listed, and maps AuthError,
+ * ServiceError and unexpected errors to status responses.
  */
 export function handleApiRoute(
   handler: (request: Request, context: ApiContext) => Promise<NextResponse>,
   options: { roles?: readonly UserRole[] } = {},
-): (request: Request) => Promise<NextResponse> {
-  return async (request: Request) => {
+): (request: Request, routeContext?: NextRouteContext) => Promise<NextResponse> {
+  return async (request: Request, routeContext?: NextRouteContext) => {
     try {
       const session = getAuthSession(request);
       if (!isRoleAllowed(options.roles, session.user.role)) {
         throw new AuthError("Forbidden", StatusCodes.FORBIDDEN);
       }
-      return await handler(request, { user: session.user, factory: session.factory });
+      const params = (await routeContext?.params) ?? {};
+      return await handler(request, { user: session.user, factory: session.factory, params });
     } catch (err: unknown) {
       if (err instanceof AuthError) {
         return NextResponse.json({ error: err.message }, { status: err.statusCode });

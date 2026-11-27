@@ -50,10 +50,6 @@ function ActionsTrigger() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Copy Only Row Action (Weighments)                                          */
-/* -------------------------------------------------------------------------- */
-
 export interface CopyRowActionProps {
   copyText: string;
   copyLabel: string;
@@ -126,10 +122,6 @@ export function CopyRowAction({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Editable Row Actions (Centers)                                             */
-/* -------------------------------------------------------------------------- */
-
 export interface EditableRowActionsProps {
   copyText: string;
   copyLabel: string;
@@ -166,10 +158,6 @@ export function EditableRowActions({
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Full Row Actions (Users)                                                   */
-/* -------------------------------------------------------------------------- */
 
 export interface FullRowActionsProps {
   copyText: string;

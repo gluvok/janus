@@ -67,7 +67,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const name = watch("name");
   const receiptImagesPerRow = watch("receipt_images_per_row");
 
-  // Synchronize from cached factory store on dialog open
   useEffect(() => {
     if (open) {
       setServerError(null);
@@ -76,7 +75,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         setFactory(current);
         reset(getFactoryFormValues(current));
       } else {
-        // Fallback fetch if store was not yet initialized
         axios
           .get<FactoryApiResponse>("/api/factories")
           .then((res) => {

@@ -78,6 +78,10 @@ assert.ok(fresh.startsWith("$argon2id$"));
 assert.equal(await verifyPassword("pw-123", fresh), true);
 assert.equal(await verifyPassword("nope", fresh), false);
 assert.equal(await verifyPassword("x", "not-a-hash"), false); // never throws
+// passwords are hashed exactly as given (login verifies untrimmed), so surrounding spaces must round-trip
+const spaced = await hashPassword("  pw 123  ");
+assert.equal(await verifyPassword("  pw 123  ", spaced), true);
+assert.equal(await verifyPassword("pw 123", spaced), false);
 // DUMMY_HASH: static, same cost params as real hashes → missing-user path costs the same as a wrong password.
 const params = (h: string) => h.split("$").slice(1, 4).join("$"); // argon2id$v=19$m=…,t=…,p=…
 assert.equal(params(DUMMY_HASH), params(fresh));

@@ -1,9 +1,3 @@
-/**
- * @file lib/api-query-params.ts
- * @description Parameter parsing, Zod schemas, date range validation, and pagination metadata
- * utilities for API query strings.
- */
-
 import { z } from "zod";
 
 export interface PaginationParams {
@@ -32,10 +26,7 @@ export const paginationQuerySchema = z.object({
 
 export const dateQuerySchema = z.string().trim().pipe(z.coerce.date());
 
-/**
- * Parses and validates pagination parameters from URL search params using Zod.
- * Automatically coerces and clamps page (>= 1) and pageSize ([1, 100]), falling back to defaults.
- */
+/** Non-numeric or out-of-range `page` / `pageSize` fall back to the defaults (1 / 15); max pageSize is 100. */
 export function parsePagination(searchParams: URLSearchParams): PaginationParams {
   const { page, pageSize } = paginationQuerySchema.parse({
     page: searchParams.get("page") ?? undefined,
@@ -45,9 +36,6 @@ export function parsePagination(searchParams: URLSearchParams): PaginationParams
   return { page, pageSize, offset: (page - 1) * pageSize };
 }
 
-/**
- * Creates a reusable Zod schema to parse and validate multi-column sort queries.
- */
 export function createSortRulesSchema<T extends string>(allowedColumns: readonly T[]) {
   const allowedSet = new Set<string>(allowedColumns);
   return z.string().transform((val) => {
@@ -68,10 +56,7 @@ export function createSortRulesSchema<T extends string>(allowedColumns: readonly
   });
 }
 
-/**
- * Parses multi-column sorting parameters from URL search params (e.g. "?sort=col1.asc,col2.desc") using Zod.
- * Validates each requested column against an allowed whitelist and applies the explicit default fallback if empty.
- */
+/** Parses `?sort=col1.asc,col2.desc`; `none` disables sorting, and invalid or empty input falls back to `defaultSort`. */
 export function parseSorting<T extends string>(
   searchParams: URLSearchParams,
   allowedColumns: readonly T[],
@@ -92,10 +77,7 @@ export function parseSorting<T extends string>(
   return [defaultSort];
 }
 
-/**
- * Applies optional 'from' and 'to' date range filters to a Supabase query with Zod validation.
- * 'to' date is normalized to end-of-day (23:59:59.999) for inclusive date matching.
- */
+/** `to` is moved to 23:59:59.999 (server-local time) so the end date is inclusive. */
 export function applyDateRange<
   TQuery extends {
     gte(col: string, val: string): TQuery;
@@ -124,9 +106,6 @@ export function applyDateRange<
   return updated;
 }
 
-/**
- * Formats a standardized JSON response envelope with data and pagination metadata.
- */
 export function formatPaginatedResponse<T>(
   data: T[] | null | undefined,
   count: number | null | undefined,

@@ -7,13 +7,15 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /** Hermes device ingest: one multipart upload, plus the Idempotency-Key header as `idempotency_key`. */
 export const ingestSchema = z.object({
-  // Charset is restricted because the key becomes part of the storage path.
+  // UUIDs are path-safe (the key becomes part of the storage path); lowercased so app and DB agree.
   idempotency_key: z
-    .string({ error: "Idempotency-Key header is required." })
-    .trim()
-    .min(8)
-    .max(128)
-    .regex(/^[\w-]+$/, "Idempotency-Key may only contain letters, digits, '_' and '-'."),
+    .uuidv7({
+      error: (issue) =>
+        issue.input === undefined
+          ? "Idempotency-Key header is required."
+          : "Idempotency-Key must be a UUIDv7.",
+    })
+    .toLowerCase(),
   vehicle_number: z.preprocess(
     (v) =>
       typeof v === "string" && /^\s*(NO_PLATE_DETECTED|REJECTED_\w*)\s*$/i.test(v) ? NO_PLATE : v,

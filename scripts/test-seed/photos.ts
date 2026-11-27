@@ -194,9 +194,7 @@ async function getBaseImageBuffer(assetIndex: number): Promise<Buffer | null> {
         consecutiveFetchFailures++;
         if (consecutiveFetchFailures >= 3) {
           wikimediaUnreachable = true;
-          console.warn(
-            "  ℹ️ Wikimedia rate-limited or unreachable; using direct open-license URLs.",
-          );
+          console.warn("  Wikimedia rate-limited or unreachable; using direct open-license URLs.");
         }
         return null;
       }
@@ -208,7 +206,7 @@ async function getBaseImageBuffer(assetIndex: number): Promise<Buffer | null> {
       consecutiveFetchFailures++;
       if (consecutiveFetchFailures >= 3) {
         wikimediaUnreachable = true;
-        console.warn("  ℹ️ Wikimedia network timeout; switching to direct open-license URLs.");
+        console.warn("  Wikimedia network timeout; switching to direct open-license URLs.");
       }
       return null;
     }
@@ -227,7 +225,7 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
   if (targets.length === 0) return urlMap;
 
   console.log(
-    `\n📸 Processing ${targets.length} open-license transport photos for Supabase Storage ('mesto' bucket)...`,
+    `\nProcessing ${targets.length} open-license transport photos for Supabase Storage ('mesto' bucket)...`,
   );
 
   let rlsBlocked = false;
@@ -298,7 +296,7 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
             verified200Count++;
             urlMap.set(storagePath, publicUrl);
           } else {
-            console.warn(`  ⚠️ Public URL returned ${verifyRes.status}: ${publicUrl}`);
+            console.warn(`  Public URL returned ${verifyRes.status}: ${publicUrl}`);
             urlMap.set(storagePath, publicUrl);
           }
         } catch {
@@ -322,14 +320,14 @@ export async function uploadAndVerifyPhotos(targets: PhotoTarget[]): Promise<Map
     );
   } else if (rlsBlocked) {
     console.warn(
-      "  ⚠️ Supabase Storage upload blocked by RLS policy. Please apply the updated policy from schema.sql in Supabase SQL Editor.",
+      "  Supabase Storage upload blocked by RLS policy. Please apply the updated policy from schema.sql in Supabase SQL Editor.",
     );
     console.log(
-      "  ℹ️ Used verified direct open-license Wikimedia Commons photo URLs across all weighments.",
+      "  Used verified direct open-license Wikimedia Commons photo URLs across all weighments.",
     );
   } else if (offline) {
     console.warn(
-      "  ⚠️ Supabase Storage is unreachable. Used verified direct open-license Wikimedia Commons photo URLs.",
+      "  Supabase Storage is unreachable. Used verified direct open-license Wikimedia Commons photo URLs.",
     );
   }
 

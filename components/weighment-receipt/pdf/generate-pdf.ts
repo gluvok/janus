@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
 
+const LAYOUT_SETTLE_MS = 200;
+
 export async function generateReceiptPdf(
   receiptElement: React.ReactElement,
   fileName: string,
@@ -22,31 +24,27 @@ export async function generateReceiptPdf(
   try {
     root.render(receiptElement);
 
-    // Synchronize font loading and settle DOM layout
-    if (typeof document !== "undefined" && document.fonts?.ready) {
+    if (document.fonts?.ready) {
       await document.fonts.ready;
     }
 
-    // Wait for all img elements in container to finish loading
     const images = Array.from(offscreenContainer.querySelectorAll("img"));
-    if (images.length > 0) {
-      await Promise.all(
-        images.map(
-          (img) =>
-            new Promise((resolve) => {
-              if (img.complete) {
-                resolve(true);
-              } else {
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(false);
-              }
-            }),
-        ),
-      );
-    }
+    await Promise.all(
+      images.map(
+        (img) =>
+          new Promise((resolve) => {
+            if (img.complete) {
+              resolve(true);
+            } else {
+              img.onload = () => resolve(true);
+              img.onerror = () => resolve(false);
+            }
+          }),
+      ),
+    );
 
-    // Allow DOM layout to settle
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // html2canvas measures the DOM; give React's async render time to commit and lay out
+    await new Promise((resolve) => setTimeout(resolve, LAYOUT_SETTLE_MS));
 
     const pageElements = offscreenContainer.querySelectorAll<HTMLElement>(".receipt-page");
     if (pageElements.length === 0) {

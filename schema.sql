@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.centers (
   id SERIAL PRIMARY KEY,
   factory_id INT NOT NULL REFERENCES public.factories(id) ON DELETE RESTRICT,
   name TEXT NOT NULL,
-  api_key_hash TEXT NOT NULL UNIQUE,
+  api_key_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT uq_centers_factory_name UNIQUE (factory_id, name),
@@ -90,6 +90,8 @@ SET api_key_hash = encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), '
 WHERE api_key_hash IS NULL;
 ALTER TABLE public.centers ALTER COLUMN api_key_hash SET NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_centers_api_key_hash ON public.centers (api_key_hash);
+-- Older schema versions declared the column UNIQUE inline: a duplicate of the index above.
+ALTER TABLE public.centers DROP CONSTRAINT IF EXISTS centers_api_key_hash_key;
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -210,6 +212,7 @@ CREATE TABLE IF NOT EXISTS public.automatic_entries (
   deleted_at TIMESTAMPTZ,
   CONSTRAINT chk_automatic_entries_vehicle CHECK (vehicle_number = 'NO_PLATE_DETECTED' OR length(trim(vehicle_number)) BETWEEN 8 AND 11),
   CONSTRAINT chk_automatic_entries_images CHECK (cardinality(images) <= 3),
+  CONSTRAINT chk_automatic_entries_idempotency_key CHECK (idempotency_key ~ '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' OR idempotency_key ~ '^legacy-(entry|auto)-[0-9]+$'),
   CONSTRAINT uq_automatic_entries_center_idem UNIQUE (center_id, idempotency_key)
 );
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_center_id ON public.automatic_entries (center_id);
@@ -230,6 +233,14 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.automatic_entries'::regclass AND conname = 'chk_automatic_entries_images') THEN
     ALTER TABLE public.automatic_entries ADD CONSTRAINT chk_automatic_entries_images CHECK (cardinality(images) <= 3) NOT VALID;
+  END IF;
+  -- Keys are lowercase UUIDv7 (the app lowercases); `legacy-entry-<id>` is what the legacy backfill below writes.
+  -- Older ingest code stored server-made keys (sha256 hex, random v4 UUIDs). Nothing outside the DB refers to them,
+  -- so rename them to `legacy-auto-<id>` first; otherwise every later UPDATE (soft delete included) on those rows fails.
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.automatic_entries'::regclass AND conname = 'chk_automatic_entries_idempotency_key') THEN
+    UPDATE public.automatic_entries SET idempotency_key = 'legacy-auto-' || id
+    WHERE NOT (idempotency_key ~ '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' OR idempotency_key ~ '^legacy-(entry|auto)-[0-9]+$');
+    ALTER TABLE public.automatic_entries ADD CONSTRAINT chk_automatic_entries_idempotency_key CHECK (idempotency_key ~ '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' OR idempotency_key ~ '^legacy-(entry|auto)-[0-9]+$');
   END IF;
 END $$;
 

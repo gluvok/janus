@@ -65,7 +65,7 @@ function parseCliArgs(argv: string[]): CliOptions {
 
   const result = cliOptionsSchema.safeParse(raw);
   if (!result.success) {
-    console.error("❌ Invalid CLI arguments:");
+    console.error("Invalid CLI arguments:");
     for (const issue of result.error.issues) {
       console.error(`   • --${issue.path.join(".")}: ${issue.message}`);
     }
@@ -123,12 +123,12 @@ async function main() {
   }
 
   console.log("=================================================");
-  console.log("🚀 Mesto Client Onboarding Seeder");
-  console.log(`📡 Supabase Endpoint: ${SUPABASE_URL}`);
+  console.log("Mesto Client Onboarding Seeder");
+  console.log(`Supabase Endpoint: ${SUPABASE_URL}`);
   console.log("=================================================");
 
   // 1. QUERY EXISTING DATA COUNTS & SUFFIXES IN SINGLE BATCH
-  console.log("\n🔍 Inspecting existing database state...");
+  console.log("\nInspecting existing database state...");
 
   const [factoriesRes, adminsRes] = await Promise.all([
     supabase.from("factories").select("id, name"),
@@ -166,7 +166,7 @@ async function main() {
 
   // 2. CREATE FACTORY
   console.log(
-    `\n🏭 Creating factory '${factoryName}' (receipt images per row: ${args.receipt_images_per_row})...`,
+    `\nCreating factory '${factoryName}' (receipt images per row: ${args.receipt_images_per_row})...`,
   );
   const factoryApiKey = crypto.randomBytes(16).toString("hex");
   const { data: createdFactory, error: factoryError } = await supabase
@@ -187,7 +187,7 @@ async function main() {
   );
 
   // 3. CREATE ADMIN USER
-  console.log(`\n👤 Provisioning admin user '${adminUsername}'...`);
+  console.log(`\nProvisioning admin user '${adminUsername}'...`);
   const adminHash = await hashPassword(args.admin_password);
   const { data: createdAdmin, error: adminError } = await supabase
     .from("users")
@@ -209,7 +209,7 @@ async function main() {
   );
 
   // 4. CREATE CENTERS WITH API KEYS IN O(1) BULK INSERT
-  console.log(`\n⚖️ Provisioning ${args.centers} center(s) with dedicated API keys...`);
+  console.log(`\nProvisioning ${args.centers} center(s) with dedicated API keys...`);
 
   // Plain keys live only here; the DB stores their SHA-256.
   const centerKeys = new Map(
@@ -239,9 +239,9 @@ async function main() {
 
   // 5. SUMMARY
   console.log("\n=================================================");
-  console.log("🎉 Client Onboarding Completed Successfully!");
+  console.log("Client Onboarding Completed Successfully!");
   console.log("=================================================");
-  console.log("📋 Summary of Provisioned Resources:");
+  console.log("Summary of Provisioned Resources:");
   console.log(
     `  • Factory:   ${createdFactory.name} (ID: ${createdFactory.id}) ➜ API Key: ${createdFactory.api_key}`,
   );
@@ -258,6 +258,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("❌ Onboarding seeding failed:", err);
+  console.error("Onboarding seeding failed:", err);
   process.exit(1);
 });

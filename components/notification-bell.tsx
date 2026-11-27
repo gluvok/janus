@@ -173,7 +173,7 @@ function BellPopover() {
       >
         <HugeiconsIcon icon={appIcons.notifications} className="size-[18px]" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary clay px-1 text-[10px] leading-none font-semibold text-primary-foreground tabular-nums">
+          <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] leading-none font-semibold text-primary-foreground tabular-nums">
             {unread > 9 ? "9+" : unread}
           </span>
         )}

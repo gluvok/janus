@@ -11,7 +11,7 @@ export async function seedFactories(): Promise<{
   primaryFactoryId: number;
   secondaryFactoryId: number;
 }> {
-  console.log("\n🏭 [1/5] Ensuring Core Factories...");
+  console.log("\n[1/5] Ensuring Core Factories...");
 
   const factoryConfigs: FactoryConfig[] = [
     { name: "Meow Meow factory name", receipt_images_per_row: 2 },

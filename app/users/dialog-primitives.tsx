@@ -47,10 +47,6 @@ export const ROLE_OPTIONS = [
   { value: "base", label: "Base", icon: UserIcon },
 ];
 
-/* -------------------------------------------------------------------------- */
-/* Shell: Dialog Frame, Header, Error Banner, Dirty Indicator & Action Buttons */
-/* -------------------------------------------------------------------------- */
-
 interface UserDialogShellProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -117,10 +113,6 @@ export function UserDialogShell({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Full Name Field                                                            */
-/* -------------------------------------------------------------------------- */
-
 interface FullNameFieldProps {
   value: string;
   onChange: (val: string) => void;
@@ -158,10 +150,6 @@ export function FullNameField({
     </Field>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Standalone Username and Password Fields                                    */
-/* -------------------------------------------------------------------------- */
 
 export interface UsernameFieldProps {
   value: string;
@@ -256,10 +244,6 @@ export function PasswordField({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Credentials 2-Column Grid (Username & Password)                            */
-/* -------------------------------------------------------------------------- */
-
 interface CredentialsFieldsProps {
   username: string;
   setUsername: (val: string) => void;
@@ -302,10 +286,6 @@ export function CredentialsFields({
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* System Role Selector                                                       */
-/* -------------------------------------------------------------------------- */
 
 interface SystemRoleSelectProps {
   value: UserRole;
@@ -375,10 +355,6 @@ export function SystemRoleSelect({ value, onChange, error }: SystemRoleSelectPro
     </Field>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Composite Form Fields (Full Name, Role & Credentials)                      */
-/* -------------------------------------------------------------------------- */
 
 export interface UserFormFieldsProps {
   name: string;

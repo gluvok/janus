@@ -14,7 +14,7 @@ export async function seedUsers({
   primaryFactoryId: number;
   secondaryFactoryId: number;
 }): Promise<Map<string, number>> {
-  console.log("\n👥 [2/5] Seeding Users with all role_enum variants...");
+  console.log("\n[2/5] Seeding Users with all role_enum variants...");
 
   const [adminHash, managerHash, operatorHash, baseHash] = await Promise.all([
     hashPassword("admin123"),

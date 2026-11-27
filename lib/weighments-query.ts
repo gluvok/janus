@@ -1,14 +1,10 @@
-/**
- * @file lib/weighments-query.ts
- * @description Dedicated backend query utilities for automatic and manual weighments views.
- */
-
 import { NextResponse } from "next/server";
 import {
   executePaginatedEntityQuery,
   commaSeparatedIdsSchema,
   applyCommaSeparatedIdFilter,
   applyCommaSeparatedEnumFilter,
+  type FilterBuilder,
 } from "@/lib/api-query";
 import {
   WEIGHMENT_TYPES,
@@ -56,10 +52,12 @@ export const ALLOWED_MANUAL_WEIGHMENT_SORT_COLUMNS = [
 
 export type ManualWeighmentSortColumn = (typeof ALLOWED_MANUAL_WEIGHMENT_SORT_COLUMNS)[number];
 
-export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchParams): any {
+export function applyCommonWeighmentFilters<TQuery extends FilterBuilder<TQuery>>(
+  query: TQuery,
+  searchParams: URLSearchParams,
+): TQuery {
   let filteredQuery = query;
 
-  // Filter by single weighment id if explicitly provided
   const idParam = searchParams.get("id")?.trim();
   if (idParam) {
     const parsedId = Number(idParam);
@@ -68,7 +66,6 @@ export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchP
     }
   }
 
-  // Filter by in_center_id and out_center_id
   filteredQuery = applyCommaSeparatedIdFilter(
     filteredQuery,
     searchParams.get("in_center_id"),
@@ -80,7 +77,6 @@ export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchP
     "out_center_id",
   );
 
-  // Filter by combined centers (in_center or out_center)
   const centerParam = searchParams.get("center_ids") || searchParams.get("center_id");
   if (centerParam && centerParam !== "all") {
     const parsedIds = commaSeparatedIdsSchema.safeParse(centerParam);
@@ -95,7 +91,6 @@ export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchP
     }
   }
 
-  // Filter by type ('in' | 'out' | 'void')
   filteredQuery = applyCommaSeparatedEnumFilter(
     filteredQuery,
     searchParams.get("type"),
@@ -106,7 +101,10 @@ export function applyCommonWeighmentFilters(query: any, searchParams: URLSearchP
   return filteredQuery;
 }
 
-export function applyManualWeighmentFilters(query: any, searchParams: URLSearchParams): any {
+export function applyManualWeighmentFilters<TQuery extends FilterBuilder<TQuery>>(
+  query: TQuery,
+  searchParams: URLSearchParams,
+): TQuery {
   let filteredQuery = applyCommonWeighmentFilters(query, searchParams);
   filteredQuery = applyCommaSeparatedIdFilter(
     filteredQuery,

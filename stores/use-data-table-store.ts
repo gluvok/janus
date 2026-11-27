@@ -13,7 +13,6 @@ import {
   DEFAULT_TABLE_ITEM_STATE,
 } from "@/lib/table-strategy";
 
-export type { TableItemState };
 export { DEFAULT_TABLE_ITEM_STATE };
 
 function resolveUpdater<T>(updaterOrValue: Updater<T>, previousValue: T): T {

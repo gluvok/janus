@@ -1,6 +1,6 @@
 # GluVok / Mesto Weighbridge Platform
 
-A centralized operational platform and automation management system for weighbridge facilities, featuring dual-mode (Automatic and Manual) weighments tracking, multi-scale support, role-based access control, persistent session authentication, and hardware integration.
+Weighbridge management app. Scale devices post vehicle readings (automatic entries), manual entries record the user who made them, and a weighment pairs two entries into gross, tare and net weight. Data is scoped per factory, and users have one of four roles: `admin`, `manager`, `operator`, `base`.
 
 ---
 
@@ -8,87 +8,77 @@ A centralized operational platform and automation management system for weighbri
 
 ### Core Entities
 
-- **Factories**: Master enterprise tenants managing scales, settings, and receipt formatting.
-- **Centers**: Processing facilities and scale locations. Each center has an API key for hardware scale and camera integration, stored only as a SHA-256 hash (`api_key_hash`).
-- **Users**: System operators, managers, and administrators with argon2 password hashing.
-- **Sessions**: Database-backed user authentication sessions with 400-day persistent rolling HTTP-only cookies (`mesto_session`).
-- **Automatic Weighments**: Hardware/ANPR camera-captured vehicle weighments. Features PostgreSQL stored generated columns (`gross`, `tare`, `net`, `type`), inbound/outbound weights, timestamps, and separate inbound/outbound photo arrays (`in_images`, `out_images`) unified via stored generated column `images = in_images || out_images`.
-- **Manual Weighments**: Operator-recorded weighments with full creator accountability (`creator_id`), inbound/outbound weights, and photo arrays (`in_images`, `out_images`).
-- **Support & Services**: Common reusable `UnderConstruction` placeholder pages at `/support` and `/services`.
+- **Factories**: Tenants. Each has a name and a receipt layout setting (`receipt_images_per_row`, 1 or 2).
+- **Centers**: Scale locations within a factory. Each has an API key for device ingest, stored only as a SHA-256 hash (`api_key_hash`).
+- **Users**: Staff with a role (`admin`, `manager`, `operator` or `base`) and an argon2 password hash.
+- **Sessions**: Database-backed login sessions, referenced by the HTTP-only `mesto_session` cookie. Only the token's SHA-256 is stored.
+- **Entries**: One scale reading: vehicle number, weight, photos. `automatic_entries` come from devices, hold up to 3 photos, and carry an `idempotency_key`, unique per center. `manual_entries` also record `creator_id`.
+- **Weighments**: `automatic_weighments` and `manual_weighments` pair an `in_entry_id` with an `out_entry_id`. For device ingest, `ingest_automatic_entry` pairs a new entry with the latest unpaired entry for the same plate in the factory (never for `NO_PLATE_DETECTED`).
+- **Support & Services**: Placeholder pages at `/support` and `/services`.
 
-### Stored Generated Columns (`automatic_weighments` & `manual_weighments`)
+### Weighment fields (`automatic_weighments` and `manual_weighments`)
 
-- `images`: `in_images || out_images` (PostgreSQL stored concatenation of inbound and outbound camera photos)
-- `gross`: `CASE WHEN out_weight IS NULL THEN in_weight ELSE GREATEST(in_weight, out_weight) END` (always valid and non-null)
-- `tare`: `CASE WHEN out_weight IS NULL THEN NULL ELSE LEAST(in_weight, out_weight) END` (null only in pending automatic weighments; always non-null in manual weighments)
-- `net`: `CASE WHEN out_weight IS NULL THEN NULL ELSE ABS(in_weight - out_weight) END` (null only in pending automatic weighments; always non-null in manual weighments)
-- `type`:
-  - `automatic_weighments.type` (`automatic_weighment_type`):
-    ```sql
-    CASE
-        WHEN out_weight IS NULL THEN 'pending'::automatic_weighment_type
-        WHEN in_weight > out_weight THEN 'in'::automatic_weighment_type
-        WHEN in_weight < out_weight THEN 'out'::automatic_weighment_type
-        ELSE 'unassigned'::automatic_weighment_type
-    END
-    ```
-  - `manual_weighments.type` (`complete_weighment_type`):
-    ```sql
-    CASE
-        WHEN in_weight > out_weight THEN 'in'::complete_weighment_type
-        WHEN in_weight < out_weight THEN 'out'::complete_weighment_type
-        ELSE 'unassigned'::complete_weighment_type
-    END
-    ```
-- **Mode-Specific Layout**: Automatic weighments omit the Operator column and show In/Out ANPR camera badges. Manual weighments include the Operator column (`creator`). The table defaults to `updated_at DESC`.
+- `gross`, `tare` and `type` are set by a `BEFORE INSERT/UPDATE` trigger (`trigger_weighments_auto_populate`), which also rejects pairing entries from different factories. `gross` is the heavier entry weight and `tare` the lighter one.
+- `type` (`weighment_type`) is `in` when the in entry is heavier, `out` when the out entry is heavier, and `void` when they are equal.
+- `net` is a stored generated column: `gross - tare`.
+- The `*_weighments_view` views add `in_images`, `out_images` and `images` (both arrays joined), plus in/out times and centers. The manual view adds in/out creator details.
+- **Mode-Specific Layout**: Manual weighments add In/Out creator columns to the table. Weighment lists sort by `created_at`, newest first.
 
 ### Advanced Multi-Column Search
 
-Search queries across data tables dynamically evaluate type-aware multi-column matching:
+Search matches these columns:
 
-- **Centers**: `name` (text ILIKE) and `id` (integer exact match).
-- **Weighments**: `vehicle_number` (text ILIKE), `id` (integer exact match), weights: `net`, `gross`, `tare`, `in_weight`, `out_weight` (numeric match), and `in_center`/`out_center` facility names (subquery match).
-- **Users**: `name`, `username` (text ILIKE), and `id` (integer match).
+- **Centers**: `name` (ILIKE) and `id` (exact).
+- **Weighments**: `vehicle_number` and in/out center names (ILIKE), `id` (exact), `gross`, `tare` and `net` (exact), and `type` (substring of `in`, `out`, `void`). Manual weighments also match in/out creator names and usernames (ILIKE) and creator roles.
+- **Users**: `name` and `username` (ILIKE), `id` (exact), and `role` (substring of the role name).
 
 ---
 
 ## Authentication & Session Management
 
-- **Session Architecture**: Next.js route protection via `proxy.ts` verifying the `mesto_session` cookie against an in-memory LRU cache backed by PostgreSQL `sessions` table (joining `users` and `factories`). Injects validated user and factory headers (`x-user-id`, `x-factory-id`, `x-user-role`, `x-user-name`, `x-user-username`, `x-user-created-at`, `x-user-updated-at`, `x-factory-name`, `x-factory-receipt-images`, `x-factory-created-at`, `x-factory-updated-at`) into downstream requests with < 0.1ms latency on warm requests.
-- **Auto-Guarded API Routes**: All protected route handlers wrapped with `handleApiRoute` automatically verify session headers and inject authenticated `{ user, factory }` context.
-- **Automatic Factory Scoping**: All paginated queries (`executePaginatedEntityQuery` and `buildPaginatedEntityResult`) automatically enforce tenant isolation by `factory_id` across `centers`, `users`, `factories`, and `weighments` beforehand.
-- **Session Duration**: Standard 7-day persistent server-set HTTP-only cookie with zero speculative rolling write updates.
-- **Credentials**: Standard username and password (argon2 hashed). No external emails or sign-up workflows.
-- **Dynamic Factory Tenancy**: All operations, center filtering, and user creation are dynamically scoped to the authenticated user's `factory_id`.
+- **Session Architecture**: `proxy.ts` checks the `mesto_session` cookie against an in-memory LRU cache (per instance, 10 s TTL) backed by the PostgreSQL `sessions` table (joining `users` and `factories`). It injects the user and factory into request headers (`x-user-id`, `x-factory-id`, `x-user-role`, `x-user-name`, `x-user-username`, `x-user-created-at`, `x-user-updated-at`, `x-factory-name`, `x-factory-receipt-images`, `x-factory-created-at`, `x-factory-updated-at`), which route handlers read instead of querying.
+- **Guarded API Routes**: Protected route handlers are wrapped with `handleApiRoute`, which reads the session headers, passes `{ user, factory, params }` to the handler, and returns 401 without a session or 403 when the role is not allowed.
+- **Factory Scoping**: All paginated queries (`executePaginatedEntityQuery` and `buildPaginatedEntityResult`) enforce tenant isolation by `factory_id` across `centers`, `users`, `factories`, and the entry and weighment views.
+- **Session Duration**: 12 hours from login. The limit is fixed: nothing renews it, and the cookie `maxAge` matches (`SESSION_TTL_SECONDS` in `lib/auth.ts`). Each login deletes that user's expired sessions.
+- **Credentials**: Username and password (argon2 hashed). Admins create accounts with `POST /api/users`; there is no sign-up or email flow.
+- **Factory Tenancy**: All operations, center filtering, and user creation are scoped to the authenticated user's `factory_id`.
 - **Client State**: RootLayout initializes separated `useUserStore` (user identity) and `useFactoryStore` (facility preferences) directly from the validated session. `AppSidebar`, `AccountDialog`, and `SettingsDialog` read and update these stores reactively.
-- **Mode Persistence**: Automatic/Manual weighment mode is persisted per-table inside the `mesto_tables_state` cookie (`tables.weighments.mode`) without global state pollution.
+- **Mode Persistence**: Automatic or Manual mode is saved per page (`entries`, `weighments`) in `localStorage` under `mesto_entity_mode`.
 
 ---
 
 ## API Routes
 
-| Method   | Endpoint                    | Description                                                                                           |
-| :------- | :-------------------------- | :---------------------------------------------------------------------------------------------------- |
-| `POST`   | `/api/auth/login`           | Authenticate via username & password, issue rolling session cookie.                                   |
-| `POST`   | `/api/auth/logout`          | Invalidate session in database and delete session cookie.                                             |
-| `GET`    | `/api/users/me`             | Retrieve live profile details and factory configuration for authenticated user.                       |
-| `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                                 |
-| `GET`    | `/api/factories`            | Retrieve factory configuration (served directly from memory session cache with 0 DB queries).         |
-| `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                                    |
-| `GET`    | `/api/centers`              | List centers for authenticated factory (never returns `api_key_hash`). Supports pagination & sorting. |
-| `PATCH`  | `/api/centers`              | Update center details.                                                                                |
-| `POST`   | `/api/entries/automatic`    | Hermes device ingest (multipart). `x-api-key` + `Idempotency-Key`, no session. See below.             |
-| `GET`    | `/api/entries/automatic`    | List automatic entries (session required).                                                            |
-| `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).              |
-| `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                                        |
-| `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                                |
-| `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                                 |
-| `PATCH`  | `/api/users`                | Update staff user accounts.                                                                           |
-| `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/entries).              |
+| Method   | Endpoint                         | Description                                                                                                                      |
+| :------- | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/auth/login`                | Authenticate via username & password, issue session cookie.                                                                      |
+| `POST`   | `/api/auth/logout`               | Invalidate session in database and delete session cookie.                                                                        |
+| `GET`    | `/api/users/me`                  | Return the session's user and factory.                                                                                           |
+| `PATCH`  | `/api/users/me`                  | Update own name, username or password (a new password needs `current_password`). A username or password change ends the session. |
+| `GET`    | `/api/factories`                 | Return the session's factory configuration (no query in the handler).                                                            |
+| `PATCH`  | `/api/factories`                 | Update factory configuration for the authenticated user's factory.                                                               |
+| `GET`    | `/api/centers`                   | List centers for authenticated factory (never returns `api_key_hash`). Supports pagination & sorting.                            |
+| `PATCH`  | `/api/centers`                   | Rename a center.                                                                                                                 |
+| `POST`   | `/api/entries/automatic`         | Hermes device ingest (multipart). `x-api-key` + `Idempotency-Key`, no session. See below.                                        |
+| `GET`    | `/api/entries/automatic`         | List automatic entries (session required).                                                                                       |
+| `GET`    | `/api/entries/manual`            | List manual entries with creator details.                                                                                        |
+| `GET`    | `/api/weighments/automatic`      | List automatic weighments (`gross`, `tare`, `net`, `type`, in/out entries and centers).                                          |
+| `PATCH`  | `/api/weighments/automatic/[id]` | Correct the vehicle number on a weighment and its two entries.                                                                   |
+| `DELETE` | `/api/weighments/automatic/[id]` | Soft-delete a weighment and its two entries.                                                                                     |
+| `GET`    | `/api/weighments/manual`         | List manual weighments with creator relations.                                                                                   |
+| `GET`    | `/api/users`                     | List staff users (Admin, Manager, Operator, Base) for current factory.                                                           |
+| `POST`   | `/api/users`                     | Create staff user accounts linked to current factory.                                                                            |
+| `PATCH`  | `/api/users`                     | Update staff user accounts.                                                                                                      |
+| `DELETE` | `/api/users`                     | Hard-delete users. Blocked with 409 while `manual_entries.creator_id` rows still reference them (`ON DELETE RESTRICT`).          |
+| `GET`    | `/api/notifications`             | Latest 20 notifications for the factory, plus the user's `seenAt`.                                                               |
+| `POST`   | `/api/notifications/seen`        | Mark notifications as seen now.                                                                                                  |
+| `GET`    | `/api/realtime/token`            | Issue a 10-minute Realtime JWT for the `factory:<id>` topic.                                                                     |
+
+`PATCH /api/centers` needs `admin` or `manager`. `PATCH /api/factories`, `POST`/`PATCH`/`DELETE /api/users` and the weighment `PATCH`/`DELETE` need `admin`. Notifications and `/api/realtime/token` allow `admin`, `manager` and `operator`. Every other session route accepts any role.
 
 ### Device ingest (Hermes)
 
-`POST /api/entries/automatic` takes Hermes's multipart upload (no session). Send the center's key in the `x-api-key` header and a unique `Idempotency-Key` header (8-128 chars of letters, digits, `_`, `-`; a UUIDv7 works). The key identifies the center, so there is no `center_id` field. In the Hermes license, `device_key` is the key.
+`POST /api/entries/automatic` takes Hermes's multipart upload (no session). Send the center's key in the `x-api-key` header and a unique `Idempotency-Key` header (must be a UUIDv7; uppercase is lowercased). The key identifies the center, so there is no `center_id` field. In the Hermes license, `device_key` is the key.
 
 Form fields: `vehicle_number` (plate, or `NO_PLATE_DETECTED` / `REJECTED_*`), `weight`, and up to 3 `file` parts (JPEG, 5 MB each).
 
@@ -133,9 +123,9 @@ pnpm type-check
 
 # Lint & Format
 pnpm lint
-pnpm fmt
+pnpm exec oxfmt <files>
 
-# Run validation & schema invariant test suite
+# Validation, security and UI tests
 pnpm test
 
 # Production build

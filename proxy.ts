@@ -28,10 +28,8 @@ export async function proxy(request: NextRequest) {
   const isApi = pathname.startsWith("/api");
   const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  // Validate session against database
   const session = sessionToken ? await getSessionUser(sessionToken) : null;
 
-  // Unauthenticated or invalid/expired session
   if (!session) {
     if (isLoginPage) {
       requestHeaders.set("x-pathname", pathname);
@@ -69,13 +67,11 @@ export async function proxy(request: NextRequest) {
     return res;
   }
 
-  // Authenticated user attempting to visit login page
   if (isLoginPage) {
     const nextUrl = safeNextPath(request.nextUrl.searchParams.get("next"));
     return NextResponse.redirect(new URL(nextUrl, request.url));
   }
 
-  // Authenticated request: inject user and factory headers for downstream consumption
   const sessionHeaders: Record<string, string> = {
     "x-user-id": String(session.user.id),
     "x-factory-id": String(session.user.factory_id),

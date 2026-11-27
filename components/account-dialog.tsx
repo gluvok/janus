@@ -40,7 +40,7 @@ const accountFormSchema = z
     password: passwordSchema.optional().or(z.literal("")),
     current_password: z.string().optional(),
   })
-  .refine((v) => !v.password?.trim() || Boolean(v.current_password), {
+  .refine((v) => !v.password || Boolean(v.current_password), {
     path: ["current_password"],
     error: "Current password is required to set a new one",
   });
@@ -121,12 +121,14 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
       password?: string;
       current_password?: string;
     } = {
-      name: values.name.trim(),
-      username: values.username.trim().toLowerCase(),
+      // zodResolver already ran nameSchema/usernameSchema (trim, lowercase).
+      name: values.name,
+      username: values.username,
     };
 
-    if (values.password && values.password.trim().length > 0) {
-      payload.password = values.password.trim();
+    // Passwords are sent exactly as typed: login compares them untrimmed.
+    if (values.password) {
+      payload.password = values.password;
       payload.current_password = values.current_password;
     }
 
