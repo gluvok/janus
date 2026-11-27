@@ -25,6 +25,8 @@ export const deviceVehicleNumberSchema = (fieldName = "Vehicle Number") =>
     z.union([z.literal("NO_PLATE_DETECTED"), indianPlateSchema(fieldName)]),
   );
 
+const idempotencyKeySchema = z.uuid("Idempotency-Key must be a UUID").optional();
+
 /**
  * Common schema fields shared across addEntrySchema and addDeviceEntrySchema.
  */
@@ -41,6 +43,7 @@ export const addEntrySchema = baseEntrySchema.extend({
   customer_id: optionalIntegerIdSchema("Customer").default(null),
   status: entryStatusSchema,
   images: z.array(z.string()).optional(),
+  idempotency_key: idempotencyKeySchema,
 });
 
 export const addDeviceEntrySchema = z.object({
@@ -48,6 +51,7 @@ export const addDeviceEntrySchema = z.object({
   center_id: integerIdSchema("Center"),
   detected_vehicle_number: deviceVehicleNumberSchema("Detected vehicle number"),
   images: z.array(z.string()).optional().default([]),
+  idempotency_key: idempotencyKeySchema,
 });
 
 export const editEntrySchema = z.object({

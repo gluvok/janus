@@ -129,6 +129,8 @@ When a truck arrives at the weighbridge:
 - **Optional Fields**:
   - `file` or `files` (binary): Camera snapshot (`image/jpeg`, `image/png`, or `image/webp`). Up to 10MB.
 
+> **Retries:** Send `-H "Idempotency-Key: $(uuidgen)"` (must be a UUID). Generate one key per weighment and reuse it on every retry of that weighment. A replay returns `200 OK` with the original entry instead of creating a duplicate.
+
 ---
 
 ### Scenario A: Standard Weighment (Plate + Image + Weight)
@@ -138,6 +140,7 @@ The standard automated entry when the plate is clearly detected:
 ```bash
 curl -X POST "https://gluvok.vercel.app/api/entries" \
   -u "pi1:hardware123" \
+  -H "Idempotency-Key: $(uuidgen)" \
   -F "center_id=1" \
   -F "detected_vehicle_number=MH12AB1234" \
   -F "weight=18540.5" \

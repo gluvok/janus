@@ -5,27 +5,21 @@ import {
   validateCustomerBelongsToFactory,
   deleteEntries,
 } from "./entries";
-import { EntryStatus, EntrySource, Role } from "@/lib/constants/enums";
+import { EntryStatus, EntrySource } from "@/lib/constants/enums";
 import { ApiErrorMessage } from "@/lib/constants/messages";
 import type { supabase } from "@/db";
 
 type MockSupabaseClient = typeof supabase & {
   from: Mock;
+  rpc: Mock;
 };
 
-const { mockUploadImages, mockValidateSeq, mockTryMerge } = vi.hoisted(() => ({
+const { mockUploadImages } = vi.hoisted(() => ({
   mockUploadImages: vi.fn(),
-  mockValidateSeq: vi.fn(),
-  mockTryMerge: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
   uploadBase64ImagesToStorage: mockUploadImages,
-}));
-
-vi.mock("./weighments", () => ({
-  validateSequentialApproval: mockValidateSeq,
-  tryMergeEntries: mockTryMerge,
 }));
 
 describe("Entries Service", () => {
@@ -34,11 +28,10 @@ describe("Entries Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUploadImages.mockResolvedValue(["http://img1.jpg"]);
-    mockValidateSeq.mockResolvedValue(undefined);
-    mockTryMerge.mockResolvedValue(null);
 
     mockClient = {
       from: vi.fn(),
+      rpc: vi.fn(),
     } as unknown as MockSupabaseClient;
   });
 
@@ -99,128 +92,35 @@ describe("Entries Service", () => {
   });
 
   describe("createEntry", () => {
-    it("creates a manual entry with default pending status and customer", async () => {
-      const insertedEntry = {
-        id: 100,
-        vehicle_number: "MH12AB1234",
-        weight: 12000,
-        center_id: 1,
-        created_by: 5,
-        approved_by: null,
-        customer_id: 2,
-        factory_id: 10,
-        status: EntryStatus.PENDING,
-        auto_approved: false,
-        images: ["http://img1.jpg"],
-      };
-
-      mockClient.from.mockImplementation((table: string) => {
-        if (table === "users") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 5, role: Role.OPERATOR },
-              error: null,
-            }),
-          };
-        }
-        if (table === "centers") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 1, auto_approve: false },
-              error: null,
-            }),
-          };
-        }
-        if (table === "customers") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({ data: { id: 2 }, error: null }),
-          };
-        }
-        if (table === "entries") {
-          return {
-            insert: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: insertedEntry, error: null }),
-              }),
-            }),
-          };
-        }
-      });
-
-      const res = await createEntry(mockClient, {
-        factoryId: 10,
-        userId: 5,
-        vehicleNumber: "MH12AB1234",
-        weight: 12000,
-        centerId: 1,
-        customerId: 2,
-        images: ["data:image/jpeg;base64,..."],
-      });
-
-      expect(res).toEqual({ ...insertedEntry, source: EntrySource.MANUAL });
-      expect(mockUploadImages).toHaveBeenCalledWith(["data:image/jpeg;base64,..."], 10);
-      expect(mockValidateSeq).not.toHaveBeenCalled();
-      expect(mockTryMerge).not.toHaveBeenCalled();
+    const entryRow = {
+      id: 100,
+      vehicle_number: "MH12AB1234",
+      weight: 12000,
+      center_id: 1,
+      created_by: 5,
+      status: EntryStatus.PENDING,
+      images: ["http://img1.jpg"],
+    };
+    const baseParams = {
+      factoryId: 10,
+      userId: 5,
+      vehicleNumber: "MH12AB1234",
+      weight: 12000,
+      centerId: 1,
+    };
+    const rpcResult = (overrides: { replayed?: boolean; source?: EntrySource } = {}) => ({
+      data: {
+        entry: entryRow,
+        weighment: null,
+        replayed: false,
+        source: EntrySource.MANUAL,
+        ...overrides,
+      },
+      error: null,
     });
 
-    it("creates a device entry with approved status and runs sequential approval and merge", async () => {
-      const insertedEntry = {
-        id: 101,
-        detected_vehicle_number: "MH12AB1234",
-        vehicle_number: "MH12AB1234",
-        weight: 15000,
-        center_id: 1,
-        created_by: 3,
-        approved_by: 3,
-        customer_id: null,
-        factory_id: 10,
-        status: EntryStatus.APPROVED,
-        auto_approved: true,
-        images: ["http://img1.jpg"],
-      };
-
-      mockClient.from.mockImplementation((table: string) => {
-        if (table === "users") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 3, role: Role.HARDWARE },
-              error: null,
-            }),
-          };
-        }
-        if (table === "centers") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 1, auto_approve: true },
-              error: null,
-            }),
-          };
-        }
-        if (table === "entries") {
-          return {
-            insert: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: insertedEntry, error: null }),
-              }),
-            }),
-          };
-        }
-      });
+    it("maps params onto the create_entry_with_weighment rpc and returns entry with source and replayed", async () => {
+      mockClient.rpc.mockResolvedValue(rpcResult({ source: EntrySource.DEVICE }));
 
       const res = await createEntry(mockClient, {
         factoryId: 10,
@@ -229,141 +129,87 @@ describe("Entries Service", () => {
         detectedVehicleNumber: "MH12AB1234",
         weight: 15000,
         centerId: 1,
+        customerId: 2,
         status: EntryStatus.APPROVED,
+        approvedBy: 7,
+        images: ["data:image/jpeg;base64,..."],
       });
 
-      expect(res).toEqual({ ...insertedEntry, source: EntrySource.DEVICE });
-      expect(mockValidateSeq).toHaveBeenCalledWith(
-        mockClient,
-        1,
-        "MH12AB1234",
-        expect.any(String),
-        0,
-        true,
-        10,
-      );
-      expect(mockTryMerge).toHaveBeenCalledWith(
-        mockClient,
-        10,
-        101,
-        expect.objectContaining({ id: 101 }),
+      expect(res).toEqual({ ...entryRow, source: EntrySource.DEVICE, replayed: false });
+      expect(mockUploadImages).toHaveBeenCalledWith(["data:image/jpeg;base64,..."], 10);
+      expect(mockClient.rpc).toHaveBeenCalledWith("create_entry_with_weighment", {
+        p_factory_id: 10,
+        p_center_id: 1,
+        p_created_by: 3,
+        p_vehicle_number: "MH12AB1234",
+        p_weight: 15000,
+        p_detected_vehicle_number: "MH12AB1234",
+        p_customer_id: 2,
+        p_status: EntryStatus.APPROVED,
+        p_approved_by: 7,
+        p_images: ["http://img1.jpg"],
+        p_idempotency_key: null,
+      });
+    });
+
+    it("forwards idempotencyKey and returns replayed true when the rpc replays", async () => {
+      const key = "3f2b8c1e-6d4a-4b7e-9a1c-2d5e8f0a1b3c";
+      mockClient.rpc.mockResolvedValue(rpcResult({ replayed: true }));
+
+      const res = await createEntry(mockClient, { ...baseParams, idempotencyKey: key });
+
+      expect(res).toEqual({ ...entryRow, source: EntrySource.MANUAL, replayed: true });
+      expect(mockClient.rpc).toHaveBeenCalledWith(
+        "create_entry_with_weighment",
+        expect.objectContaining({ p_idempotency_key: key }),
       );
     });
 
-    it("creates a device entry with NO_PLATE_DETECTED without querying centers table", async () => {
-      const insertedEntry = {
-        id: 102,
-        detected_vehicle_number: "NO_PLATE_DETECTED",
-        vehicle_number: "NO_PLATE_DETECTED",
-        weight: 15000,
-        center_id: 1,
-        created_by: 3,
-        approved_by: null,
-        customer_id: null,
-        factory_id: 10,
-        status: EntryStatus.PENDING,
-        auto_approved: false,
-        images: ["http://img1.jpg"],
-      };
-
-      const centersQueryMock = vi.fn();
-      mockClient.from.mockImplementation((table: string) => {
-        if (table === "users") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 3, role: Role.HARDWARE },
-              error: null,
-            }),
-          };
-        }
-        if (table === "centers") {
-          centersQueryMock();
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 1, auto_approve: true },
-              error: null,
-            }),
-          };
-        }
-        if (table === "entries") {
-          return {
-            insert: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: insertedEntry, error: null }),
-              }),
-            }),
-          };
-        }
+    it("rethrows rpc validation errors (P0001) with their message", async () => {
+      mockClient.rpc.mockResolvedValue({
+        data: null,
+        error: { code: "P0001", message: ApiErrorMessage.SELECTED_CENTER_NOT_FOUND },
       });
 
-      const res = await createEntry(mockClient, {
-        factoryId: 10,
-        deviceId: 3,
-        vehicleNumber: "NO_PLATE_DETECTED",
-        detectedVehicleNumber: "NO_PLATE_DETECTED",
-        weight: 15000,
-        centerId: 1,
-      });
-
-      expect(res).toEqual({ ...insertedEntry, source: EntrySource.DEVICE });
-      expect(centersQueryMock).not.toHaveBeenCalled();
-      expect(mockValidateSeq).not.toHaveBeenCalled();
-      expect(mockTryMerge).not.toHaveBeenCalled();
+      await expect(createEntry(mockClient, baseParams)).rejects.toThrow(
+        new Error(ApiErrorMessage.SELECTED_CENTER_NOT_FOUND),
+      );
     });
 
-    it("throws error when db insert fails", async () => {
-      mockClient.from.mockImplementation((table: string) => {
-        if (table === "users") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 5, role: Role.OPERATOR },
-              error: null,
-            }),
-          };
-        }
-        if (table === "centers") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 1, auto_approve: false },
-              error: null,
-            }),
-          };
-        }
-        if (table === "entries") {
-          return {
-            insert: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: null,
-                  error: { message: "DB failure" },
-                }),
-              }),
-            }),
-          };
-        }
+    it("hides unexpected rpc errors behind CREATE_ENTRY_FAILED", async () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockClient.rpc.mockResolvedValue({
+        data: null,
+        error: { code: "23505", message: "duplicate key value violates unique constraint" },
       });
 
+      await expect(createEntry(mockClient, baseParams)).rejects.toThrow(
+        new Error(ApiErrorMessage.CREATE_ENTRY_FAILED),
+      );
+      expect(consoleError).toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
+
+    it("throws CREATE_ENTRY_FAILED when the rpc returns no entry", async () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockClient.rpc.mockResolvedValue({ data: null, error: null });
+
+      await expect(createEntry(mockClient, baseParams)).rejects.toThrow(
+        new Error(ApiErrorMessage.CREATE_ENTRY_FAILED),
+      );
+      consoleError.mockRestore();
+    });
+
+    it("throws when no creator id is provided and does not call the rpc", async () => {
       await expect(
         createEntry(mockClient, {
           factoryId: 10,
-          userId: 5,
           vehicleNumber: "MH12AB1234",
           weight: 12000,
           centerId: 1,
         }),
-      ).rejects.toThrow(ApiErrorMessage.CREATE_ENTRY_FAILED);
+      ).rejects.toThrow("Missing created_by user ID");
+      expect(mockClient.rpc).not.toHaveBeenCalled();
     });
   });
 
