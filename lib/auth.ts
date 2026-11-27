@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { StatusCodes } from "http-status-codes";
 import { LRUCache } from "lru-cache";
 import { supabase } from "@/lib/supabase";
+import { SESSION_HEADER_KEYS } from "@/lib/security";
 import { type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 
@@ -17,9 +18,15 @@ export interface SessionData {
   factory: Factory;
 }
 
-const sessionCache = new LRUCache<string, SessionData>({
-  max: 5000,
-});
+export const SESSION_TTL_SECONDS = 60 * 60 * 12; // D4
+const CACHE_TTL_MS = 10_000;
+
+// ponytail: per-instance cache (proxy and API routes don't share one); revocation lags <=10s. Shared cache if instant is needed.
+const sessionCache = new LRUCache<string, SessionData>({ max: 5000, ttl: CACHE_TTL_MS });
+
+export function sessionCutoffIso(): string {
+  return new Date(Date.now() - SESSION_TTL_SECONDS * 1000).toISOString();
+}
 
 export function invalidateSessionCache(token: string): void {
   sessionCache.delete(token);
@@ -29,14 +36,6 @@ export function invalidateAllUserSessionCache(userId: number): void {
   for (const [token, session] of sessionCache.entries()) {
     if (session.user.id === userId) {
       sessionCache.delete(token);
-    }
-  }
-}
-
-export function updateUserSessionCache(userId: number, updatedUser: User): void {
-  for (const [_token, session] of sessionCache.entries()) {
-    if (session.user.id === userId) {
-      session.user = updatedUser;
     }
   }
 }
@@ -72,10 +71,8 @@ export async function createSession(userId: number): Promise<{ token: string }> 
   });
 
   if (error) {
-    throw new AuthError(
-      `Failed to create session: ${error.message}`,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-    );
+    console.error("Failed to create session:", error);
+    throw new AuthError("Failed to create session.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   return { token };
@@ -109,6 +106,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
         factory_id,
         created_at,
         updated_at,
+        deleted_at,
         factory:factories!factory_id(
           id,
           name,
@@ -119,6 +117,8 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
       )
     `)
     .eq("token_hash", tokenHash)
+    .is("deleted_at", null)
+    .gt("created_at", sessionCutoffIso())
     .maybeSingle();
 
   if (error || !data || !data.user) {
@@ -133,8 +133,13 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
     factory_id: number;
     created_at: string;
     updated_at: string;
+    deleted_at: string | null;
     factory: Factory;
   };
+
+  if (rawUser.deleted_at) {
+    return null;
+  }
 
   const user: User = {
     id: rawUser.id,
@@ -152,19 +157,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
   return sessionData;
 }
 
-export const SESSION_HEADER_KEYS = [
-  "x-user-id",
-  "x-factory-id",
-  "x-user-role",
-  "x-user-name",
-  "x-user-username",
-  "x-user-created-at",
-  "x-user-updated-at",
-  "x-factory-name",
-  "x-factory-receipt-images",
-  "x-factory-created-at",
-  "x-factory-updated-at",
-] as const;
+export { SESSION_HEADER_KEYS };
 
 export type SessionHeaderKey = (typeof SESSION_HEADER_KEYS)[number];
 

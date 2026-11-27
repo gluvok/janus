@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { StatusCodes } from "http-status-codes";
-import { handleApiRoute, type ApiContext } from "@/lib/api-handler";
+import { handleApiRoute, ServiceError, type ApiContext } from "@/lib/api-handler";
+import { supabase } from "@/lib/supabase";
+import { SESSION_COOKIE_NAME } from "@/lib/auth";
+import { verifyPassword } from "@/lib/password";
 import { updateUserAccount } from "@/app/api/users/service";
 import { nameSchema, usernameSchema, passwordSchema } from "@/app/users/types";
 
@@ -10,6 +13,7 @@ const updateMeSchema = z
     name: nameSchema,
     username: usernameSchema,
     password: passwordSchema.optional().or(z.literal("")),
+    current_password: z.string().optional(),
   })
   .strict();
 
@@ -36,6 +40,20 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
   }
 
   const { name, username, password } = validation.data;
+
+  if (password && password.trim()) {
+    const { data: row } = await supabase
+      .from("users")
+      .select("password_hash")
+      .eq("id", context.user.id)
+      .single();
+    const ok =
+      row && validation.data.current_password
+        ? await verifyPassword(validation.data.current_password, row.password_hash)
+        : false;
+    if (!ok) throw new ServiceError("Current password is incorrect.", StatusCodes.BAD_REQUEST);
+  }
+
   const updated = await updateUserAccount(
     {
       id: context.user.id,
@@ -47,8 +65,13 @@ export const PATCH = handleApiRoute(async (request: Request, context: ApiContext
     context.factory.id,
   );
 
-  return NextResponse.json({
+  // trg_invalidate_sessions deletes this user's sessions (including this one) on username/password change.
+  const reauth = Boolean(password && password.trim()) || updated.username !== context.user.username;
+  const response = NextResponse.json({
     data: updated,
+    reauth,
     message: "Account profile updated successfully.",
   });
+  if (reauth) response.cookies.delete(SESSION_COOKIE_NAME);
+  return response;
 });

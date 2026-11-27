@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { NavGroup } from "./nav-group";
 import { NavUser, type UserProps } from "./nav-user";
+import { AccountDialog } from "@/components/account-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { operationsNavItems, managementNavItems, systemNavItems } from "@/lib/navigation";
 import { useUserStore } from "@/stores/use-user-store";
@@ -32,6 +33,7 @@ export function AppSidebar() {
   const accountUser = useUserStore((state) => state.user);
   const setAccountUser = useUserStore((state) => state.setUser);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [isAccountOpen, setIsAccountOpen] = React.useState(false);
   const { isMobile, setOpenMobile } = useSidebar();
 
   const userProps: UserProps | null = React.useMemo(() => {
@@ -88,11 +90,20 @@ export function AppSidebar() {
         </SidebarContent>
         <SidebarFooter>
           {accountUser && userProps && (
-            <NavUser user={userProps} accountUser={accountUser} onUserUpdated={setAccountUser} />
+            <NavUser user={userProps} onOpenAccount={() => setIsAccountOpen(true)} />
           )}
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
+
+      {accountUser && (
+        <AccountDialog
+          open={isAccountOpen}
+          onOpenChange={setIsAccountOpen}
+          user={accountUser}
+          onUserUpdated={setAccountUser}
+        />
+      )}
 
       <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
     </>
