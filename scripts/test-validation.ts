@@ -45,6 +45,7 @@ const validPlates = [
   "KA05B9999",
   "UP32AB1234",
   "HR26DQ5551",
+  "22BH1234AA", // Bharat series
 ];
 
 for (const plate of validPlates) {
@@ -52,16 +53,15 @@ for (const plate of validPlates) {
   const parsed = vehicleNumberSchema.safeParse(plate);
   assert.ok(parsed.success, `Expected zod schema to pass for ${plate}`);
 }
-console.log(`  ✓ ${validPlates.length} valid commercial plates verified.`);
+console.log(`  ✓ ${validPlates.length} valid plates verified.`);
 
-// Test invalid formats (including non-commercial BH and VA)
+// Test invalid formats (including non-commercial VA)
 const invalidPlates = [
   "XX12AB1028", // Invalid state code XX
   "12345", // Just numbers
   "ABCDE", // Just letters
   "ZZ99ZZ9999", // ZZ is not in STATE_CODES
   "MH12345AB", // Invalid structure
-  "22BH1234AA", // BH series is non-commercial
   "DLVAAA1234", // Vintage VA series is non-commercial
 ];
 
