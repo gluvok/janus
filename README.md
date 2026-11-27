@@ -80,7 +80,7 @@ Search matches these columns:
 
 `POST /api/entries/automatic` takes Hermes's multipart upload (no session). Send the center's key in the `x-api-key` header and a unique `Idempotency-Key` header (must be a UUIDv7; uppercase is lowercased). The key identifies the center, so there is no `center_id` field. In the Hermes license, `device_key` is the key.
 
-Form fields: `vehicle_number` (plate, or `NO_PLATE_DETECTED` / `REJECTED_*`), `weight`, and up to 3 `file` parts (JPEG, 5 MB each).
+Form fields: `vehicle_number` (plate, or `NO_PLATE_DETECTED` / `REJECTED_*`), `weight`, and up to 3 `file` parts (JPEG, 4 MB in total: Vercel rejects larger request bodies).
 
 Issue (or rotate) a key in SQL. The old key stops working as soon as the `UPDATE` runs. Generate the key, store only its hash, and give the key to the device operator:
 

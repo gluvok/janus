@@ -3,7 +3,9 @@ import { vehicleNumberSchema } from "./helpers.ts";
 
 export const NO_PLATE = "NO_PLATE_DETECTED";
 export const MAX_INGEST_IMAGES = 3;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Vercel rejects request bodies over 4.5 MB before the route runs, so cap the images below that.
+// This also bounds any single image, so there is no separate per-image limit.
+export const MAX_TOTAL_IMAGE_BYTES = 4_000_000;
 
 /** Hermes device ingest: one multipart upload, plus the Idempotency-Key header as `idempotency_key`. */
 export const ingestSchema = z.object({
@@ -25,7 +27,10 @@ export const ingestSchema = z.object({
   images: z
     .array(z.instanceof(File))
     .max(MAX_INGEST_IMAGES, `At most ${MAX_INGEST_IMAGES} images.`)
-    .refine((files) => files.every((f) => f.type === "image/jpeg" && f.size <= MAX_IMAGE_BYTES), {
-      message: "Images must be JPEG and at most 5 MB.",
+    .refine((files) => files.every((f) => f.type === "image/jpeg"), {
+      message: "Images must be JPEG.",
+    })
+    .refine((files) => files.reduce((total, f) => total + f.size, 0) <= MAX_TOTAL_IMAGE_BYTES, {
+      message: "Images must total at most 4 MB.",
     }),
 });

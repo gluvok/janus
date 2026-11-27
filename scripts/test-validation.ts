@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { hashApiKey } from "../lib/api-key.ts";
-import { ingestSchema } from "../lib/validation/ingest.ts";
+import { MAX_TOTAL_IMAGE_BYTES, ingestSchema } from "../lib/validation/ingest.ts";
 import {
   isValidIndianPlate,
   normalizeVehicleNumber,
@@ -294,6 +294,15 @@ assert.ok(!ingestSchema.safeParse({ ...ingest, images: Array.from({ length: 4 },
 assert.ok(
   !ingestSchema.safeParse({ ...ingest, images: [new File(["x"], "a.png", { type: "image/png" })] })
     .success,
+);
+// Total image bytes are capped (Vercel's 4.5 MB body limit): 2 x 2 MB fits, 2 x 2 MB + 1 byte does not.
+const jpegOf = (bytes: number) =>
+  new File([new Uint8Array(bytes)], "a.jpg", { type: "image/jpeg" });
+const half = MAX_TOTAL_IMAGE_BYTES / 2;
+assert.ok(ingestSchema.safeParse({ ...ingest, images: [jpegOf(half), jpegOf(half)] }).success);
+assert.ok(!ingestSchema.safeParse({ ...ingest, images: [jpegOf(half), jpegOf(half + 1)] }).success);
+assert.ok(
+  !ingestSchema.safeParse({ ...ingest, images: [jpegOf(MAX_TOTAL_IMAGE_BYTES + 1)] }).success,
 );
 assert.equal(
   ingestSchema.parse({ ...ingest, vehicle_number: "REJECTED_BLUR", images: [] }).vehicle_number,
