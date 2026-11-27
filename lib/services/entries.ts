@@ -4,11 +4,9 @@
  */
 
 import { supabase } from "@/db";
-import { EntryStatus, EntrySource, Role } from "@/lib/constants/enums";
+import { EntryStatus } from "@/lib/constants/enums";
 import { ApiErrorMessage } from "@/lib/constants/messages";
 import { uploadBase64ImagesToStorage, deleteStorageImages } from "./storage";
-import { validateSequentialApproval, tryMergeEntries } from "./weighments";
-import { isNoPlateDetectedText } from "@/lib/validation";
 
 export interface CreateEntryParams {
   factoryId: number;
@@ -23,6 +21,7 @@ export interface CreateEntryParams {
   customerId?: number | null;
   status?: EntryStatus;
   images?: string[];
+  idempotencyKey?: string | null;
 }
 
 export async function validateCenterBelongsToFactory(
@@ -80,6 +79,7 @@ export async function createEntry(client: typeof supabase, params: CreateEntryPa
     customerId = null,
     status = EntryStatus.PENDING,
     images = [],
+    idempotencyKey = null,
   } = params;
 
   const creatorId = createdBy ?? userId ?? deviceId;
@@ -87,103 +87,31 @@ export async function createEntry(client: typeof supabase, params: CreateEntryPa
     throw new Error("Missing created_by user ID");
   }
 
-  // Fetch creator's role to determine whether this entry originates from hardware
-  const { data: creator } = await client
-    .from("users")
-    .select("id, role")
-    .eq("id", creatorId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const isDevice = creator?.role === Role.HARDWARE;
-  const isNoPlate =
-    isNoPlateDetectedText(vehicleNumber) || isNoPlateDetectedText(detectedVehicleNumber);
-
-  // 1 & 2. Verify center and customer (if provided) concurrently
-  // When no plate detected is received from device, skip fetching the centers table since auto-approval is impossible.
-  const [centerRecord] = await Promise.all([
-    isNoPlate && isDevice
-      ? Promise.resolve(null)
-      : validateCenterBelongsToFactory(client, Number(centerId), factoryId),
-    customerId
-      ? validateCustomerBelongsToFactory(client, Number(customerId), factoryId)
-      : Promise.resolve(),
-  ]);
-
-  // 3. Determine auto_approved flag & final approval status
-  let finalStatus = status;
-  let isAutoApproved = false;
-  let approvedBy = explicitApprovedBy;
-
-  if (isDevice && !isNoPlate) {
-    if (centerRecord?.auto_approve) {
-      isAutoApproved = true;
-      finalStatus = EntryStatus.APPROVED;
-      approvedBy = creatorId;
-    }
-  } else {
-    // Manual entries or entries with NO_PLATE_DETECTED are NEVER auto-approved
-    isAutoApproved = false;
-    if (finalStatus === EntryStatus.APPROVED && !approvedBy) {
-      approvedBy = creatorId;
-    }
-  }
-
-  const nowStr = new Date().toISOString();
-
-  // 4. Upload base64 images to storage
   const uploadedImageUrls = await uploadBase64ImagesToStorage(images, factoryId);
 
-  // 5. Validate sequential approval if approved
-  if (finalStatus === EntryStatus.APPROVED) {
-    await validateSequentialApproval(
-      client,
-      Number(centerId),
-      vehicleNumber,
-      nowStr,
-      0,
-      isDevice,
-      factoryId,
-    );
-  }
+  // Validation, approval, insert and weighment merge run atomically inside the RPC.
+  const { data, error } = await client.rpc("create_entry_with_weighment", {
+    p_factory_id: factoryId,
+    p_center_id: centerId,
+    p_created_by: creatorId,
+    p_vehicle_number: vehicleNumber,
+    p_weight: weight,
+    p_detected_vehicle_number: detectedVehicleNumber,
+    p_customer_id: customerId,
+    p_status: status,
+    p_approved_by: explicitApprovedBy,
+    p_images: uploadedImageUrls,
+    p_idempotency_key: idempotencyKey,
+  });
 
-  // 6. Insert new entry into database
-  const { data: newEntry, error: insertErr } = await client
-    .from("entries")
-    .insert({
-      detected_vehicle_number: detectedVehicleNumber,
-      vehicle_number: vehicleNumber,
-      weight: Number(weight),
-      center_id: Number(centerId),
-      customer_id: customerId ? Number(customerId) : null,
-      created_by: creatorId,
-      approved_by: approvedBy,
-      status: finalStatus,
-      auto_approved: isAutoApproved,
-      images: uploadedImageUrls,
-      created_at: nowStr,
-      updated_at: nowStr,
-    })
-    .select("*")
-    .single();
-
-  if (insertErr || !newEntry) {
-    console.error("Failed to insert entry:", insertErr);
+  // P0001 carries an ApiErrorMessage raised by the RPC; anything else must not reach clients.
+  if (error?.code === "P0001") throw new Error(error.message);
+  if (error || !data?.entry) {
+    console.error("Failed to create entry:", error ?? data);
     throw new Error(ApiErrorMessage.CREATE_ENTRY_FAILED);
   }
 
-  // 7. Attempt automatic weighment merging if approved
-  if (newEntry.status === EntryStatus.APPROVED) {
-    await tryMergeEntries(client, factoryId, newEntry.id, {
-      ...newEntry,
-      creator: { role: creator?.role },
-    });
-  }
-
-  return {
-    ...newEntry,
-    source: isDevice ? EntrySource.DEVICE : EntrySource.MANUAL,
-  };
+  return { ...data.entry, source: data.source, replayed: data.replayed };
 }
 
 export async function deleteEntries(

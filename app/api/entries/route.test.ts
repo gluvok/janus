@@ -622,6 +622,105 @@ describe("Entries route handlers (/api/entries)", () => {
         1,
       );
     });
+
+    describe("Idempotency-Key", () => {
+      const idempotencyKey = "3f2b8c1e-6d4a-4b7e-9a1c-2d5e8f0a1b3c";
+      const createdEntry = {
+        id: 30,
+        vehicle_number: "MH12AB1234",
+        weight: 12000,
+        center_id: 1,
+        factory_id: 1,
+        source: EntrySource.MANUAL,
+        status: EntryStatus.PENDING,
+        images: ["https://storage.supabase.co/first-attempt.jpg"],
+      };
+
+      function mockCenterFound() {
+        const maybeSingle = vi.fn().mockResolvedValue({ data: { id: 1, factory_id: 1 } });
+        const is = vi.fn().mockReturnValue({ maybeSingle });
+        const innerEq = vi.fn().mockReturnValue({ is, maybeSingle });
+        const outerEq = vi.fn().mockReturnValue({ eq: innerEq, is });
+        mockDb.from.mockReturnValue({ select: vi.fn().mockReturnValue({ eq: outerEq }) });
+      }
+
+      const entryFields = { vehicle_number: "MH12AB1234", weight: 12000, center_id: 1 };
+
+      it("passes the header to createEntry and responds 201 without the replayed flag", async () => {
+        mockCenterFound();
+        mockCreateEntry.mockResolvedValue({ ...createdEntry, replayed: false });
+
+        const req = createMultipartReq(entryFields, undefined, {
+          "Idempotency-Key": idempotencyKey,
+        });
+        const handler = POST as unknown as RawHandler;
+        const response = await handler(req, sampleUser, {}, context);
+
+        expect(response.status).toBe(201);
+        expect((await response.json()).data).toEqual(createdEntry);
+        expect(mockCreateEntry).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ idempotencyKey }),
+        );
+      });
+
+      it("passes the header to createEntry for device requests", async () => {
+        mockCenterFound();
+        mockVerifyDeviceRequest.mockResolvedValue({
+          success: true,
+          device: { id: 5, factory_id: 1 },
+        });
+        mockCreateEntry.mockResolvedValue({ ...createdEntry, replayed: false });
+
+        const req = createMultipartReq(
+          { detected_vehicle_number: "MH12AB1234", weight: 12000, center_id: 1 },
+          undefined,
+          {
+            authorization: `Basic ${Buffer.from("device1:pass123").toString("base64")}`,
+            "Idempotency-Key": idempotencyKey,
+          },
+        );
+        const response = await POST(req);
+
+        expect(response.status).toBe(201);
+        expect(mockCreateEntry).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ idempotencyKey }),
+        );
+      });
+
+      it("responds 200 with the original entry and drops this attempt's uploads on a replay", async () => {
+        mockCenterFound();
+        mockUploadFilesToStorage.mockResolvedValue(["https://storage.supabase.co/retry.jpg"]);
+        mockCreateEntry.mockResolvedValue({ ...createdEntry, replayed: true });
+
+        const file = new File([new Uint8Array([1, 2, 3])], "photo.jpg", { type: "image/jpeg" });
+        const req = createMultipartReq(entryFields, [file], { "Idempotency-Key": idempotencyKey });
+        const handler = POST as unknown as RawHandler;
+        const response = await handler(req, sampleUser, {}, context);
+
+        expect(response.status).toBe(200);
+        const json = await response.json();
+        expect(json.data).toEqual(createdEntry);
+        expect(json.data).not.toHaveProperty("replayed");
+        expect(mockDeleteStorageImages).toHaveBeenCalledWith(
+          ["https://storage.supabase.co/retry.jpg"],
+          1,
+        );
+      });
+
+      it("rejects a malformed header with 400 before creating anything", async () => {
+        const req = createMultipartReq(entryFields, undefined, {
+          "Idempotency-Key": "not-a-uuid",
+        });
+        const handler = POST as unknown as RawHandler;
+        const response = await handler(req, sampleUser, {}, context);
+
+        expect(response.status).toBe(400);
+        expect((await response.json()).error).toBe("Idempotency-Key must be a UUID");
+        expect(mockCreateEntry).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe("DELETE /api/entries", () => {

@@ -126,6 +126,15 @@ export const GET = withAuth(async (req, user, client) => {
   });
 });
 
+async function discardUploadedImages(urls: string[], factoryId: number, reason: string) {
+  if (urls.length === 0) return;
+  try {
+    await deleteStorageImages(urls, factoryId);
+  } catch (cleanupErr) {
+    console.error(`Failed to cleanup uploaded images on ${reason}:`, cleanupErr);
+  }
+}
+
 export async function POST(req: NextRequest, ...rest: unknown[]) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -191,6 +200,7 @@ export async function POST(req: NextRequest, ...rest: unknown[]) {
     const customerIdRaw = formData.get("customer_id");
     const customerId = customerIdRaw ? Number(customerIdRaw) : null;
     const status = (formData.get("status") as EntryStatus) || EntryStatus.PENDING;
+    const idempotencyKey = req.headers.get("idempotency-key") ?? undefined;
 
     // Extract files positionally — order is preserved by the sender (first file = cam 1, etc.)
     const files: File[] = [];
@@ -201,13 +211,19 @@ export async function POST(req: NextRequest, ...rest: unknown[]) {
     }
 
     const validationData = isHardware
-      ? { detected_vehicle_number: detectedVehicleNumber, weight, center_id: centerId }
+      ? {
+          detected_vehicle_number: detectedVehicleNumber,
+          weight,
+          center_id: centerId,
+          idempotency_key: idempotencyKey,
+        }
       : {
           vehicle_number: vehicleNumber,
           weight,
           center_id: centerId,
           customer_id: customerId,
           status,
+          idempotency_key: idempotencyKey,
         };
 
     const parsed = isHardware
@@ -269,21 +285,23 @@ export async function POST(req: NextRequest, ...rest: unknown[]) {
         customerId,
         status: isHardware ? EntryStatus.PENDING : status,
         images: uploadedUrls,
+        idempotencyKey: parsed.data.idempotency_key ?? null,
       });
     } catch (dbErr: unknown) {
       // Compensating rollback: delete uploaded images if DB insertion fails
-      if (uploadedUrls.length > 0) {
-        try {
-          await deleteStorageImages(uploadedUrls, factoryId);
-        } catch (cleanupErr) {
-          console.error("Failed to cleanup uploaded images on DB failure:", cleanupErr);
-        }
-      }
+      await discardUploadedImages(uploadedUrls, factoryId, "DB failure");
       const msg = dbErr instanceof Error ? dbErr.message : ApiErrorMessage.PROCESS_ENTRY_FAILED;
       return apiError(msg, StatusCodes.BAD_REQUEST);
     }
 
-    return NextResponse.json({ data: newEntry }, { status: StatusCodes.CREATED });
+    const { replayed, ...entry } = newEntry;
+    // A replay returns the first attempt's entry, which already owns its images; this attempt's uploads are orphans.
+    if (replayed) await discardUploadedImages(uploadedUrls, factoryId, "idempotent replay");
+
+    return NextResponse.json(
+      { data: entry },
+      { status: replayed ? StatusCodes.OK : StatusCodes.CREATED },
+    );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : ApiErrorMessage.PROCESS_ENTRY_FAILED;
     return apiError(msg, StatusCodes.BAD_REQUEST);
