@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import { LRUCache } from "lru-cache";
+import { RateLimiterMemory } from "rate-limiter-flexible";
 import { DUMMY_HASH, verifyPassword } from "@/lib/password";
 import { supabase } from "@/lib/supabase";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
@@ -12,9 +12,11 @@ import {
   SESSION_TTL_SECONDS,
 } from "@/lib/auth";
 
-const MAX_FAILED_LOGINS = 5;
-// ponytail: per-instance counter; move to a DB/Redis counter if instances scale out.
-const failedLogins = new LRUCache<string, number>({ max: 10_000, ttl: 15 * 60_000 });
+// ponytail: per-instance memory store; each instance counts separately, so scaling out lets an
+// attacker multiply the budget. Swap in a shared store (Postgres/Redis limiter) if that matters.
+const WINDOW_SECONDS = 15 * 60;
+const byUsername = new RateLimiterMemory({ points: 5, duration: WINDOW_SECONDS });
+const byIp = new RateLimiterMemory({ points: 25, duration: WINDOW_SECONDS });
 const INVALID = "Invalid username or password.";
 
 const loginSchema = z
@@ -37,10 +39,17 @@ export async function POST(request: Request) {
 
     const { username, password } = validation.data;
 
-    if ((failedLogins.get(username) ?? 0) >= MAX_FAILED_LOGINS) {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+    const [userRes, ipRes] = await Promise.all([byUsername.get(username), byIp.get(ip)]);
+    const blocked = [
+      userRes && userRes.consumedPoints >= byUsername.points ? userRes : null,
+      ipRes && ipRes.consumedPoints >= byIp.points ? ipRes : null,
+    ].filter((res) => res !== null);
+    if (blocked.length > 0) {
+      const retryAfter = Math.ceil(Math.max(...blocked.map((res) => res.msBeforeNext)) / 1000);
       return NextResponse.json(
         { error: "Too many attempts. Try again in 15 minutes." },
-        { status: StatusCodes.TOO_MANY_REQUESTS },
+        { status: StatusCodes.TOO_MANY_REQUESTS, headers: { "Retry-After": String(retryAfter) } },
       );
     }
 
@@ -63,10 +72,11 @@ export async function POST(request: Request) {
       ? await verifyPassword(password, user.password_hash)
       : (await verifyPassword(password, DUMMY_HASH), false);
     if (!user || !isValidPassword) {
-      failedLogins.set(username, (failedLogins.get(username) ?? 0) + 1);
+      // consume() rejects with a RateLimiterRes (not an Error) once the budget is spent
+      await Promise.allSettled([byUsername.consume(username), byIp.consume(ip)]);
       return NextResponse.json({ error: INVALID }, { status: StatusCodes.UNAUTHORIZED });
     }
-    failedLogins.delete(username);
+    await byUsername.delete(username);
 
     const { token } = await createSession(user.id);
     await supabase

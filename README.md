@@ -77,8 +77,8 @@ Search queries across data tables dynamically evaluate type-aware multi-column m
 | `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                                    |
 | `GET`    | `/api/centers`              | List centers for authenticated factory (never returns `api_key_hash`). Supports pagination & sorting. |
 | `PATCH`  | `/api/centers`              | Update center details.                                                                                |
-| `POST`   | `/api/centers/rotate-key`   | Admin only. Issue a new center API key; returns the plain key once, stores only its SHA-256.          |
-| `POST`   | `/api/entries`              | Hermes device ingest (multipart). Basic `center_id:api_key`, no session. See below.                   |
+| `POST`   | `/api/entries/automatic`    | Hermes device ingest (multipart). `x-api-key` + `Idempotency-Key`, no session. See below.             |
+| `GET`    | `/api/entries/automatic`    | List automatic entries (session required).                                                            |
 | `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).              |
 | `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                                        |
 | `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                                |
@@ -88,21 +88,11 @@ Search queries across data tables dynamically evaluate type-aware multi-column m
 
 ### Device ingest (Hermes)
 
-`POST /api/entries` takes Hermes's multipart upload, authenticated with HTTP Basic `center_id:api_key`. In the Hermes license, `device_id` is the center id and `device_key` is the key.
+`POST /api/entries/automatic` takes Hermes's multipart upload (no session). Send the center's key in the `x-api-key` header and a unique `Idempotency-Key` header (8-128 chars of letters, digits, `_`, `-`; a UUIDv7 works). The key identifies the center, so there is no `center_id` field. In the Hermes license, `device_key` is the key.
 
-Issue (or rotate) a key from the browser console while logged in as admin. The old key stops working at once and the new one is shown only this time:
+Form fields: `vehicle_number` (plate, or `NO_PLATE_DETECTED` / `REJECTED_*`), `weight`, and up to 3 `file` parts (JPEG, 5 MB each).
 
-```js
-await (
-  await fetch("/api/centers/rotate-key", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id: 1 }),
-  })
-).json();
-```
-
-SQL fallback (the key then sits in your SQL history):
+Issue (or rotate) a key in SQL. The old key stops working as soon as the `UPDATE` runs. Generate the key, store only its hash, and give the key to the device operator:
 
 ```bash
 openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
@@ -112,7 +102,7 @@ openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
 UPDATE public.centers SET api_key_hash = encode(sha256(convert_to('<key>','UTF8')),'hex'), updated_at = now() WHERE id = <id>;
 ```
 
-Responses: `201` created (`{"data":{"id":N}}`), `200` duplicate (existing id), `400` invalid form or image storage failed, `401` bad credentials, `403` form `center_id` doesn't match the credentials, `429` rate limited, `500` server error.
+Responses: `201` created, `200` replay of an existing `Idempotency-Key` (same body shape, existing entry), both `{"data":{"id":N,"weighment_id":N}}`; `400` invalid form, header or images (or image storage failed); `401` missing or unknown key; `429` rate limited (5 requests per minute per key, with a `Retry-After` header in seconds); `500` server error. A replay with a different payload still returns the original entry.
 
 ---
 

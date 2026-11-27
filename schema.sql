@@ -204,11 +204,13 @@ CREATE TABLE IF NOT EXISTS public.automatic_entries (
   vehicle_number TEXT NOT NULL,
   weight DECIMAL(10, 2) NOT NULL CHECK (weight > 0),
   images TEXT[] NOT NULL DEFAULT '{}',
-  idempotency_key TEXT UNIQUE NOT NULL,
+  idempotency_key TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ,
-  CONSTRAINT chk_automatic_entries_vehicle CHECK (vehicle_number = 'NO_PLATE_DETECTED' OR length(trim(vehicle_number)) BETWEEN 8 AND 11)
+  CONSTRAINT chk_automatic_entries_vehicle CHECK (vehicle_number = 'NO_PLATE_DETECTED' OR length(trim(vehicle_number)) BETWEEN 8 AND 11),
+  CONSTRAINT chk_automatic_entries_images CHECK (cardinality(images) <= 3),
+  CONSTRAINT uq_automatic_entries_center_idem UNIQUE (center_id, idempotency_key)
 );
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_center_id ON public.automatic_entries (center_id);
 CREATE INDEX IF NOT EXISTS idx_automatic_entries_vehicle_number ON public.automatic_entries (vehicle_number);
@@ -217,6 +219,19 @@ CREATE INDEX IF NOT EXISTS idx_automatic_entries_vehicle_trgm ON public.automati
 ALTER TABLE public.automatic_entries DROP CONSTRAINT IF EXISTS chk_automatic_entries_vehicle;
 ALTER TABLE public.automatic_entries ADD CONSTRAINT chk_automatic_entries_vehicle
   CHECK (vehicle_number = 'NO_PLATE_DETECTED' OR length(trim(vehicle_number)) BETWEEN 8 AND 11);
+CREATE INDEX IF NOT EXISTS idx_automatic_entries_plate_latest
+  ON public.automatic_entries (vehicle_number, created_at DESC, id DESC) WHERE deleted_at IS NULL;
+-- Existing DBs: idempotency is per center (not global); images capped at 3 (NOT VALID spares old rows).
+ALTER TABLE public.automatic_entries DROP CONSTRAINT IF EXISTS automatic_entries_idempotency_key_key;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.automatic_entries'::regclass AND conname = 'uq_automatic_entries_center_idem') THEN
+    ALTER TABLE public.automatic_entries ADD CONSTRAINT uq_automatic_entries_center_idem UNIQUE (center_id, idempotency_key);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.automatic_entries'::regclass AND conname = 'chk_automatic_entries_images') THEN
+    ALTER TABLE public.automatic_entries ADD CONSTRAINT chk_automatic_entries_images CHECK (cardinality(images) <= 3) NOT VALID;
+  END IF;
+END $$;
 
 -- Manual Entries table (raw operator-entered scale readings at centers)
 CREATE TABLE IF NOT EXISTS public.manual_entries (
@@ -556,7 +571,7 @@ BEGIN
     WHERE u.role::text = 'hardware'
       AND length(trim(e.vehicle_number)) BETWEEN 8 AND 11
       AND e.weight > 0
-    ON CONFLICT (idempotency_key) DO NOTHING;
+    ON CONFLICT (center_id, idempotency_key) DO NOTHING;
 
     INSERT INTO public.automatic_weighments (
       in_entry_id, out_entry_id, gross, tare, type, created_at, updated_at, deleted_at
@@ -760,6 +775,73 @@ BEGIN
   SET deleted_at = now()
   WHERE id IN (v_weighment.in_entry_id, v_weighment.out_entry_id)
     AND deleted_at IS NULL;
+END;
+$$;
+
+-- Ingest one hardware reading: dedupe per center, then pair with the previous unpaired entry for the same plate.
+-- Soft delete needs no special case: soft_delete_automatic_weighment also soft-deletes both entries, so they
+-- drop out via deleted_at; NOT EXISTS must still see deleted weighments (UNIQUE in/out_entry_id covers all rows).
+-- ponytail: no time window on pairing; add `AND e.created_at > now() - interval '...'` if stale orphans pair.
+CREATE OR REPLACE FUNCTION public.ingest_automatic_entry(
+  p_center_id int,
+  p_idempotency_key text,
+  p_vehicle_number text,
+  p_weight numeric,
+  p_images text[]
+)
+RETURNS TABLE (entry_id int, weighment_id int, replayed boolean)
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_factory int;
+  v_prev int;
+BEGIN
+  SELECT factory_id INTO STRICT v_factory FROM public.centers WHERE id = p_center_id;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_factory::text || ':' || p_vehicle_number, 0));
+
+  INSERT INTO public.automatic_entries (center_id, idempotency_key, vehicle_number, weight, images)
+  VALUES (p_center_id, p_idempotency_key, p_vehicle_number, p_weight, p_images)
+  ON CONFLICT (center_id, idempotency_key) DO NOTHING
+  RETURNING id INTO entry_id;
+
+  IF entry_id IS NULL THEN
+    SELECT e.id INTO entry_id FROM public.automatic_entries e
+    WHERE e.center_id = p_center_id AND e.idempotency_key = p_idempotency_key;
+    SELECT w.id INTO weighment_id FROM public.automatic_weighments w
+    WHERE w.in_entry_id = entry_id OR w.out_entry_id = entry_id;
+    replayed := true;
+    RETURN NEXT;
+    RETURN;
+  END IF;
+
+  IF p_vehicle_number <> 'NO_PLATE_DETECTED' THEN
+    SELECT e.id INTO v_prev
+    FROM public.automatic_entries e
+    JOIN public.centers c ON c.id = e.center_id
+    WHERE c.factory_id = v_factory
+      AND e.vehicle_number = p_vehicle_number
+      AND e.deleted_at IS NULL
+      AND e.id <> entry_id
+      AND NOT EXISTS (
+        SELECT 1 FROM public.automatic_weighments w
+        WHERE w.in_entry_id = e.id OR w.out_entry_id = e.id
+      )
+    ORDER BY e.created_at DESC, e.id DESC
+    LIMIT 1;
+
+    IF v_prev IS NOT NULL THEN
+      -- gross/tare/type are filled by trg_automatic_weighments_auto_populate
+      INSERT INTO public.automatic_weighments (in_entry_id, out_entry_id)
+      VALUES (v_prev, entry_id)
+      RETURNING id INTO weighment_id;
+    END IF;
+  END IF;
+
+  replayed := false;
+  RETURN NEXT;
 END;
 $$;
 

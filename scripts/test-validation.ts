@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { hashApiKey } from "../lib/api-key.ts";
+import { ingestSchema } from "../lib/validation/ingest.ts";
 import {
   isValidIndianPlate,
   normalizeVehicleNumber,
@@ -291,6 +292,26 @@ for (const key of invalidKeys) {
 }
 
 console.log("  ✓ Entry UUIDv7 idempotency key validation verified.");
+
+// Hermes ingest schema: vehicle_number (not detected_vehicle_number), Idempotency-Key, max 3 JPEG images
+const jpeg = () => new File([new Uint8Array(4)], "a.jpg", { type: "image/jpeg" });
+const ingest = { idempotency_key: validUuidV7, vehicle_number: "MH12AB1028", weight: "10.5" };
+assert.ok(ingestSchema.safeParse({ ...ingest, images: [jpeg(), jpeg(), jpeg()] }).success);
+assert.ok(!ingestSchema.safeParse({ ...ingest, images: Array.from({ length: 4 }, jpeg) }).success);
+assert.ok(
+  !ingestSchema.safeParse({ ...ingest, images: [new File(["x"], "a.png", { type: "image/png" })] })
+    .success,
+);
+assert.equal(
+  ingestSchema.parse({ ...ingest, vehicle_number: "REJECTED_BLUR", images: [] }).vehicle_number,
+  "NO_PLATE_DETECTED",
+);
+assert.ok(!ingestSchema.safeParse({ ...ingest, vehicle_number: undefined, images: [] }).success);
+assert.ok(!ingestSchema.safeParse({ ...ingest, idempotency_key: "short", images: [] }).success);
+assert.ok(
+  !ingestSchema.safeParse({ ...ingest, idempotency_key: "../../etc/passwd", images: [] }).success,
+);
+console.log("  ✓ Hermes ingest schema (vehicle_number, Idempotency-Key, max 3 images) verified.");
 
 console.log("\n=================================================");
 console.log("🎉 All validation and schema invariant tests passed!");

@@ -45,18 +45,3 @@ export function safeNextPath(next: string | null | undefined): string {
 export function quotePostgrestValue(value: string): string {
   return `"${value.replace(/["\\]/g, "\\$&")}"`;
 }
-
-/** `Authorization: Basic base64(id:key)` → { id, key }, else null. Splits on the first ":" (RFC 7617). */
-export function parseBasicAuth(header: string | null): { id: string; key: string } | null {
-  const match = header?.match(/^Basic +([A-Za-z0-9+/]+={0,2})$/i);
-  if (!match) return null;
-  let decoded: string;
-  try {
-    decoded = atob(match[1]);
-  } catch {
-    return null;
-  }
-  const sep = decoded.indexOf(":");
-  if (sep <= 0 || sep === decoded.length - 1) return null;
-  return { id: decoded.slice(0, sep), key: decoded.slice(sep + 1) };
-}

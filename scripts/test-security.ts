@@ -9,10 +9,9 @@ import {
   stripSessionHeaders,
   safeNextPath,
   quotePostgrestValue,
-  parseBasicAuth,
 } from "../lib/security.ts";
 import { hashPassword, verifyPassword, DUMMY_HASH } from "../lib/password.ts";
-import { hashApiKey, apiKeyMatches, generateApiKey, DUMMY_KEY_HASH } from "../lib/api-key.ts";
+import { hashApiKey, generateApiKey } from "../lib/api-key.ts";
 import { signHs256 } from "../lib/realtime-token.ts";
 import { supabase } from "../lib/supabase.ts"; // importing must not read env or build a client
 
@@ -91,29 +90,9 @@ assert.equal(sig, createHmac("sha256", "s3cret").update(`${h}.${p}`).digest("bas
 assert.deepEqual(JSON.parse(Buffer.from(p, "base64url").toString()), { sub: "1", exp: 9 });
 console.log("✓ realtime token signing");
 
-const b64 = (s: string) => `Basic ${Buffer.from(s).toString("base64")}`;
-assert.deepEqual(parseBasicAuth(b64("12:s3cret")), { id: "12", key: "s3cret" });
-assert.deepEqual(parseBasicAuth(b64("12:a:b")), { id: "12", key: "a:b" }); // RFC 7617: split on first ":"
-assert.deepEqual(parseBasicAuth(`basic  ${Buffer.from("1:k").toString("base64")}`), {
-  id: "1",
-  key: "k",
-});
-assert.equal(parseBasicAuth(null), null);
-assert.equal(parseBasicAuth("Bearer abc"), null);
-assert.equal(parseBasicAuth("Basic !!!"), null);
-assert.equal(parseBasicAuth(b64("nocolon")), null);
-assert.equal(parseBasicAuth(b64(":keyonly")), null);
-assert.equal(parseBasicAuth(b64("12:")), null); // empty key
-console.log("✓ basic auth parser");
-
 const key = generateApiKey();
 assert.match(key, /^[A-Za-z0-9_-]{43}$/);
 assert.match(hashApiKey(key), /^[0-9a-f]{64}$/);
-assert.equal(apiKeyMatches(key, hashApiKey(key)), true);
-assert.equal(apiKeyMatches(key + "x", hashApiKey(key)), false);
-assert.equal(apiKeyMatches(key, DUMMY_KEY_HASH), false);
-assert.equal(apiKeyMatches(key, "not-hex"), false); // malformed stored hash: false, never throws
-assert.equal(apiKeyMatches(key, ""), false);
 // matches what Postgres backfills: encode(sha256(convert_to('abc','UTF8')),'hex')
 assert.equal(hashApiKey("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-console.log("✓ api key hash + constant-time compare");
+console.log("✓ api key hash");

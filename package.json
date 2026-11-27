@@ -38,6 +38,7 @@
     "jspdf": "^4.2.1",
     "lru-cache": "^11.5.3",
     "next": "16.4.6",
+    "rate-limiter-flexible": "^11.6.1",
     "react": "19.3.1",
     "react-day-picker": "^10.0.2",
     "react-dom": "19.3.1",
