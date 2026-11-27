@@ -38,7 +38,8 @@ For a new database instance, run the following SQL scripts in your Supabase SQL 
 2. `storage.sql` — provisions the `gluvok` storage bucket and file access policies.
 3. `data_api.sql` — provisions `api_key` on `factories`, the `factory_processed_weighments` table, and the `get_factory_weighment_data` / `acknowledge_factory_weighment` stored procedures for the Factory Data API.
 4. `entries_data_api.sql` — provisions the `factory_processed_entries` table and the `get_factory_entry_data` / `acknowledge_factory_entry` stored procedures.
-5. `realtime.sql` — locks down open access, revokes RPC access from `anon`/`authenticated`, and provisions the `notifications` table, its triggers, and the Realtime listen policy. Run it last, and re-run it whenever you re-run any file above. Safe to re-run.
+5. `entries_idempotency.sql` — provisions `entries.idempotency_key` and the `create_entry_with_weighment` stored procedure, which creates an entry and its weighment in one transaction and returns the original entry when a request is retried with the same key. Safe to re-run. Test it on a scratch database (`schema.sql` is destructive): apply `schema.sql` and `entries_idempotency.sql`, then run `psql -d <scratch_db> -v ON_ERROR_STOP=1 -f tests/sql/entries_idempotency.test.sql`. It rolls back and passes if it ends without an `ERROR`.
+6. `realtime.sql` — locks down open access, revokes RPC access from `anon`/`authenticated`, and provisions the `notifications` table, its triggers, and the Realtime listen policy. Run it last, and re-run it whenever you re-run any file above. Safe to re-run.
 
 ### Start Development Server
 
