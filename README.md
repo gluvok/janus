@@ -9,7 +9,7 @@ A centralized operational platform and automation management system for weighbri
 ### Core Entities
 
 - **Factories**: Master enterprise tenants managing scales, settings, and receipt formatting.
-- **Centers**: Processing facilities and scale locations. Each center has an authenticated `api_key` for hardware scale and camera integration (hidden during `GET` requests).
+- **Centers**: Processing facilities and scale locations. Each center has an API key for hardware scale and camera integration, stored only as a SHA-256 hash (`api_key_hash`).
 - **Users**: System operators, managers, and administrators with argon2 password hashing.
 - **Sessions**: Database-backed user authentication sessions with 400-day persistent rolling HTTP-only cookies (`mesto_session`).
 - **Automatic Weighments**: Hardware/ANPR camera-captured vehicle weighments. Features PostgreSQL stored generated columns (`gross`, `tare`, `net`, `type`), inbound/outbound weights, timestamps, and separate inbound/outbound photo arrays (`in_images`, `out_images`) unified via stored generated column `images = in_images || out_images`.
@@ -75,14 +75,44 @@ Search queries across data tables dynamically evaluate type-aware multi-column m
 | `PATCH`  | `/api/users/me`             | Update profile details and password for current user.                                                 |
 | `GET`    | `/api/factories`            | Retrieve factory configuration (served directly from memory session cache with 0 DB queries).         |
 | `PATCH`  | `/api/factories`            | Update factory configuration for the authenticated user's factory.                                    |
-| `GET`    | `/api/centers`              | List centers for authenticated factory (omits `api_key` for security). Supports pagination & sorting. |
+| `GET`    | `/api/centers`              | List centers for authenticated factory (never returns `api_key_hash`). Supports pagination & sorting. |
 | `PATCH`  | `/api/centers`              | Update center details.                                                                                |
+| `POST`   | `/api/centers/rotate-key`   | Admin only. Issue a new center API key; returns the plain key once, stores only its SHA-256.          |
+| `POST`   | `/api/entries`              | Hermes device ingest (multipart). Basic `center_id:api_key`, no session. See below.                   |
 | `GET`    | `/api/weighments/automatic` | List automatic weighments with stored generated fields (`gross`, `tare`, `net`, `type`).              |
 | `GET`    | `/api/weighments/manual`    | List manual weighments with creator relations.                                                        |
 | `GET`    | `/api/users`                | List staff users (Admin, Manager, Operator, Base) for current factory.                                |
 | `POST`   | `/api/users`                | Create staff user accounts linked to current factory.                                                 |
 | `PATCH`  | `/api/users`                | Update staff user accounts.                                                                           |
 | `DELETE` | `/api/users`                | Hard-delete users (protected by `ON DELETE RESTRICT` against linked weighments/entries).              |
+
+### Device ingest (Hermes)
+
+`POST /api/entries` takes Hermes's multipart upload, authenticated with HTTP Basic `center_id:api_key`. In the Hermes license, `device_id` is the center id and `device_key` is the key.
+
+Issue (or rotate) a key from the browser console while logged in as admin. The old key stops working at once and the new one is shown only this time:
+
+```js
+await (
+  await fetch("/api/centers/rotate-key", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: 1 }),
+  })
+).json();
+```
+
+SQL fallback (the key then sits in your SQL history):
+
+```bash
+openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
+```
+
+```sql
+UPDATE public.centers SET api_key_hash = encode(sha256(convert_to('<key>','UTF8')),'hex'), updated_at = now() WHERE id = <id>;
+```
+
+Responses: `201` created (`{"data":{"id":N}}`), `200` duplicate (existing id), `400` invalid form or image storage failed, `401` bad credentials, `403` form `center_id` doesn't match the credentials, `429` rate limited, `500` server error.
 
 ---
 

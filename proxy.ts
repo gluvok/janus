@@ -15,7 +15,9 @@ export async function proxy(request: NextRequest) {
     pathname === "/logo.png" ||
     pathname === "/icon.png";
 
-  const isPublicAuthApi = pathname === "/api/auth/login";
+  // Device ingest authenticates itself (HTTP Basic center_id:api_key) inside the route.
+  const isPublicAuthApi =
+    pathname === "/api/auth/login" || (pathname === "/api/entries" && request.method === "POST");
 
   if (isPublicAsset || isPublicAuthApi) {
     return NextResponse.next({ request: { headers: requestHeaders } });

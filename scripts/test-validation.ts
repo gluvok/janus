@@ -12,6 +12,7 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { z } from "zod";
+import { hashApiKey } from "../lib/api-key.ts";
 import {
   isValidIndianPlate,
   normalizeVehicleNumber,
@@ -149,7 +150,15 @@ assert.ok(validateApiKey("a".repeat(16)));
 assert.ok(validateApiKey("0123456789abcdef0123456789abcdef")); // 32 hex chars
 assert.ok(!validateApiKey("short_key"));
 assert.ok(!validateApiKey("   " + "a".repeat(10) + "   "));
-console.log("  ✓ chk_factories_api_key & chk_centers_api_key (>= 16 chars) verified.");
+console.log("  ✓ chk_factories_api_key (>= 16 chars) verified.");
+
+// Mirrors chk_centers_api_key_hash: api_key_hash ~ '^[0-9a-f]{64}$'
+const isApiKeyHash = (hash: string) => /^[0-9a-f]{64}$/.test(hash);
+assert.ok(isApiKeyHash(hashApiKey("abc")));
+assert.ok(!isApiKeyHash("A".repeat(64))); // uppercase hex rejected
+assert.ok(!isApiKeyHash("0".repeat(63)));
+assert.ok(!isApiKeyHash("0123456789abcdef0123456789abcdef")); // a plain 32-char key is not a hash
+console.log("  ✓ chk_centers_api_key_hash (64 lowercase hex) verified.");
 
 function validateName(name: string): boolean {
   return typeof name === "string" && name.trim().length >= 3 && name.trim().length <= 50;

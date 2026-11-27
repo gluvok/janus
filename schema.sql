@@ -70,14 +70,44 @@ CREATE TABLE centers (
   id SERIAL PRIMARY KEY,
   factory_id INT NOT NULL REFERENCES factories(id) ON DELETE RESTRICT,
   name TEXT NOT NULL,
-  api_key TEXT NOT NULL UNIQUE,
+  api_key_hash TEXT NOT NULL UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT uq_centers_factory_name UNIQUE (factory_id, name),
   CONSTRAINT uq_centers_id_factory UNIQUE (id, factory_id),
   CONSTRAINT chk_centers_name CHECK (length(trim(name)) BETWEEN 3 AND 50),
-  CONSTRAINT chk_centers_api_key CHECK (length(trim(api_key)) >= 16)
+  CONSTRAINT chk_centers_api_key_hash CHECK (api_key_hash ~ '^[0-9a-f]{64}$')
 );
+-- Center API keys are stored only as SHA-256 hex. Existing plain keys keep working (hash backfilled).
+ALTER TABLE public.centers ADD COLUMN IF NOT EXISTS api_key_hash TEXT;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'centers' AND column_name = 'api_key'
+  ) THEN
+    UPDATE public.centers
+    SET api_key_hash = encode(sha256(convert_to(api_key, 'UTF8')), 'hex')
+    WHERE api_key_hash IS NULL AND api_key IS NOT NULL;
+    ALTER TABLE public.centers DROP COLUMN api_key; -- drops idx_centers_api_key and chk_centers_api_key with it
+  END IF;
+END $$;
+-- Any row still without a key gets an unusable random hash; an admin rotates it to issue a real key.
+UPDATE public.centers
+SET api_key_hash = encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex')
+WHERE api_key_hash IS NULL;
+ALTER TABLE public.centers ALTER COLUMN api_key_hash SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_centers_api_key_hash ON public.centers (api_key_hash);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_centers_api_key_hash' AND conrelid = 'public.centers'::regclass
+  ) THEN
+    ALTER TABLE public.centers
+      ADD CONSTRAINT chk_centers_api_key_hash CHECK (api_key_hash ~ '^[0-9a-f]{64}$');
+  END IF;
+END $$;
 CREATE INDEX idx_centers_factory_id ON centers (factory_id);
 CREATE INDEX idx_centers_name ON centers (name);
 CREATE INDEX idx_centers_created_at ON centers (created_at DESC);
@@ -127,12 +157,15 @@ CREATE TABLE automatic_entries (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ,
-  CONSTRAINT chk_automatic_entries_vehicle CHECK (length(trim(vehicle_number)) BETWEEN 8 AND 11)
+  CONSTRAINT chk_automatic_entries_vehicle CHECK (vehicle_number = 'NO_PLATE_DETECTED' OR length(trim(vehicle_number)) BETWEEN 8 AND 11)
 );
 CREATE INDEX idx_automatic_entries_center_id ON automatic_entries (center_id);
 CREATE INDEX idx_automatic_entries_vehicle_number ON automatic_entries (vehicle_number);
 CREATE INDEX idx_automatic_entries_created_at ON automatic_entries (created_at DESC);
 CREATE INDEX idx_automatic_entries_vehicle_trgm ON automatic_entries USING gin (vehicle_number gin_trgm_ops);
+ALTER TABLE public.automatic_entries DROP CONSTRAINT IF EXISTS chk_automatic_entries_vehicle;
+ALTER TABLE public.automatic_entries ADD CONSTRAINT chk_automatic_entries_vehicle
+  CHECK (vehicle_number = 'NO_PLATE_DETECTED' OR length(trim(vehicle_number)) BETWEEN 8 AND 11);
 
 -- Manual Entries table (raw operator-entered scale readings at centers)
 CREATE TABLE manual_entries (

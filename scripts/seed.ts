@@ -8,6 +8,7 @@
  */
 
 import crypto from "node:crypto";
+import { generateApiKey, hashApiKey } from "../lib/api-key.ts";
 import { hashPassword } from "../lib/password.ts";
 import { z } from "zod";
 import { SUPABASE_URL, supabase } from "./supabase.ts";
@@ -210,29 +211,30 @@ async function main() {
   // 4. CREATE CENTERS WITH API KEYS IN O(1) BULK INSERT
   console.log(`\n⚖️ Provisioning ${args.centers} center(s) with dedicated API keys...`);
 
-  const centersToInsert = Array.from({ length: args.centers }, (_, i) => {
-    const centerIndex = i + 1;
-    const centerName =
-      args.center_names && args.center_names[i] ? args.center_names[i] : `Center ${centerIndex}`;
-    const apiKey = crypto.randomBytes(16).toString("hex");
-    return {
-      name: centerName,
-      factory_id: createdFactory.id,
-      api_key: apiKey,
-    };
-  });
+  // Plain keys live only here; the DB stores their SHA-256.
+  const centerKeys = new Map(
+    Array.from({ length: args.centers }, (_, i) => [
+      args.center_names && args.center_names[i] ? args.center_names[i] : `Center ${i + 1}`,
+      generateApiKey(),
+    ]),
+  );
+  const centersToInsert = [...centerKeys].map(([name, apiKey]) => ({
+    name,
+    factory_id: createdFactory.id,
+    api_key_hash: hashApiKey(apiKey),
+  }));
 
   const { data: createdCenters, error: centersError } = await supabase
     .from("centers")
     .insert(centersToInsert)
-    .select("id, name, api_key");
+    .select("id, name");
 
   if (centersError || !createdCenters) {
     throw centersError || new Error("Failed to bulk create centers");
   }
 
   for (const center of createdCenters) {
-    console.log(`  ✓ Center '${center.name}' (ID: ${center.id}, API Key: ${center.api_key})`);
+    console.log(`  ✓ Center '${center.name}' (ID: ${center.id})`);
   }
 
   // 5. SUMMARY
@@ -248,7 +250,9 @@ async function main() {
   );
   console.log("  • Centers & Scale API Keys:");
   for (const center of createdCenters) {
-    console.log(`    - ${center.name} (ID: ${center.id}) ➜ API Key: ${center.api_key}`);
+    console.log(
+      `    - ${center.name} (ID: ${center.id}) ➜ API Key: ${centerKeys.get(center.name)}`,
+    );
   }
   console.log("=================================================");
 }
