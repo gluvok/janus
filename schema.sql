@@ -675,6 +675,9 @@ BEGIN
 END $$;
 
 -- Sequence reset procedures for database testing and seed isolation (keeps legacy param signature)
+-- Drop first: CREATE OR REPLACE cannot rename a parameter, and the older script used p_table.
+-- No CASCADE: only reset_all_sequences calls it, from a plpgsql body (no pg_depend entry); section 8 re-grants.
+DROP FUNCTION IF EXISTS public.reset_table_sequence(text);
 CREATE OR REPLACE FUNCTION public.reset_table_sequence(table_name text)
 RETURNS void AS $$
 DECLARE
