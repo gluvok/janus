@@ -118,7 +118,7 @@ Responses: `201` created (`{"data":{"id":N}}`), `200` duplicate (existing id), `
 
 ## Database setup
 
-Run `schema.sql`, then `realtime.sql`; re-run `realtime.sql` after every `schema.sql` run (schema.sql drops the notifications table).
+Run `schema.sql`, then `realtime.sql` (non-destructive and safe to re-run against both fresh databases and existing legacy schemas).
 
 ---
 

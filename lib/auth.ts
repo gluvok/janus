@@ -19,9 +19,9 @@ export interface SessionData {
 }
 
 export const SESSION_TTL_SECONDS = 60 * 60 * 12; // D4
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 10_000;
 
-// ponytail: per-instance cache; a revoked session lives <=60s on other instances. Shared cache if that's too long.
+// ponytail: per-instance cache (proxy and API routes don't share one); revocation lags <=10s. Shared cache if instant is needed.
 const sessionCache = new LRUCache<string, SessionData>({ max: 5000, ttl: CACHE_TTL_MS });
 
 export function sessionCutoffIso(): string {
@@ -106,6 +106,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
         factory_id,
         created_at,
         updated_at,
+        deleted_at,
         factory:factories!factory_id(
           id,
           name,
@@ -116,6 +117,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
       )
     `)
     .eq("token_hash", tokenHash)
+    .is("deleted_at", null)
     .gt("created_at", sessionCutoffIso())
     .maybeSingle();
 
@@ -131,8 +133,13 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
     factory_id: number;
     created_at: string;
     updated_at: string;
+    deleted_at: string | null;
     factory: Factory;
   };
+
+  if (rawUser.deleted_at) {
+    return null;
+  }
 
   const user: User = {
     id: rawUser.id,
