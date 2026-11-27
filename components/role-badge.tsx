@@ -33,11 +33,15 @@ const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
 };
 
 export interface RoleBadgeProps {
-  role: UserRole;
+  role: UserRole | (string & {});
 }
 
 export function RoleBadge({ role }: RoleBadgeProps) {
-  const config = ROLE_CONFIGS[role];
+  const config = (ROLE_CONFIGS as Record<string, RoleConfig>)[role] ?? {
+    label: role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : "Unknown",
+    icon: UserIcon,
+    className: "gap-1 text-2xs font-normal text-muted-foreground border-border bg-muted",
+  };
 
   return (
     <Badge variant="outline" className={config.className}>

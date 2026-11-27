@@ -142,6 +142,7 @@ export function AccountDialog({ open, onOpenChange, user, onUserUpdated }: Accou
           description: "Please sign in again with your new credentials.",
         });
         useUserStore.getState().setUser(null);
+        useFactoryStore.getState().setFactory(null);
         router.replace(`/login?next=${encodeURIComponent(pathname)}`);
         return;
       }

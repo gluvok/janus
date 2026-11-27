@@ -43,14 +43,15 @@ export const GET = handleApiRoute(async (request: Request) => {
     integerColumns: ["id"],
     enumColumns: [{ column: "role", values: USER_ROLES }],
     applyCustomFilters: (query, params) => {
+      let filtered = query.in("role", USER_ROLES).is("deleted_at", null);
       const roleParam = params.get("role")?.trim();
       if (roleParam && roleParam !== "all") {
         const parsed = rolesFilterSchema.safeParse(roleParam);
         if (parsed.success && parsed.data.length > 0) {
-          return query.in("role", parsed.data);
+          filtered = filtered.in("role", parsed.data);
         }
       }
-      return query;
+      return filtered;
     },
   };
 
