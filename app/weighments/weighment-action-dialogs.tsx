@@ -66,8 +66,7 @@ export function CorrectPlateDialog({
 
     setIsSubmitting(true);
     try {
-      await axios.patch("/api/weighments/automatic", {
-        id: weighment.id,
+      await axios.patch(`/api/weighments/automatic/${weighment.id}`, {
         vehicle_number: parsed.data,
       });
       toast.add({

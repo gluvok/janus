@@ -3,7 +3,7 @@
  * @description Provisions weighing centers with dedicated API keys partitioned by factory.
  */
 
-import crypto from "node:crypto";
+import { generateApiKey, hashApiKey } from "../../lib/api-key.ts";
 import { supabase } from "../supabase.ts";
 import type { CenterConfig } from "./types.ts";
 
@@ -18,7 +18,7 @@ export async function seedCenters({
   secondaryCenterIds: number[];
   centerNameMap: Map<number, string>;
 }> {
-  console.log("\n⚖️ [3/5] Seeding Centers strictly partitioned by factory...");
+  console.log("\n[3/5] Seeding Centers strictly partitioned by factory...");
 
   const centerConfigs: CenterConfig[] = [
     { name: "North Weighbridge", factory_id: primaryFactoryId },
@@ -47,13 +47,17 @@ export async function seedCenters({
     centerNameMap.set(c.id, c.name);
   }
 
-  const missingCenters = centerConfigs
-    .filter((c) => !centerMap.has(`${c.factory_id}:${c.name}`))
-    .map((c) => ({
-      name: c.name,
-      factory_id: c.factory_id,
-      api_key: crypto.randomBytes(16).toString("hex"),
-    }));
+  // Plain keys live only here; the DB stores their SHA-256.
+  const missingKeys = new Map(
+    centerConfigs
+      .filter((c) => !centerMap.has(`${c.factory_id}:${c.name}`))
+      .map((c) => [`${c.factory_id}:${c.name}`, { ...c, apiKey: generateApiKey() }]),
+  );
+  const missingCenters = [...missingKeys.values()].map(({ name, factory_id, apiKey }) => ({
+    name,
+    factory_id,
+    api_key_hash: hashApiKey(apiKey),
+  }));
 
   if (missingCenters.length > 0) {
     const { data: createdCenters, error: insertCentersErr } = await supabase
@@ -65,6 +69,9 @@ export async function seedCenters({
     for (const c of createdCenters) {
       centerMap.set(`${c.factory_id}:${c.name}`, c.id);
       centerNameMap.set(c.id, c.name);
+      console.log(
+        `  ✓ Center '${c.name}' (ID: ${c.id}) ➜ API Key: ${missingKeys.get(`${c.factory_id}:${c.name}`)?.apiKey}`,
+      );
     }
   }
 

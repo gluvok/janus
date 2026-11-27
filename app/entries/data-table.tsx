@@ -1,23 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import {
   DataTableContent,
   DataTablePagination,
   DataTableToolbar,
   useDataTable,
   endpointFetcher,
-  type FacetedFilterOption,
   type DataTableFilterConfig,
 } from "@/components/data-table";
 import { Building02Icon, UserIcon } from "@hugeicons/core-free-icons";
-import { appIcons } from "@/lib/icons";
 import { PhotosDialog, type PhotoItem } from "@/components/photos-dialog";
+import { toast } from "@/components/ui/toast";
 import { useWeighmentPdfDownload } from "@/hooks/use-weighment-pdf-download";
-import type { Center } from "@/app/centers/types";
-import type { User } from "@/app/users/types";
+import { getErrorMessage } from "@/lib/utils";
 import type { EntityMode } from "@/stores/use-mode-store";
+import {
+  fetchFilterOptions,
+  formatCenterOptions,
+  formatUserOptions,
+} from "@/app/weighments/table-helpers";
 import { getEntryColumns, type EntriesTableMeta, type EntryRow } from "./columns";
 
 interface PhotosDialogState {
@@ -34,12 +36,8 @@ export interface EntriesDataTableProps {
 }
 
 export function EntriesDataTable({ mode }: EntriesDataTableProps) {
-  const [centerOptions, setCenterOptions] = useState<FacetedFilterOption[]>([
-    { label: "All Centers", value: "all", icon: appIcons.centers },
-  ]);
-  const [creatorOptions, setCreatorOptions] = useState<FacetedFilterOption[]>([
-    { label: "All Creators", value: "all", icon: appIcons.users },
-  ]);
+  const [centerOptions, setCenterOptions] = useState(() => formatCenterOptions([], "Centers"));
+  const [creatorOptions, setCreatorOptions] = useState(() => formatUserOptions([], "Creators"));
 
   const [photosDialogState, setPhotosDialogState] = useState<PhotosDialogState>({
     open: false,
@@ -51,44 +49,24 @@ export function EntriesDataTable({ mode }: EntriesDataTableProps) {
   });
 
   useEffect(() => {
-    async function loadCenters() {
-      try {
-        const res = await axios.get<{ data: Center[] }>("/api/centers?all=true&sort=name.asc");
-        const centers = res.data.data ?? [];
-        setCenterOptions([
-          { label: "All Centers", value: "all", icon: appIcons.centers },
-          ...centers.map((c) => ({
-            idPrefix: `#${c.id}`,
-            label: c.name,
-            value: String(c.id),
-          })),
-        ]);
-      } catch {
-        // Non-fatal if centers fail to load
-      }
-    }
-    loadCenters();
-  }, []);
-
-  useEffect(() => {
-    if (mode !== "manual") return;
-    async function loadCreators() {
-      try {
-        const res = await axios.get<{ data: User[] }>("/api/users?all=true&sort=name.asc");
-        const users = res.data.data ?? [];
-        setCreatorOptions([
-          { label: "All Creators", value: "all", icon: appIcons.users },
-          ...users.map((u) => ({
-            idPrefix: `#${u.id}`,
-            label: u.name,
-            value: String(u.id),
-          })),
-        ]);
-      } catch {
-        // Non-fatal if creators fail to load
-      }
-    }
-    loadCreators();
+    let cancelled = false;
+    fetchFilterOptions(mode)
+      .then(({ centers, users }) => {
+        if (cancelled) return;
+        setCenterOptions(formatCenterOptions(centers, "Centers"));
+        if (mode === "manual") setCreatorOptions(formatUserOptions(users, "Creators"));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        toast.add({
+          type: "error",
+          title: "Failed to load filters",
+          description: getErrorMessage(err, "Failed to load filter options."),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [mode]);
 
   const { downloadEntryReceipt, downloadingId } = useWeighmentPdfDownload();

@@ -91,7 +91,7 @@ function splitGroup<T>(specs: BaseEntrySpec[], rows: T[]): EntryGroup<T> {
 
 export async function seedEntries(ctx: SeedContext): Promise<SeededEntriesResult> {
   console.log(
-    "\n⚖️ [4/6] Seeding Automatic & Manual Scale Entries with unique photos & idempotency keys...",
+    "\n[4/6] Seeding Automatic & Manual Scale Entries with unique photos & idempotency keys...",
   );
 
   const { primaryFactoryId, secondaryFactoryId, userMap, primaryCenterIds, secondaryCenterIds } =

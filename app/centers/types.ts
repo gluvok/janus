@@ -11,7 +11,6 @@ export const centerSchema = z
     id: z.int().positive({ error: "Center ID must be a positive integer" }),
     name: centerNameSchema,
     factory_id: z.int().positive({ error: "Factory ID must be a positive integer" }).optional(),
-    api_key: z.string().min(1, { error: "API key cannot be empty" }).optional(),
     created_at: z.string(),
     updated_at: z.string(),
   })
@@ -24,12 +23,5 @@ export const updateCenterSchema = z
   })
   .strict();
 
-export const centerFormSchema = z
-  .object({
-    name: centerNameSchema,
-  })
-  .strict();
-
 export type Center = z.infer<typeof centerSchema>;
 export type UpdateCenterInput = z.infer<typeof updateCenterSchema>;
-export type CenterFormInput = z.infer<typeof centerFormSchema>;

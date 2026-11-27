@@ -1,8 +1,8 @@
 import { z } from "zod";
-import argon2 from "argon2";
+import { hashPassword } from "@/lib/password";
 import { StatusCodes } from "http-status-codes";
 import { supabase } from "@/lib/supabase";
-import { updateUserSessionCache, invalidateAllUserSessionCache } from "@/lib/auth";
+import { invalidateAllUserSessionCache } from "@/lib/auth";
 import { ServiceError } from "@/lib/api-handler";
 import {
   userRoleEnum,
@@ -13,23 +13,14 @@ import {
 
 export { ServiceError };
 
+const roleOrDropped = z.union([userRoleEnum, z.string().transform(() => undefined)]);
+
+// "admin, nope,manager" -> ["admin", "manager"]: parts are trimmed; unknown/empty parts are dropped.
 export const rolesFilterSchema = z
   .string()
-  .transform((val) => {
-    const parts = val
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const validRoles: UserRole[] = [];
-    for (const part of parts) {
-      const parsed = userRoleEnum.safeParse(part);
-      if (parsed.success) {
-        validRoles.push(parsed.data);
-      }
-    }
-    return validRoles;
-  })
-  .pipe(z.array(userRoleEnum));
+  .transform((val) => val.split(","))
+  .pipe(z.array(z.string().trim().pipe(roleOrDropped)))
+  .transform((roles) => roles.filter((role): role is UserRole => role !== undefined));
 
 export const ALLOWED_SORT_COLUMNS = [
   "id",
@@ -40,23 +31,21 @@ export const ALLOWED_SORT_COLUMNS = [
   "updated_at",
 ] as const;
 
+const MAX_LINKED_ENTRIES_SHOWN = 20;
+
 export const USER_SELECT_PROJECTION =
   "id, username, name, role, factory_id, created_at, updated_at" as const;
 
-/**
- * Creates a new staff user account with mandatory credentials and dynamic factory_id.
- * Relies directly on PostgreSQL UNIQUE constraint for atomic concurrency protection.
- */
+/** Relies on the PostgreSQL UNIQUE constraint on username to reject concurrent duplicates. */
 export async function createUserAccount(data: CreateUserInput, factoryId: number) {
   const { username, name, role, password } = data;
-  const cleanUsername = username.trim().toLowerCase();
-  const passwordHash = await argon2.hash(password.trim());
+  const passwordHash = await hashPassword(password);
 
   const { data: created, error: insertError } = await supabase
     .from("users")
     .insert({
-      username: cleanUsername,
-      name: name.trim(),
+      username,
+      name,
       role,
       password_hash: passwordHash,
       factory_id: factoryId,
@@ -66,30 +55,24 @@ export async function createUserAccount(data: CreateUserInput, factoryId: number
 
   if (insertError) {
     if (insertError.code === "23505") {
-      throw new ServiceError(`Username "${cleanUsername}" is already taken.`, StatusCodes.CONFLICT);
+      throw new ServiceError(`Username "${username}" is already taken.`, StatusCodes.CONFLICT);
     }
-    throw new ServiceError(insertError.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    console.error("User insert failed:", insertError);
+    throw new ServiceError("Failed to create user.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   return created;
 }
 
-/**
- * Updates an existing user account.
- * Atomically enforces uniqueness via PostgreSQL unique constraints.
- */
+/** Relies on the PostgreSQL UNIQUE constraint on username to reject concurrent duplicates. */
 export async function updateUserAccount(data: UpdateUserInput, factoryId: number) {
   const { id, username, name, role, password } = data;
-  const cleanUsername = username.trim().toLowerCase();
 
-  const updates: Record<string, unknown> = {
-    username: cleanUsername,
-    name: name.trim(),
-    role,
-  };
+  const updates: Record<string, unknown> = { username, name, role };
 
-  if (password && password.trim()) {
-    updates.password_hash = await argon2.hash(password.trim());
+  // "" means "keep current password" (updateUserSchema).
+  if (password) {
+    updates.password_hash = await hashPassword(password);
   }
 
   const { data: updated, error: updateError } = await supabase
@@ -102,27 +85,23 @@ export async function updateUserAccount(data: UpdateUserInput, factoryId: number
 
   if (updateError) {
     if (updateError.code === "23505") {
-      throw new ServiceError(`Username "${cleanUsername}" is already taken.`, StatusCodes.CONFLICT);
+      throw new ServiceError(`Username "${username}" is already taken.`, StatusCodes.CONFLICT);
     }
-    throw new ServiceError(updateError.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    console.error("User update failed:", updateError);
+    throw new ServiceError("Failed to update user.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   if (!updated) {
     throw new ServiceError("User not found or has been deleted.", StatusCodes.NOT_FOUND);
   }
 
-  if (password && password.trim()) {
-    invalidateAllUserSessionCache(updated.id);
-  } else {
-    updateUserSessionCache(updated.id, updated);
-  }
+  // DB trigger trg_invalidate_sessions deletes rows on role/username/password change; drop cached copies too.
+  invalidateAllUserSessionCache(updated.id);
 
   return updated;
 }
 
-/**
- * Hard-deletes user accounts in a single batch operation with ON DELETE RESTRICT protection.
- */
+/** Relies on ON DELETE RESTRICT foreign keys to block deleting users with linked records. */
 export async function deleteUserAccounts(targetIds: number[], factoryId: number) {
   const { data, error: deleteErr } = await supabase
     .from("users")
@@ -133,12 +112,24 @@ export async function deleteUserAccounts(targetIds: number[], factoryId: number)
 
   if (deleteErr) {
     if (deleteErr.code === "23503") {
+      // manual_entries.creator_id is ON DELETE RESTRICT and soft-deleted rows still count, so no deleted_at filter.
+      const { data: linked, error: linkedErr } = await supabase
+        .from("manual_entries")
+        .select("id")
+        .in("creator_id", targetIds)
+        .order("id")
+        .limit(MAX_LINKED_ENTRIES_SHOWN);
+      if (linkedErr) console.error("Linked manual entries lookup failed:", linkedErr);
+
       throw new ServiceError(
-        "Cannot delete user account(s) because linked operational records (weighments or entries) exist.",
+        linked?.length
+          ? `Cannot delete: user is linked to manual entries ${linked.map((e) => `#${e.id}`).join(", ")} (including deleted ones).`
+          : "Cannot delete user account(s) because linked operational records (weighments or entries) exist.",
         StatusCodes.CONFLICT,
       );
     }
-    throw new ServiceError(deleteErr.message, StatusCodes.INTERNAL_SERVER_ERROR);
+    console.error("User delete failed:", deleteErr);
+    throw new ServiceError("Failed to delete user.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   if (!data || data.length === 0) {

@@ -12,6 +12,8 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { z } from "zod";
+import { hashApiKey } from "../lib/api-key.ts";
+import { MAX_TOTAL_IMAGE_BYTES, ingestSchema } from "../lib/validation/ingest.ts";
 import {
   isValidIndianPlate,
   normalizeVehicleNumber,
@@ -19,13 +21,13 @@ import {
 } from "../lib/validation/helpers.ts";
 
 console.log("=================================================");
-console.log("🧪 Running GluVok Validation & Schema Invariants Suite");
+console.log("Running GluVok Validation & Schema Invariants Suite");
 console.log("=================================================");
 
 // ------------------------------------------------------------------------------
 // 1. VEHICLE REGISTRATION NUMBER VALIDATION TESTS
 // ------------------------------------------------------------------------------
-console.log("\n🚗 [1/5] Testing Vehicle Number Normalization & Validation...");
+console.log("\n[1/5] Testing Vehicle Number Normalization & Validation...");
 
 // Test normalization
 assert.equal(normalizeVehicleNumber("mh 12 ab 1028"), "MH12AB1028");
@@ -43,6 +45,7 @@ const validPlates = [
   "KA05B9999",
   "UP32AB1234",
   "HR26DQ5551",
+  "22BH1234AA", // Bharat series
 ];
 
 for (const plate of validPlates) {
@@ -50,16 +53,15 @@ for (const plate of validPlates) {
   const parsed = vehicleNumberSchema.safeParse(plate);
   assert.ok(parsed.success, `Expected zod schema to pass for ${plate}`);
 }
-console.log(`  ✓ ${validPlates.length} valid commercial plates verified.`);
+console.log(`  ✓ ${validPlates.length} valid plates verified.`);
 
-// Test invalid formats (including non-commercial BH and VA)
+// Test invalid formats (including non-commercial VA)
 const invalidPlates = [
   "XX12AB1028", // Invalid state code XX
   "12345", // Just numbers
   "ABCDE", // Just letters
   "ZZ99ZZ9999", // ZZ is not in STATE_CODES
   "MH12345AB", // Invalid structure
-  "22BH1234AA", // BH series is non-commercial
   "DLVAAA1234", // Vintage VA series is non-commercial
 ];
 
@@ -74,7 +76,7 @@ console.log(`  ✓ ${invalidPlates.length} invalid plate formats rejected correc
 // 2. SCHEMA TRIGGER & GENERATED COLUMN CALCULATIONS (gross, tare, net, type)
 // Reference: schema.sql lines 136-147 & 282-321
 // ------------------------------------------------------------------------------
-console.log("\n⚖️ [2/5] Testing PostgreSQL Trigger Derivations & Generated Columns...");
+console.log("\n[2/5] Testing PostgreSQL Trigger Derivations & Generated Columns...");
 
 type WeighmentType = "in" | "out" | "void";
 
@@ -128,7 +130,7 @@ function deriveWeighment(
 // 3. SCHEMA CONSTRAINT INVARIANTS
 // Reference: schema.sql (factories, centers, users, automatic_*, manual_*)
 // ------------------------------------------------------------------------------
-console.log("\n📐 [3/5] Testing Schema Constraint Invariants...");
+console.log("\n[3/5] Testing Schema Constraint Invariants...");
 
 function validateReceiptImagesPerRow(val: number): boolean {
   return Number.isInteger(val) && val >= 1 && val <= 2;
@@ -149,7 +151,15 @@ assert.ok(validateApiKey("a".repeat(16)));
 assert.ok(validateApiKey("0123456789abcdef0123456789abcdef")); // 32 hex chars
 assert.ok(!validateApiKey("short_key"));
 assert.ok(!validateApiKey("   " + "a".repeat(10) + "   "));
-console.log("  ✓ chk_factories_api_key & chk_centers_api_key (>= 16 chars) verified.");
+console.log("  ✓ chk_factories_api_key (>= 16 chars) verified.");
+
+// Mirrors chk_centers_api_key_hash: api_key_hash ~ '^[0-9a-f]{64}$'
+const isApiKeyHash = (hash: string) => /^[0-9a-f]{64}$/.test(hash);
+assert.ok(isApiKeyHash(hashApiKey("abc")));
+assert.ok(!isApiKeyHash("A".repeat(64))); // uppercase hex rejected
+assert.ok(!isApiKeyHash("0".repeat(63)));
+assert.ok(!isApiKeyHash("0123456789abcdef0123456789abcdef")); // a plain 32-char key is not a hash
+console.log("  ✓ chk_centers_api_key_hash (64 lowercase hex) verified.");
 
 function validateName(name: string): boolean {
   return typeof name === "string" && name.trim().length >= 3 && name.trim().length <= 50;
@@ -222,7 +232,7 @@ console.log("  ✓ manual_entries non-null creator_id invariant verified.");
 // 4. DATABASE ENUM SET INVARIANTS
 // Reference: schema.sql lines 38-40
 // ------------------------------------------------------------------------------
-console.log("\n🏷️ [4/5] Testing Database Enum Definitions...");
+console.log("\n[4/5] Testing Database Enum Definitions...");
 
 const ROLE_ENUMS = new Set(["admin", "manager", "operator", "base"]);
 assert.equal(ROLE_ENUMS.size, 4);
@@ -245,24 +255,17 @@ console.log("  ✓ All database enum sets match schema.sql exactly.");
 // 5. ENTRY IDEMPOTENCY KEY UUIDV7 INVARIANTS
 // Reference: schema.sql line 119
 // ------------------------------------------------------------------------------
-console.log("\n🔑 [5/5] Testing Entry Idempotency Key UUIDv7 Validation...");
+console.log("\n[5/5] Testing Entry Idempotency Key UUIDv7 Validation...");
 
 const idempotencySchema = z.uuidv7();
 
-// Valid UUIDv7 generated via Node native crypto
-const validUuidV7 = crypto.randomUUIDv7();
+// Fixed UUIDv7 literal (crypto.randomUUIDv7 is missing on Node 22)
+const validUuidV7 = "01890a5c-5b20-77a8-8b9a-7c2d9d1b0d3e";
 assert.ok(
   idempotencySchema.safeParse(validUuidV7).success,
   `Expected valid UUIDv7 ${validUuidV7} to pass validation`,
 );
 assert.equal(idempotencySchema.parse(validUuidV7), validUuidV7);
-
-// Known UUIDv7 test vector
-const sampleUuidV7 = "01890a5c-5b20-77a8-8b9a-7c2d9d1b0d3e";
-assert.ok(
-  idempotencySchema.safeParse(sampleUuidV7).success,
-  `Expected sample UUIDv7 ${sampleUuidV7} to pass validation`,
-);
 
 // Reject UUIDv4 (version 4)
 const uuidV4 = crypto.randomUUID();
@@ -283,6 +286,42 @@ for (const key of invalidKeys) {
 
 console.log("  ✓ Entry UUIDv7 idempotency key validation verified.");
 
+// Hermes ingest schema: vehicle_number (not detected_vehicle_number), Idempotency-Key, max 3 JPEG images
+const jpeg = () => new File([new Uint8Array(4)], "a.jpg", { type: "image/jpeg" });
+const ingest = { idempotency_key: validUuidV7, vehicle_number: "MH12AB1028", weight: "10.5" };
+assert.ok(ingestSchema.safeParse({ ...ingest, images: [jpeg(), jpeg(), jpeg()] }).success);
+assert.ok(!ingestSchema.safeParse({ ...ingest, images: Array.from({ length: 4 }, jpeg) }).success);
+assert.ok(
+  !ingestSchema.safeParse({ ...ingest, images: [new File(["x"], "a.png", { type: "image/png" })] })
+    .success,
+);
+// Total image bytes are capped (Vercel's 4.5 MB body limit): 2 x 2 MB fits, 2 x 2 MB + 1 byte does not.
+const jpegOf = (bytes: number) =>
+  new File([new Uint8Array(bytes)], "a.jpg", { type: "image/jpeg" });
+const half = MAX_TOTAL_IMAGE_BYTES / 2;
+assert.ok(ingestSchema.safeParse({ ...ingest, images: [jpegOf(half), jpegOf(half)] }).success);
+assert.ok(!ingestSchema.safeParse({ ...ingest, images: [jpegOf(half), jpegOf(half + 1)] }).success);
+assert.ok(
+  !ingestSchema.safeParse({ ...ingest, images: [jpegOf(MAX_TOTAL_IMAGE_BYTES + 1)] }).success,
+);
+assert.equal(
+  ingestSchema.parse({ ...ingest, vehicle_number: "REJECTED_BLUR", images: [] }).vehicle_number,
+  "NO_PLATE_DETECTED",
+);
+assert.ok(!ingestSchema.safeParse({ ...ingest, vehicle_number: undefined, images: [] }).success);
+assert.equal(
+  ingestSchema.parse({ ...ingest, idempotency_key: validUuidV7.toUpperCase(), images: [] })
+    .idempotency_key,
+  validUuidV7,
+);
+for (const key of [crypto.randomUUID(), "abc-123-xyz", "short", "../../etc/passwd"]) {
+  assert.ok(
+    !ingestSchema.safeParse({ ...ingest, idempotency_key: key, images: [] }).success,
+    `Expected ingest idempotency_key '${key}' to be rejected`,
+  );
+}
+console.log("  ✓ Hermes ingest schema (vehicle_number, Idempotency-Key, max 3 images) verified.");
+
 console.log("\n=================================================");
-console.log("🎉 All validation and schema invariant tests passed!");
+console.log("All validation and schema invariant tests passed!");
 console.log("=================================================");

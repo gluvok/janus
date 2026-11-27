@@ -32,7 +32,6 @@ export function BootingScreen({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // 1. Initialize User & Factory stores synchronously
   const initialized = useRef(false);
   if (!initialized.current) {
     useUserStore.setState({ user: initialUser, isInitialized: true });
@@ -45,7 +44,6 @@ export function BootingScreen({
     useFactoryStore.setState({ factory: initialFactory });
   }, [initialUser, initialFactory]);
 
-  // 2. Network 401 interceptor for automatic session expiration handling
   const currentPathRef = useRef(pathname);
   const currentSearchRef = useRef(searchParams);
 
@@ -88,7 +86,6 @@ export function BootingScreen({
     };
   }, [router]);
 
-  // 3. Hydration check
   const isUserInitialized = useUserStore((state) => state.isInitialized);
   const hasTableHydrated = useTableHydrated();
 

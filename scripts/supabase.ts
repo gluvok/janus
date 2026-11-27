@@ -38,7 +38,7 @@ const parsedEnv = envSchema.safeParse({
 });
 
 if (!parsedEnv.success) {
-  console.error("❌ Environment configuration error:");
+  console.error("Environment configuration error:");
   for (const issue of parsedEnv.error.issues) {
     console.error(`   • ${issue.path.join(".")}: ${issue.message}`);
   }

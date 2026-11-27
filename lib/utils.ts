@@ -1,10 +1,7 @@
 import axios from "axios";
 export { cn } from "cn";
 
-/**
- * Extracts a user-facing error message from an unknown error, prioritizing
- * Axios response error payloads and Error message properties with a fallback.
- */
+/** Prefers the API error payload, then the error message, then `fallback`. */
 export function getErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {
     return err.response?.data?.error || err.message || fallback;
@@ -15,9 +12,7 @@ export function getErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-/**
- * Standardizes ISO date-time string formatting across tables, cards, and audit logs.
- */
+/** Formats an ISO date-time string for display; returns "—" when empty. */
 export function formatDateTime(isoString: string | null): string {
   if (!isoString) return "—";
   try {

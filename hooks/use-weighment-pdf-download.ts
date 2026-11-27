@@ -16,8 +16,6 @@ export function useWeighmentPdfDownload() {
     setDownloadingId(id);
     try {
       await task();
-    } catch {
-      // Error already notified by toast in download helper
     } finally {
       setDownloadingId(null);
     }
@@ -41,8 +39,6 @@ export function useWeighmentPdfDownload() {
       setIsBatchPrinting(true);
       try {
         await downloadWeighmentsBatchReceipt({ weighments, mode });
-      } catch {
-        // Error already notified by toast in download helper
       } finally {
         setIsBatchPrinting(false);
       }

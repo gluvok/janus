@@ -96,7 +96,6 @@ async function executeReceiptPdfDownload<T extends ReceiptRecordIdentity>({
         `Failed to prepare ${entityLabel.toLowerCase()} receipt for printing.`,
       ),
     });
-    throw err;
   }
 }
 
@@ -204,6 +203,5 @@ export async function downloadWeighmentsBatchReceipt({
       title: "Print Failed",
       description: getErrorMessage(err, "Failed to prepare weighment receipts for printing."),
     });
-    throw err;
   }
 }

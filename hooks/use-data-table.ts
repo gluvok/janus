@@ -87,7 +87,6 @@ export function useDataTable<TData extends RowData>({
 
   const debouncedSearch = useDebounce(search, 300);
 
-  // Store action dispatchers
   const setSearch = useCallback(
     (val: string) => store.setTableSearch(tableId, val),
     [store, tableId],
@@ -196,7 +195,6 @@ export function useDataTable<TData extends RowData>({
     fetchTableData();
   }, [hasHydrated, enabled, fetchTableData]);
 
-  // Global app header refresh listener
   useEffect(() => {
     if (!hasHydrated || !enabled) return;
     const handleRefresh = () => {
@@ -208,7 +206,6 @@ export function useDataTable<TData extends RowData>({
     };
   }, [hasHydrated, enabled, fetchTableData]);
 
-  // TanStack table instance
   const table = useTable({
     features,
     data,

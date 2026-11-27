@@ -8,7 +8,8 @@
  */
 
 import crypto from "node:crypto";
-import argon2 from "argon2";
+import { generateApiKey, hashApiKey } from "../lib/api-key.ts";
+import { hashPassword } from "../lib/password.ts";
 import { z } from "zod";
 import { SUPABASE_URL, supabase } from "./supabase.ts";
 
@@ -64,7 +65,7 @@ function parseCliArgs(argv: string[]): CliOptions {
 
   const result = cliOptionsSchema.safeParse(raw);
   if (!result.success) {
-    console.error("❌ Invalid CLI arguments:");
+    console.error("Invalid CLI arguments:");
     for (const issue of result.error.issues) {
       console.error(`   • --${issue.path.join(".")}: ${issue.message}`);
     }
@@ -122,12 +123,12 @@ async function main() {
   }
 
   console.log("=================================================");
-  console.log("🚀 Mesto Client Onboarding Seeder");
-  console.log(`📡 Supabase Endpoint: ${SUPABASE_URL}`);
+  console.log("Mesto Client Onboarding Seeder");
+  console.log(`Supabase Endpoint: ${SUPABASE_URL}`);
   console.log("=================================================");
 
   // 1. QUERY EXISTING DATA COUNTS & SUFFIXES IN SINGLE BATCH
-  console.log("\n🔍 Inspecting existing database state...");
+  console.log("\nInspecting existing database state...");
 
   const [factoriesRes, adminsRes] = await Promise.all([
     supabase.from("factories").select("id, name"),
@@ -165,7 +166,7 @@ async function main() {
 
   // 2. CREATE FACTORY
   console.log(
-    `\n🏭 Creating factory '${factoryName}' (receipt images per row: ${args.receipt_images_per_row})...`,
+    `\nCreating factory '${factoryName}' (receipt images per row: ${args.receipt_images_per_row})...`,
   );
   const factoryApiKey = crypto.randomBytes(16).toString("hex");
   const { data: createdFactory, error: factoryError } = await supabase
@@ -186,8 +187,8 @@ async function main() {
   );
 
   // 3. CREATE ADMIN USER
-  console.log(`\n👤 Provisioning admin user '${adminUsername}'...`);
-  const adminHash = await argon2.hash(args.admin_password);
+  console.log(`\nProvisioning admin user '${adminUsername}'...`);
+  const adminHash = await hashPassword(args.admin_password);
   const { data: createdAdmin, error: adminError } = await supabase
     .from("users")
     .insert({
@@ -208,38 +209,39 @@ async function main() {
   );
 
   // 4. CREATE CENTERS WITH API KEYS IN O(1) BULK INSERT
-  console.log(`\n⚖️ Provisioning ${args.centers} center(s) with dedicated API keys...`);
+  console.log(`\nProvisioning ${args.centers} center(s) with dedicated API keys...`);
 
-  const centersToInsert = Array.from({ length: args.centers }, (_, i) => {
-    const centerIndex = i + 1;
-    const centerName =
-      args.center_names && args.center_names[i] ? args.center_names[i] : `Center ${centerIndex}`;
-    const apiKey = crypto.randomBytes(16).toString("hex");
-    return {
-      name: centerName,
-      factory_id: createdFactory.id,
-      api_key: apiKey,
-    };
-  });
+  // Plain keys live only here; the DB stores their SHA-256.
+  const centerKeys = new Map(
+    Array.from({ length: args.centers }, (_, i) => [
+      args.center_names && args.center_names[i] ? args.center_names[i] : `Center ${i + 1}`,
+      generateApiKey(),
+    ]),
+  );
+  const centersToInsert = [...centerKeys].map(([name, apiKey]) => ({
+    name,
+    factory_id: createdFactory.id,
+    api_key_hash: hashApiKey(apiKey),
+  }));
 
   const { data: createdCenters, error: centersError } = await supabase
     .from("centers")
     .insert(centersToInsert)
-    .select("id, name, api_key");
+    .select("id, name");
 
   if (centersError || !createdCenters) {
     throw centersError || new Error("Failed to bulk create centers");
   }
 
   for (const center of createdCenters) {
-    console.log(`  ✓ Center '${center.name}' (ID: ${center.id}, API Key: ${center.api_key})`);
+    console.log(`  ✓ Center '${center.name}' (ID: ${center.id})`);
   }
 
   // 5. SUMMARY
   console.log("\n=================================================");
-  console.log("🎉 Client Onboarding Completed Successfully!");
+  console.log("Client Onboarding Completed Successfully!");
   console.log("=================================================");
-  console.log("📋 Summary of Provisioned Resources:");
+  console.log("Summary of Provisioned Resources:");
   console.log(
     `  • Factory:   ${createdFactory.name} (ID: ${createdFactory.id}) ➜ API Key: ${createdFactory.api_key}`,
   );
@@ -248,12 +250,14 @@ async function main() {
   );
   console.log("  • Centers & Scale API Keys:");
   for (const center of createdCenters) {
-    console.log(`    - ${center.name} (ID: ${center.id}) ➜ API Key: ${center.api_key}`);
+    console.log(
+      `    - ${center.name} (ID: ${center.id}) ➜ API Key: ${centerKeys.get(center.name)}`,
+    );
   }
   console.log("=================================================");
 }
 
 main().catch((err) => {
-  console.error("❌ Onboarding seeding failed:", err);
+  console.error("Onboarding seeding failed:", err);
   process.exit(1);
 });

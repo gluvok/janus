@@ -51,7 +51,7 @@ export async function seedWeighments({
   manual: SeededWeighmentRow[];
 }> {
   console.log(
-    "\n🚛 [5/6] Seeding Automatic & Manual Weighment Pairs (invoking trigger_weighments_auto_populate)...",
+    "\n[5/6] Seeding Automatic & Manual Weighment Pairs (invoking trigger_weighments_auto_populate)...",
   );
 
   const [createdAuto, createdManual] = await Promise.all([

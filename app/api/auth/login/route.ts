@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import argon2 from "argon2";
+import { RateLimiterMemory } from "rate-limiter-flexible";
+import { DUMMY_HASH, verifyPassword } from "@/lib/password";
 import { supabase } from "@/lib/supabase";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
-import { createSession, SESSION_COOKIE_NAME } from "@/lib/auth";
+import {
+  createSession,
+  sessionCutoffIso,
+  SESSION_COOKIE_NAME,
+  SESSION_TTL_SECONDS,
+} from "@/lib/auth";
+
+// ponytail: per-instance memory store; each instance counts separately, so scaling out lets an
+// attacker multiply the budget. Swap in a shared store (Postgres/Redis limiter) if that matters.
+const WINDOW_SECONDS = 15 * 60;
+const byUsername = new RateLimiterMemory({ points: 5, duration: WINDOW_SECONDS });
+const byIp = new RateLimiterMemory({ points: 25, duration: WINDOW_SECONDS });
+const INVALID = "Invalid username or password.";
 
 const loginSchema = z
   .object({
@@ -26,32 +39,51 @@ export async function POST(request: Request) {
 
     const { username, password } = validation.data;
 
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+    const [userRes, ipRes] = await Promise.all([byUsername.get(username), byIp.get(ip)]);
+    const blocked = [
+      userRes && userRes.consumedPoints >= byUsername.points ? userRes : null,
+      ipRes && ipRes.consumedPoints >= byIp.points ? ipRes : null,
+    ].filter((res) => res !== null);
+    if (blocked.length > 0) {
+      const retryAfter = Math.ceil(Math.max(...blocked.map((res) => res.msBeforeNext)) / 1000);
+      return NextResponse.json(
+        { error: "Too many attempts. Try again in 15 minutes." },
+        { status: StatusCodes.TOO_MANY_REQUESTS, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, username, password_hash, name, role, factory_id, created_at, updated_at")
       .eq("username", username)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (userError) {
+      console.error("Login user lookup failed:", userError);
       return NextResponse.json(
-        { error: userError.message },
+        { error: "Internal Server Error" },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found." }, { status: StatusCodes.UNAUTHORIZED });
+    const isValidPassword = user
+      ? await verifyPassword(password, user.password_hash)
+      : (await verifyPassword(password, DUMMY_HASH), false);
+    if (!user || !isValidPassword) {
+      // consume() rejects with a RateLimiterRes (not an Error) once the budget is spent
+      await Promise.allSettled([byUsername.consume(username), byIp.consume(ip)]);
+      return NextResponse.json({ error: INVALID }, { status: StatusCodes.UNAUTHORIZED });
     }
-
-    const isValidPassword = await argon2.verify(user.password_hash, password);
-    if (!isValidPassword) {
-      return NextResponse.json(
-        { error: "Incorrect password." },
-        { status: StatusCodes.UNAUTHORIZED },
-      );
-    }
+    await byUsername.delete(username);
 
     const { token } = await createSession(user.id);
+    await supabase
+      .from("sessions")
+      .delete()
+      .eq("user_id", user.id)
+      .lt("created_at", sessionCutoffIso());
 
     const { data: factory, error: factoryError } = await supabase
       .from("factories")
@@ -59,8 +91,9 @@ export async function POST(request: Request) {
       .eq("id", user.factory_id)
       .single();
     if (factoryError) {
+      console.error("Login factory lookup failed:", factoryError);
       return NextResponse.json(
-        { error: factoryError.message },
+        { error: "Internal Server Error" },
         { status: StatusCodes.INTERNAL_SERVER_ERROR },
       );
     }
@@ -97,11 +130,15 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
+      maxAge: SESSION_TTL_SECONDS,
     });
 
     return response;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return NextResponse.json({ error: message }, { status: StatusCodes.INTERNAL_SERVER_ERROR });
+    console.error("Login error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
+    );
   }
 }

@@ -16,10 +16,6 @@ import {
   type User,
 } from "./types";
 
-/* -------------------------------------------------------------------------- */
-/* Create User Dialog                                                         */
-/* -------------------------------------------------------------------------- */
-
 export interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -128,10 +124,6 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     </UserDialogShell>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Edit User Dialog                                                           */
-/* -------------------------------------------------------------------------- */
 
 export interface EditUserDialogProps {
   open: boolean;

@@ -9,7 +9,6 @@ export const POST = handleApiRoute(async () => {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  // 1. Clean up database session and in-memory cache if a token was present
   if (token) {
     invalidateSessionCache(token);
     const tokenHash = hashSessionToken(token);
@@ -21,7 +20,6 @@ export const POST = handleApiRoute(async () => {
     { status: StatusCodes.OK },
   );
 
-  // 2. Always strip the cookie from the browser
   response.cookies.delete(SESSION_COOKIE_NAME);
 
   return response;

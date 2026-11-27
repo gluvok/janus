@@ -15,6 +15,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { usernameSchema, passwordSchema } from "@/app/users/types";
+import { safeNextPath } from "@/lib/security";
 import { useUserStore } from "@/stores/use-user-store";
 import { useFactoryStore } from "@/stores/use-factory-store";
 
@@ -30,7 +31,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextUrl = searchParams.get("next") || "/";
+  const nextUrl = safeNextPath(searchParams.get("next"));
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const {

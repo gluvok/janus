@@ -1,8 +1,3 @@
-/**
- * @file app/entries/types.ts
- * @description Type definitions and zod schemas for the Automatic and Manual Entries domain models.
- */
-
 import { z } from "zod";
 import { userRoleEnum } from "@/app/users/types";
 

@@ -6,6 +6,7 @@ import {
   Factory01Icon,
   ImagesIcon,
   Layers01Icon,
+  Notification01Icon,
   Settings01Icon,
   UserIcon,
   WeightScale01Icon,
@@ -26,6 +27,5 @@ export const appIcons = {
   services: Briefcase01Icon,
   allFilter: Layers01Icon,
   search: Search01Icon,
+  notifications: Notification01Icon,
 } as const;
-
-export type AppIconKey = keyof typeof appIcons;

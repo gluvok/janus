@@ -8,7 +8,7 @@ import { supabase } from "../supabase.ts";
 import { TABLES_IN_CLEAR_ORDER } from "./constants.ts";
 
 export async function clearDatabase(): Promise<void> {
-  console.log("🧹 [Clean Mode] Clearing all existing records in topological dependency order...");
+  console.log("[Clean Mode] Clearing all existing records in topological dependency order...");
 
   for (const table of TABLES_IN_CLEAR_ORDER) {
     const { error } = await supabase.from(table).delete().neq("id", 0);
@@ -20,7 +20,7 @@ export async function clearDatabase(): Promise<void> {
 
   const { error: resetErr } = await supabase.rpc("reset_all_sequences");
   if (resetErr) {
-    console.warn("  ⚠️ Could not invoke reset_all_sequences RPC:", resetErr.message);
+    console.warn("  Could not invoke reset_all_sequences RPC:", resetErr.message);
   } else {
     console.log("  ✓ Reset all auto-increment sequences via reset_all_sequences().");
   }

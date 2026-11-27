@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { StatusCodes } from "http-status-codes";
 import { LRUCache } from "lru-cache";
 import { supabase } from "@/lib/supabase";
+import { SESSION_HEADER_KEYS } from "@/lib/security";
 import { type User } from "@/app/users/types";
 import { type Factory } from "@/app/settings/types";
 
@@ -17,9 +18,15 @@ export interface SessionData {
   factory: Factory;
 }
 
-const sessionCache = new LRUCache<string, SessionData>({
-  max: 5000,
-});
+export const SESSION_TTL_SECONDS = 60 * 60 * 12; // D4
+const CACHE_TTL_MS = 10_000;
+
+// ponytail: per-instance cache (proxy and API routes don't share one); revocation lags <=10s. Shared cache if instant is needed.
+const sessionCache = new LRUCache<string, SessionData>({ max: 5000, ttl: CACHE_TTL_MS });
+
+export function sessionCutoffIso(): string {
+  return new Date(Date.now() - SESSION_TTL_SECONDS * 1000).toISOString();
+}
 
 export function invalidateSessionCache(token: string): void {
   sessionCache.delete(token);
@@ -29,14 +36,6 @@ export function invalidateAllUserSessionCache(userId: number): void {
   for (const [token, session] of sessionCache.entries()) {
     if (session.user.id === userId) {
       sessionCache.delete(token);
-    }
-  }
-}
-
-export function updateUserSessionCache(userId: number, updatedUser: User): void {
-  for (const [_token, session] of sessionCache.entries()) {
-    if (session.user.id === userId) {
-      session.user = updatedUser;
     }
   }
 }
@@ -59,9 +58,6 @@ export class AuthError extends Error {
   }
 }
 
-/**
- * Creates a persistent database session for the given user ID.
- */
 export async function createSession(userId: number): Promise<{ token: string }> {
   const token = crypto.randomUUID();
   const tokenHash = hashSessionToken(token);
@@ -72,19 +68,14 @@ export async function createSession(userId: number): Promise<{ token: string }> 
   });
 
   if (error) {
-    throw new AuthError(
-      `Failed to create session: ${error.message}`,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-    );
+    console.error("Failed to create session:", error);
+    throw new AuthError("Failed to create session.", StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
   return { token };
 }
 
-/**
- * Validates a session token using in-memory LRU cache and read-only database query.
- * Returns both the current authenticated user and their factory configuration.
- */
+/** Null when the token is unknown, expired, or the user is soft-deleted. */
 export async function getSessionUser(token: string): Promise<SessionData | null> {
   if (!token) return null;
 
@@ -109,6 +100,7 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
         factory_id,
         created_at,
         updated_at,
+        deleted_at,
         factory:factories!factory_id(
           id,
           name,
@@ -119,6 +111,8 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
       )
     `)
     .eq("token_hash", tokenHash)
+    .is("deleted_at", null)
+    .gt("created_at", sessionCutoffIso())
     .maybeSingle();
 
   if (error || !data || !data.user) {
@@ -133,8 +127,13 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
     factory_id: number;
     created_at: string;
     updated_at: string;
+    deleted_at: string | null;
     factory: Factory;
   };
+
+  if (rawUser.deleted_at) {
+    return null;
+  }
 
   const user: User = {
     id: rawUser.id,
@@ -152,26 +151,11 @@ export async function getSessionUser(token: string): Promise<SessionData | null>
   return sessionData;
 }
 
-export const SESSION_HEADER_KEYS = [
-  "x-user-id",
-  "x-factory-id",
-  "x-user-role",
-  "x-user-name",
-  "x-user-username",
-  "x-user-created-at",
-  "x-user-updated-at",
-  "x-factory-name",
-  "x-factory-receipt-images",
-  "x-factory-created-at",
-  "x-factory-updated-at",
-] as const;
+export { SESSION_HEADER_KEYS };
 
 export type SessionHeaderKey = (typeof SESSION_HEADER_KEYS)[number];
 
-/**
- * Extracts and validates session headers using a loop over SESSION_HEADER_KEYS.
- * Returns SessionData if all 11 headers exist, or null if any header is missing.
- */
+/** Null if any SESSION_HEADER_KEYS header is missing. */
 export function parseSessionHeaders(headerSource: {
   get(name: string): string | null;
 }): SessionData | null {
@@ -215,53 +199,14 @@ export function getAuthSession(req: Request): SessionData {
 }
 
 /**
- * Reads user identity injected into request headers by proxy.ts with zero database queries.
- * Throws AuthError (401) if headers are missing.
- */
-export function getAuthUser(req: Request): User {
-  return getAuthSession(req).user;
-}
-
-/**
- * Reads factory configuration injected into request headers by proxy.ts with zero database queries.
- * Throws AuthError (401) if headers are missing.
- */
-export function getAuthFactory(req: Request): Factory {
-  return getAuthSession(req).factory;
-}
-
-/**
  * Extracts and verifies the current session in Next.js Server Components.
  * Reads request headers set by proxy.ts; falls back to session lookup only if headers are not set.
  */
 export async function getServerSession(): Promise<SessionData | null> {
-  try {
-    const headerList = await headers();
-    const session = parseSessionHeaders(headerList);
-    if (session) return session;
-  } catch {
-    // headers() might not be available
-  }
+  const session = parseSessionHeaders(await headers());
+  if (session) return session;
 
-  let token: string | undefined;
-  try {
-    const cookieStore = await cookies();
-    token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  } catch {
-    // Cookie store unavailable
-  }
-
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
   return getSessionUser(token);
-}
-
-/**
- * Asserts an authenticated user session in Server Components, throwing AuthError (401) if invalid or expired.
- */
-export async function requireServerSession(): Promise<SessionData> {
-  const session = await getServerSession();
-  if (!session) {
-    throw new AuthError("Unauthorized. Please log in again.", StatusCodes.UNAUTHORIZED);
-  }
-  return session;
 }

@@ -1,8 +1,3 @@
-/**
- * @file app/weighments/types.ts
- * @description Type definitions for Automatic and Manual Weighments domain models matching schema.sql views.
- */
-
 import { z } from "zod";
 import { userRoleEnum } from "@/app/users/types";
 

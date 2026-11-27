@@ -32,7 +32,6 @@ export function DataTablePagination<TData extends RowData>({
   loading,
 }: DataTablePaginationProps<TData>) {
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
-  // Number of rows currently rendered in datatable on the current page
   const currentRowsCount = table.getRowModel().rows.length;
   const currentPage = table.state.pagination.pageIndex + 1;
   const totalPages = Math.max(1, table.getPageCount());

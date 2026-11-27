@@ -373,9 +373,7 @@ export function WeighmentsDataTable({ mode }: WeighmentsDataTableProps) {
           deleteLabel="Delete Weighment"
           onConfirm={async () => {
             if (!deleteWeighment) return;
-            await axios.delete("/api/weighments/automatic", {
-              params: { id: deleteWeighment.id },
-            });
+            await axios.delete(`/api/weighments/automatic/${deleteWeighment.id}`);
             toast.add({
               type: "success",
               title: "Weighment deleted",

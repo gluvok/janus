@@ -3,7 +3,7 @@ import type { ColumnVisibilityState, SortingState, PaginationState } from "@tans
 
 export const DEFAULT_PAGE_SIZE = 15;
 
-export interface BaseTableState {
+export interface TableItemState {
   search: string;
   dateRange: { from?: string; to?: string } | undefined;
   sorting: SortingState;
@@ -35,7 +35,7 @@ export const filteredPrunedStateSchema = basePrunedStateSchema
 
 export type FilteredPrunedState = z.infer<typeof filteredPrunedStateSchema>;
 
-export function pruneBaseState(state: BaseTableState): BasePrunedState {
+export function pruneBaseState(state: TableItemState): BasePrunedState {
   const pruned: BasePrunedState = {};
 
   if (state.search && state.search.trim() !== "") {
@@ -72,7 +72,7 @@ export function pruneBaseState(state: BaseTableState): BasePrunedState {
 export function hydrateBaseState(
   pruned: BasePrunedState | undefined,
   defaultSorting: SortingState = [{ id: "id", desc: true }],
-): BaseTableState {
+): TableItemState {
   return {
     search: pruned?.search ?? "",
     dateRange: pruned?.dateRange,
@@ -96,7 +96,7 @@ export interface TableStrategy<TState, TPruned> {
 function createFilteredTableStrategy(
   defaultColumnVisibility: ColumnVisibilityState = {},
   defaultSorting: SortingState = [{ id: "created_at", desc: true }],
-): TableStrategy<BaseTableState, FilteredPrunedState> {
+): TableStrategy<TableItemState, FilteredPrunedState> {
   return {
     schema: filteredPrunedStateSchema,
     defaultState: {
@@ -119,35 +119,17 @@ function createFilteredTableStrategy(
   };
 }
 
-/* -------------------------------------------------------------------------- */
-/* Centers Table Strategy: Base capabilities + dateRange. No filters          */
-/* -------------------------------------------------------------------------- */
-
-export type CentersTableState = BaseTableState;
 export const centersPrunedSchema = basePrunedStateSchema.strict();
 export type CentersPrunedState = z.infer<typeof centersPrunedSchema>;
 
-export const centersStrategy: TableStrategy<CentersTableState, CentersPrunedState> = {
+export const centersStrategy: TableStrategy<TableItemState, CentersPrunedState> = {
   schema: centersPrunedSchema,
   defaultState: hydrateBaseState(undefined, [{ id: "id", desc: true }]),
   prune: (state) => pruneBaseState(state),
   hydrate: (pruned) => hydrateBaseState(pruned, [{ id: "id", desc: true }]),
 };
 
-/* -------------------------------------------------------------------------- */
-/* Users Table Strategy: Base capabilities + dateRange + filters              */
-/* -------------------------------------------------------------------------- */
-
-export type UsersTableState = BaseTableState;
-export const usersPrunedSchema = filteredPrunedStateSchema;
-export type UsersPrunedState = FilteredPrunedState;
-
-export const usersStrategy: TableStrategy<UsersTableState, UsersPrunedState> =
-  createFilteredTableStrategy({}, [{ id: "id", desc: true }]);
-
-/* -------------------------------------------------------------------------- */
-/* Entries Table Strategies: Automatic & Manual                               */
-/* -------------------------------------------------------------------------- */
+export const usersStrategy = createFilteredTableStrategy({}, [{ id: "id", desc: true }]);
 
 export const automaticEntriesStrategy = createFilteredTableStrategy({
   center_id: false,
@@ -161,10 +143,6 @@ export const manualEntriesStrategy = createFilteredTableStrategy({
   created_at: false,
   updated_at: false,
 });
-
-/* -------------------------------------------------------------------------- */
-/* Weighments Table Strategies: Automatic & Manual                            */
-/* -------------------------------------------------------------------------- */
 
 export const automaticWeighmentsStrategy = createFilteredTableStrategy({
   in_entry_id: false,
@@ -190,10 +168,6 @@ export const manualWeighmentsStrategy = createFilteredTableStrategy({
   updated_at: false,
 });
 
-/* -------------------------------------------------------------------------- */
-/* Declarative Table Registry                                                 */
-/* -------------------------------------------------------------------------- */
-
 export const TABLE_STRATEGIES = {
   centers: centersStrategy,
   users: usersStrategy,
@@ -204,9 +178,6 @@ export const TABLE_STRATEGIES = {
 } as const;
 
 export type TableId = keyof typeof TABLE_STRATEGIES;
-
-// Unified Table State bag for generic consumer compatibility
-export type TableItemState = BaseTableState;
 
 export const DEFAULT_TABLE_ITEM_STATE: TableItemState = {
   search: "",
